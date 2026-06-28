@@ -23,30 +23,28 @@
  * ============================================================================
  */
 
-import Link from "next/link"
-import type { Course } from "../data/courses"
+import Link from "next/link";
+import { Course } from "../types/course";
+import Card from "@/shared/ui/Card";
+import { Button } from "@/components/ui/button";
 
 interface CourseCardProps {
-  course: Course
+  course: Course;
 }
 
+/**
+ * Card riutilizzabile per un corso.
+ * UI pura: nessuna logica business, riceve i dati via props.
+ * Ora è un Link verso la pagina di dettaglio del corso.
+ */
 export default function CourseCard({ course }: CourseCardProps) {
   return (
-    <article className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
-      <h3 className="text-xl font-semibold text-gray-900">
-        {course.title}
-      </h3>
+    <Card>
+      <h3 className="text-xl font-semibold">{course.title}</h3>
 
-      <p className="mt-4 text-gray-600">
-        {course.description}
-      </p>
+      <p className="mt-4 text-gray-600">{course.description}</p>
 
-      <Link
-        href="/courses"
-        className="mt-6 inline-block font-semibold text-blue-600 hover:text-blue-700"
-      >
-        Scopri il corso →
-      </Link>
-    </article>
-  )
+      <Button className="mt-6">Scopri il corso</Button>
+    </Card>
+  );
 }

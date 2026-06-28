@@ -1,0 +1,34 @@
+import PublicLayout from "@/shared/layout/PublicLayout";
+import PageContainer from "@/shared/ui/PageContainer";
+
+import CourseCard from "@/features/courses/components/CourseCard";
+import { courses } from "@/features/courses/data/courses";
+
+export default function CoursesPage() {
+  return (
+    <PublicLayout>
+      <section className="py-16">
+        <PageContainer>
+
+          <h1 className="text-4xl font-bold text-gray-900">
+            Tutti i corsi
+          </h1>
+
+          <p className="mt-3 text-gray-600">
+            Esplora tutti i corsi disponibili su GCPROF AI Academy.
+          </p>
+
+          <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {courses.map((course) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+              />
+            ))}
+          </div>
+
+        </PageContainer>
+      </section>
+    </PublicLayout>
+  );
+}

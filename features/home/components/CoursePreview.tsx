@@ -22,37 +22,28 @@
  * ============================================================================
  */
 
+import PageContainer from "@/shared/ui/PageContainer";
+import SectionTitle from "@/shared/ui/SectionTitle";
 
-import PageContainer from "@/shared/ui/PageContainer"
-import { courses } from "../data/courses"
-//import { CourseCard } from "./CourseCard"
-import CourseCard from "./CourseCard"
+import { courses } from "@/features/courses/data/courses";
+import CourseCard from "@/features/courses/components/CourseCard";
 
 export default function CoursePreview() {
   return (
     <section className="bg-gray-50 py-20">
       <PageContainer>
 
-        <div className="mb-12 text-center">
-          <h2 className="text-3xl font-bold text-gray-900">
-            Corsi in evidenza
-          </h2>
-
-          <p className="mt-3 text-gray-600">
-            Alcuni dei corsi disponibili nella piattaforma.
-          </p>
-        </div>
+        <SectionTitle
+          title="Corsi in evidenza"
+          subtitle="Una selezione dei corsi disponibili nella piattaforma."
+        />
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {courses.map((course) => (
-            <CourseCard
-              key={course.id}
-              course={course}
-            />
+            <CourseCard key={course.id} course={course} />
           ))}
         </div>
-
       </PageContainer>
     </section>
-  )
+  );
 }

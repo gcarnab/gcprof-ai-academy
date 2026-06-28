@@ -1,27 +1,24 @@
 /**
  * ============================================================================
- * COMPONENTE: PageContainer
+ * FILE: PageContainer.tsx
+ * FEATURE: Shared UI
  * ----------------------------------------------------------------------------
- * Wrapper layout riutilizzabile per tutte le sezioni della pagina.
+ * SCOPO
+ * Contenitore riutilizzabile che definisce la larghezza massima e il padding
+ * orizzontale di tutte le pagine pubbliche della piattaforma.
  *
- * RUOLO:
- * - Gestire larghezza massima del contenuto
- * - Gestire padding laterale coerente
+ * RESPONSABILITÀ
+ * - Centrare il contenuto
+ * - Limitare la larghezza massima
+ * - Evitare duplicazione delle classi Tailwind
  *
- * ATTUALMENTE:
- * - max-width fisso (7xl)
- * - padding orizzontale standard
- *
- * FUTURO:
- * - Possibili varianti (sm, md, lg container)
- * - Supporto layout dashboard
- *
- * NOTA ARCHITETTURALE:
- * Evita duplicazione di classi Tailwind in tutta la piattaforma.
+ * NOTE
+ * Utilizzare questo componente ogni volta che si vuole allineare il contenuto
+ * con il layout principale della piattaforma.
  * ============================================================================
  */
 
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface PageContainerProps {
   children: ReactNode;
