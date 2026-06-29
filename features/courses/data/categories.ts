@@ -34,5 +34,5 @@ export const categories: string[] = [
   "Finance",
   "Informatica",
   "Programmazione",
-  "Sistemi e Reti",
+  "Reti",
 ];
