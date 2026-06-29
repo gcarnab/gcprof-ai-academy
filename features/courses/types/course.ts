@@ -58,8 +58,12 @@ export interface Course {
 
   published: boolean;
 
-  /**
-   * NUOVA STRUTTURA LMS
-   */
   modules: Module[];
+
+  /**
+   * CONTROLLO ACCESSO (Sprint 0.10)
+   * Se indefinito o vuoto, il corso è aperto a tutti.
+   * Es: ["3A", "4B"]
+   */
+  allowedClasses?: string[];
 }

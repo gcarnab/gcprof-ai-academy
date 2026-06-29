@@ -1,111 +1,48 @@
-/**
- * ============================================================================
- * SERVICE: CourseService
- * ----------------------------------------------------------------------------
- * Questo service rappresenta il livello di accesso ai dati dei corsi.
- *
- * FILOSOFIA
- * ----------------------------------------------------------------------------
- * La UI NON accede mai direttamente al file courses.ts.
- *
- * Tutte le ricerche vengono effettuate tramite questo service.
- *
- * In futuro sarà sufficiente sostituire l'implementazione con Supabase
- * senza modificare nessun componente React.
- *
- * RESPONSABILITÀ
- * ----------------------------------------------------------------------------
- * ✔ recuperare tutti i corsi
- * ✔ recuperare un corso tramite slug
- * ✔ recuperare un modulo
- * ✔ recuperare una lezione
- * ============================================================================
- */
-
 import { courses } from "../data/courses";
+import type { Course, Module, Lesson } from "../types/course";
+import type { SessionUser } from "../../auth/services/authService";
 
-import type {
-  Course,
-  Module,
-  Lesson,
-} from "../types/course";
+export function hasCourseAccess(course: Course, user: SessionUser | null): boolean {
+  // Se il corso non è pubblicato, nessuno studente lo vede
+  if (!course.published) return false;
 
-/* ============================================================================
- * TUTTI I CORSI
- * ========================================================================== */
+  // L'admin ha accesso a tutto
+  if (user?.role === "admin") return true;
 
-/**
- * Restituisce il catalogo completo.
- */
-export function getAllCourses(): Course[] {
-  return courses;
-}
-
-/* ============================================================================
- * CORSO
- * ========================================================================== */
-
-/**
- * Restituisce un corso tramite slug.
- */
-export function getCourseBySlug(
-  slug: string
-): Course | undefined {
-
-  return courses.find(
-    (course) => course.slug === slug
-  );
-
-}
-
-/* ============================================================================
- * MODULO
- * ========================================================================== */
-
-/**
- * Restituisce un modulo di un corso.
- */
-export function getModule(
-  courseSlug: string,
-  moduleId: string
-): Module | undefined {
-
-  const course = getCourseBySlug(courseSlug);
-
-  if (!course) {
-    return undefined;
+  // Se il corso non ha restrizioni di classe, è aperto a tutti gli utenti loggati
+  if (!course.allowedClasses || course.allowedClasses.length === 0) {
+    return user !== null;
   }
 
-  return course.modules.find(
-    (module) => module.id === moduleId
-  );
+  // Se l'utente non è loggato o non ha classi assegnate, accesso negato
+  if (!user || !user.class) return false;
 
+  // Trasformiamo la stringa "1A,1B" in un array di classi dell'utente: ["1A", "1B"]
+  const userClasses = user.class.split(",").map((c) => c.trim());
+
+  // Controlliamo se almeno una delle classi dell'utente è tra quelle permesse dal corso
+  return course.allowedClasses.some((allowedClass) => userClasses.includes(allowedClass));
 }
 
-/* ============================================================================
- * LEZIONE
- * ========================================================================== */
+// ... mantieni getAllCourses, getCourseBySlug, getModule, getLesson uguali a prima
+export function getAllCourses(user: SessionUser | null): Course[] {
+  return courses.filter((course) => hasCourseAccess(course, user));
+}
 
-/**
- * Restituisce una lezione.
- */
-export function getLesson(
-  courseSlug: string,
-  moduleId: string,
-  lessonId: string
-): Lesson | undefined {
+export function getCourseBySlug(slug: string, user: SessionUser | null): Course | undefined {
+  const course = courses.find((c) => c.slug === slug);
+  if (!course || !hasCourseAccess(course, user)) return undefined;
+  return course;
+}
 
-  const module = getModule(
-    courseSlug,
-    moduleId
-  );
+export function getModule(courseSlug: string, moduleId: string, user: SessionUser | null): Module | undefined {
+  const course = getCourseBySlug(courseSlug, user);
+  if (!course) return undefined;
+  return course.modules.find((m) => m.id === moduleId);
+}
 
-  if (!module) {
-    return undefined;
-  }
-
-  return module.lessons.find(
-    (lesson) => lesson.id === lessonId
-  );
-
+export function getLesson(courseSlug: string, moduleId: string, lessonId: string, user: SessionUser | null): Lesson | undefined {
+  const module = getModule(courseSlug, moduleId, user);
+  if (!module) return undefined;
+  return module.lessons.find((l) => l.id === lessonId);
 }

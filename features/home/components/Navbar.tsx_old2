@@ -1,0 +1,175 @@
+/**
+ * ============================================================================
+ * COMPONENTE: Navbar
+ * ----------------------------------------------------------------------------
+ * Navbar principale della piattaforma GCPROF AI Academy.
+ *
+ * RESPONSABILITÀ
+ * ----------------------------------------------------------------------------
+ * Questo componente rappresenta il menu di navigazione globale
+ * dell'applicazione.
+ *
+ * Attualmente permette di:
+ *
+ * • visualizzare il logo della piattaforma
+ * • navigare tra le pagine pubbliche
+ * • evidenziare automaticamente la pagina attiva
+ * • mostrare il pulsante di accesso (LoginDialog)
+ *
+ * EVOLUZIONE FUTURA
+ * ----------------------------------------------------------------------------
+ * Durante gli Sprint successivi questo componente verrà esteso con:
+ *
+ * • autenticazione Supabase
+ * • avatar utente
+ * • menu Studente
+ * • menu Docente
+ * • menu Amministratore
+ * • notifiche
+ * • menu responsive (mobile)
+ *
+ * NOTA ARCHITETTURALE
+ * ----------------------------------------------------------------------------
+ * Questo componente è presente in tutte le pagine pubbliche
+ * dell'applicazione.
+ *
+ * È un Client Component perché utilizza l'hook usePathname().
+ * ============================================================================
+ */
+
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { navigation } from "@/shared/config/navigation";
+import LoginDialog from "@/features/auth/components/LoginDialog";
+import { useAuth } from "@/features/auth/context/AuthContext";
+
+/**
+ * ============================================================================
+ * COMPONENTE NAVBAR
+ * ============================================================================
+ */
+
+export default function Navbar() {
+  const { user } = useAuth();
+
+  /**
+   * Restituisce il percorso corrente.
+   *
+   * Esempi:
+   *
+   * "/"
+   * "/courses"
+   * "/courses/react"
+   * "/contacts"
+   */
+  const pathname = usePathname();
+
+  /**
+   * Determina se una voce del menu è attiva.
+   *
+   * NOTA
+   * ----------------------------------------------------------------------------
+   * Non utilizziamo semplicemente:
+   *
+   * pathname === path
+   *
+   * perché in futuro avremo pagine come:
+   *
+   * /courses/react
+   * /courses/python
+   * /courses/database
+   *
+   * In questi casi vogliamo mantenere evidenziata
+   * la voce "Corsi".
+   */
+  const isActive = (path: string): boolean => {
+    // Caso speciale della Home.
+    if (path === "/") {
+      return pathname === "/";
+    }
+
+    return pathname.startsWith(path);
+  };
+
+  /**
+   * Restituisce le classi CSS del link.
+   */
+  const linkClass = (path: string): string =>
+    `
+      transition-colors
+      duration-200
+      hover:text-blue-600
+      ${isActive(path) ? "font-semibold text-blue-600" : "text-gray-700"}
+    `;
+
+  return (
+    <header className="border-b border-gray-200 bg-white shadow-sm">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        {/* ============================================================
+            LOGO
+        ============================================================ */}
+
+        <Link href="/" className="group flex items-center gap-3 transition-all">
+          <Image
+            src="/gcprof-ai-academy_logo_small.png"
+            alt="Logo GCPROF AI Academy"
+            width={46}
+            height={46}
+            sizes="46px"
+            priority
+            className="transition-transform duration-300 group-hover:scale-105"
+          />
+
+          <div className="flex flex-col leading-none">
+            <span className="text-lg font-extrabold tracking-tight text-gray-900 transition-colors group-hover:text-blue-600">
+              GCPROF
+            </span>
+
+            <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-blue-600">
+              AI ACADEMY
+            </span>
+          </div>
+        </Link>
+
+        {/* ============================================================
+            MENU PRINCIPALE
+        ============================================================ */}
+
+        <nav aria-label="Navigazione principale">
+          <ul className="flex items-center gap-8 text-sm">
+            {navigation.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className={linkClass(item.href)}>
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* ============================================================
+            AREA UTENTE
+        ============================================================ */}
+
+        {/*
+            Attualmente viene mostrato il LoginDialog.
+
+            Dopo l'autenticazione questo spazio ospiterà:
+
+            • Avatar utente
+            • Menu a tendina
+            • Logout
+            • Dashboard
+        */}
+
+        <LoginDialog />
+
+        {user?.role === "admin" && <Link href="/admin">Admin</Link>}
+        
+      </div>
+    </header>
+  );
+}
