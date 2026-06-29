@@ -20,8 +20,9 @@
  */
 
 import { notFound } from "next/navigation";
-import Link from "next/link";
+
 import { getCourseBySlug } from "@/features/courses/services/courseService";
+
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 
@@ -31,7 +32,7 @@ interface Props {
   };
 }
 export default async function CourseDetailPage({ params }: Props) {
-  //export default function CourseDetailPage({ params }: Props) {
+//export default function CourseDetailPage({ params }: Props) {
 
   const { slug } = await params;
   //const course = getCourseBySlug(params.slug);
@@ -46,6 +47,7 @@ export default async function CourseDetailPage({ params }: Props) {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
+
       {/* ============================================================
           NAVBAR
       ============================================================ */}
@@ -55,13 +57,19 @@ export default async function CourseDetailPage({ params }: Props) {
           CONTENUTO
       ============================================================ */}
       <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
-        {/* HEADER CORSO */}
-        <h1 className="text-4xl font-bold text-gray-900">{course.title}</h1>
 
-        <p className="mt-4 text-lg text-gray-600">{course.description}</p>
+        {/* HEADER CORSO */}
+        <h1 className="text-4xl font-bold text-gray-900">
+          {course.title}
+        </h1>
+
+        <p className="mt-4 text-lg text-gray-600">
+          {course.description}
+        </p>
 
         {/* METADATA */}
         <div className="mt-8 grid grid-cols-2 gap-6 text-sm text-gray-700">
+
           <div>
             <strong>Categoria:</strong> {course.category}
           </div>
@@ -77,51 +85,24 @@ export default async function CourseDetailPage({ params }: Props) {
           <div>
             <strong>Docente:</strong> {course.teacher}
           </div>
+
         </div>
 
-        {/* ============================================================
-    MODULI E LEZIONI
-============================================================ */}
-
-        <div className="mt-10">
-          <h2 className="text-2xl font-bold text-gray-900">Moduli del corso</h2>
-
-          <div className="mt-6 space-y-6">
-            {course.modules.map((module) => (
-              <div key={module.id} className="rounded-lg border bg-white p-5">
-                {/* MODULE TITLE */}
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {module.title}
-                </h3>
-
-                {/* LESSONS */}
-                <ul className="mt-3 space-y-2">
-                  {module.lessons.map((lesson) => (
-                    <li
-                      key={lesson.id}
-                      className="flex justify-between text-sm text-gray-600"
-                    >
-                      <Link
-                        href={`/courses/${slug}/modules/${module.id}/lessons/${lesson.id}`}
-                        className="hover:text-blue-600 hover:underline transition-colors"
-                      >
-                       {lesson.title}
-                      </Link>
-
-                      <span>{lesson.duration} min</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+        {/* PLACEHOLDER FUTURO */}
+        <div className="mt-12 rounded-lg border bg-white p-6">
+          <p className="text-gray-500">
+            Qui in futuro aggiungeremo:
+            moduli, lezioni, progress tracking e video.
+          </p>
         </div>
+
       </main>
 
       {/* ============================================================
           FOOTER
       ============================================================ */}
       <Footer />
+
     </div>
   );
 }

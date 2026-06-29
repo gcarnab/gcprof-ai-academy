@@ -28,8 +28,11 @@
  */
 export const categories: string[] = [
   "Tutti",
-  "Programmazione",
-  "Web",
-  "Database",
   "AI",
+  "Blockchain",
+  "Database",
+  "Finance",
+  "Informatica",
+  "Programmazione",
+  "Sistemi e Reti",
 ];

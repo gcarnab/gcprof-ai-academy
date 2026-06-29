@@ -43,10 +43,13 @@ export default function CourseCard({ course }: Props) {
         <span>{course.difficulty}</span>
       </div>
 
-      {/* CTA implicita */}
-      <div className="mt-4 text-sm font-medium text-blue-600">
-        Vai al corso →
-      </div>
+      {/* CTA implicita*/}
+      <Link
+        className="mt-4 text-sm font-medium text-blue-600"
+        href={`/courses/${course.slug}`}
+      >
+        Vai al corso
+      </Link>
     </Link>
   );
 }
