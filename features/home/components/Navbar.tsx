@@ -4,21 +4,36 @@
  * ----------------------------------------------------------------------------
  * Navbar principale della piattaforma GCPROF AI Academy.
  *
- * RUOLO:
- * - Navigazione globale del sito
+ * RESPONSABILITÀ
+ * ----------------------------------------------------------------------------
+ * Questo componente rappresenta il menu di navigazione globale
+ * dell'applicazione.
  *
- * ATTUALMENTE:
- * - Link Home, Corsi, Contatti
- * - Pulsante "Accedi" statico
+ * Attualmente permette di:
  *
- * FUTURO:
- * - Autenticazione utente
- * - Menu dinamico (studente / docente / admin)
- * - Notifiche
- * - Avatar utente
+ * • visualizzare il logo della piattaforma
+ * • navigare tra le pagine pubbliche
+ * • evidenziare automaticamente la pagina attiva
+ * • mostrare il pulsante di accesso (LoginDialog)
  *
- * NOTA ARCHITETTURALE:
- * Questo componente sarà presente in tutte le pagine pubbliche.
+ * EVOLUZIONE FUTURA
+ * ----------------------------------------------------------------------------
+ * Durante gli Sprint successivi questo componente verrà esteso con:
+ *
+ * • autenticazione Supabase
+ * • avatar utente
+ * • menu Studente
+ * • menu Docente
+ * • menu Amministratore
+ * • notifiche
+ * • menu responsive (mobile)
+ *
+ * NOTA ARCHITETTURALE
+ * ----------------------------------------------------------------------------
+ * Questo componente è presente in tutte le pagine pubbliche
+ * dell'applicazione.
+ *
+ * È un Client Component perché utilizza l'hook usePathname().
  * ============================================================================
  */
 
@@ -27,32 +42,88 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { navigation } from "@/shared/config/navigation";
+import LoginDialog from "@/features/auth/components/LoginDialog";
+
 
 /**
- * Navbar con stato attivo basato sulla route corrente
+ * ============================================================================
+ * COMPONENTE NAVBAR
+ * ============================================================================
  */
 
 export default function Navbar() {
+  /**
+   * Restituisce il percorso corrente.
+   *
+   * Esempi:
+   *
+   * "/"
+   * "/courses"
+   * "/courses/react"
+   * "/contacts"
+   */
   const pathname = usePathname();
 
-  const isActive = (path: string) => pathname === path;
+  /**
+   * Determina se una voce del menu è attiva.
+   *
+   * NOTA
+   * ----------------------------------------------------------------------------
+   * Non utilizziamo semplicemente:
+   *
+   * pathname === path
+   *
+   * perché in futuro avremo pagine come:
+   *
+   * /courses/react
+   * /courses/python
+   * /courses/database
+   *
+   * In questi casi vogliamo mantenere evidenziata
+   * la voce "Corsi".
+   */
+  const isActive = (path: string): boolean => {
+    // Caso speciale della Home.
+    if (path === "/") {
+      return pathname === "/";
+    }
 
-  const linkClass = (path: string) =>
-    `transition-colors hover:text-blue-600 ${
-      isActive(path) ? "text-blue-600 font-semibold" : "text-gray-700"
-    }`;
+    return pathname.startsWith(path);
+  };
+
+  /**
+   * Restituisce le classi CSS del link.
+   */
+  const linkClass = (path: string): string =>
+    `
+      transition-colors
+      duration-200
+      hover:text-blue-600
+      ${
+        isActive(path)
+          ? "font-semibold text-blue-600"
+          : "text-gray-700"
+      }
+    `;
 
   return (
     <header className="border-b border-gray-200 bg-white shadow-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        {/* Logo */}
-        <Link href="/" className="group flex items-center gap-3 transition-all">
+        {/* ============================================================
+            LOGO
+        ============================================================ */}
+
+        <Link
+          href="/"
+          className="group flex items-center gap-3 transition-all"
+        >
           <Image
             src="/gcprof-ai-academy_logo_small.png"
-            alt="GCPROF AI Academy Logo"
+            alt="Logo GCPROF AI Academy"
             width={46}
             height={46}
+            sizes="46px"
             priority
             className="transition-transform duration-300 group-hover:scale-105"
           />
@@ -68,31 +139,38 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Menu */}
-        <nav>
+        {/* ============================================================
+            MENU PRINCIPALE
+        ============================================================ */}
+
+        <nav aria-label="Navigazione principale">
           <ul className="flex items-center gap-8 text-sm">
-            <li>
-              <Link href="/" className={linkClass("/")}>
-                Home
-              </Link>
-            </li>
-
-            <li>
-              <Link href="/courses" className={linkClass("/courses")}>
-                Corsi
-              </Link>
-            </li>
-
-            <li>
-              <Link href="/contacts" className={linkClass("/contacts")}>
-                Contatti
-              </Link>
-            </li>
+            {navigation.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className={linkClass(item.href)}>
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
 
-        {/* shadcn */}
-        <Button>Accedi</Button>
+        {/* ============================================================
+            AREA UTENTE
+        ============================================================ */}
+
+        {/*
+            Attualmente viene mostrato il LoginDialog.
+
+            Dopo l'autenticazione questo spazio ospiterà:
+
+            • Avatar utente
+            • Menu a tendina
+            • Logout
+            • Dashboard
+        */}
+
+        <LoginDialog />
       </div>
     </header>
   );

@@ -1,50 +1,93 @@
 /**
- * ============================================================================
- * COMPONENTE: CourseCard
- * ----------------------------------------------------------------------------
- * Card riutilizzabile per la visualizzazione di un singolo corso.
+ * =====================================================================
+ * GCPROF AI Academy
+ * ---------------------------------------------------------------------
+ * File: CourseCard.tsx
+ * ---------------------------------------------------------------------
+ * Questo componente rappresenta una singola "scheda corso".
  *
- * RUOLO:
- * - Mostrare informazioni base di un corso
+ * RESPONSABILITÀ
+ * ---------------------------------------------------------------------
+ * Il componente NON conosce dove vengono recuperati i dati.
  *
- * ATTUALMENTE:
- * - Titolo corso
- * - Descrizione breve
- * - Link alla pagina corso
+ * Riceve semplicemente un oggetto Course tramite le props
+ * e si limita a mostrarlo.
  *
- * FUTURO:
- * - Immagine corso
- * - Badge (novità, popolare)
- * - Stato progresso utente
+ * Questo principio prende il nome di:
  *
- * NOTA ARCHITETTURALE:
- * Questo è un componente UI puro e RIUTILIZZABILE.
- * NON deve contenere logica dati.
- * ============================================================================
+ *      Presentational Component
+ *
+ * ovvero un componente dedicato esclusivamente
+ * alla presentazione grafica.
+ *
+ * In futuro potrà essere riutilizzato:
+ *
+ * • Home
+ * • Catalogo corsi
+ * • Ricerca
+ * • Dashboard docente
+ * • Dashboard studente
+ * • Preferiti
+ *
+ * senza alcuna modifica.
+ * =====================================================================
  */
 
-import Link from "next/link";
 import { Course } from "../types/course";
-import Card from "@/shared/ui/Card";
-import { Button } from "@/components/ui/button";
 
+/**
+ * Definizione delle proprietà (Props)
+ * ricevute dal componente.
+ */
 interface CourseCardProps {
+  /**
+   * Corso da visualizzare.
+   */
   course: Course;
 }
 
 /**
- * Card riutilizzabile per un corso.
- * UI pura: nessuna logica business, riceve i dati via props.
- * Ora è un Link verso la pagina di dettaglio del corso.
+ * =====================================================================
+ * COMPONENTE
+ * =====================================================================
  */
 export default function CourseCard({ course }: CourseCardProps) {
   return (
-    <Card>
-      <h3 className="text-xl font-semibold">{course.title}</h3>
+    <article
+      className="
+                rounded-xl
+                border
+                border-gray-200
+                bg-white
+                p-6
+                shadow-sm
+                transition
+                duration-300
+                hover:shadow-lg
+                hover:-translate-y-1
+            "
+    >
+      {/* ==========================================================
+                Titolo
+            =========================================================== */}
 
-      <p className="mt-4 text-gray-600">{course.description}</p>
+      <h3 className="text-xl font-bold text-slate-800">{course.title}</h3>
 
-      <Button className="mt-6">Scopri il corso</Button>
-    </Card>
+      {/* ==========================================================
+                Livello
+            =========================================================== */}
+
+      <h3 className="text-sm italic text-green-600 font-semibold">
+        {course.level}
+      </h3>
+
+      {/* ==========================================================
+                Descrizione
+            =========================================================== */}
+
+      <p className=" mt-3 text-gray-600 leading-relaxed">
+        {course.description}
+      </p>
+    </article>
   );
 }

@@ -28,6 +28,7 @@ import SectionTitle from "@/shared/ui/SectionTitle";
 import { courses } from "@/features/courses/data/courses";
 import CourseCard from "@/features/courses/components/CourseCard";
 
+
 export default function CoursePreview() {
   return (
     <section className="bg-gray-50 py-20">
