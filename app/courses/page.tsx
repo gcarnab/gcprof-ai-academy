@@ -1,34 +1,82 @@
-import PublicLayout from "@/shared/layout/PublicLayout";
-import PageContainer from "@/shared/ui/PageContainer";
+/**
+ * ============================================================================
+ * PAGINA: /courses
+ * ----------------------------------------------------------------------------
+ * Questa è la pagina del Catalogo Corsi.
+ *
+ * RESPONSABILITÀ:
+ * ----------------------------------------------------------------------------
+ * - orchestrare i componenti della feature courses
+ * - collegare UI e logica (useCourses)
+ * - NON contenere logica di business
+ *
+ * ARCHITETTURA:
+ * ----------------------------------------------------------------------------
+ * UI → Components
+ * State → useCourses
+ * Data → mock (futuro Supabase)
+ * ============================================================================
+ */
 
-import CourseCard from "@/features/courses/components/CourseCard";
-import { courses } from "@/features/courses/data/courses";
+"use client";
 
+import { useCourses } from "@/features/courses/hooks/useCourses";
+
+import CourseList from "@/features/courses/components/CourseList";
+import CourseSearch from "@/features/courses/components/CourseSearch";
+import CategoryFilter from "@/features/courses/components/CategoryFilter";
+import CoursesHeader from "@/features/courses/components/CoursesHeader";
+import Navbar from "@/features/home/components/Navbar";
+import Footer from "@/features/home/components/Footer";
+import { categories } from "@/features/courses/data/categories";
+
+/**
+ * ============================================================================
+ * COMPONENTE PAGINA
+ * ============================================================================
+ */
 export default function CoursesPage() {
+  /**
+   * Hook centrale del catalogo
+   */
+  const { courses, search, setSearch, category, setCategory } = useCourses();
+
   return (
-    <PublicLayout>
-      <section className="py-16">
-        <PageContainer>
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      {/* ============================================================
+          NAVBAR
+      ============================================================ */}
+      <Navbar />
 
-          <h1 className="text-4xl font-bold text-gray-900">
-            Tutti i corsi
-          </h1>
+      {/* ============================================================
+          CONTENUTO PRINCIPALE
+      ============================================================ */}
+      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">
+        {/* HEADER */}
+        <CoursesHeader />
 
-          <p className="mt-3 text-gray-600">
-            Esplora tutti i corsi disponibili su GCPROF AI Academy.
-          </p>
+        {/* SEARCH */}
+        <div className="mb-6">
+          <CourseSearch onSearch={setSearch} />
+        </div>
 
-          <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-              />
-            ))}
-          </div>
+        {/* CATEGORY FILTER */}
+        <div className="mb-8">
+          <CategoryFilter
+            categories={categories}
+            selected={category}
+            onChange={setCategory}
+          />
+        </div>
 
-        </PageContainer>
-      </section>
-    </PublicLayout>
+        {/* COURSE LIST */}
+        <CourseList courses={courses} />
+      </main>
+
+      {/* ============================================================
+          FOOTER
+      ============================================================ */}
+      <Footer />
+    </div>
   );
 }

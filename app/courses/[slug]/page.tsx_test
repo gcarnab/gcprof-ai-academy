@@ -1,0 +1,23 @@
+import { notFound } from "next/navigation";
+import { getCourseBySlug } from "@/features/courses/services/courseService";
+
+interface Props {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function Page({ params }: Props) {
+  const { slug } = await params;
+
+  const course = getCourseBySlug(slug);
+
+  if (!course) {
+    notFound();
+  }
+
+  return (
+    <div>
+      <h1>{course.title}</h1>
+      <p>{course.description}</p>
+    </div>
+  );
+}

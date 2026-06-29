@@ -1,93 +1,52 @@
 /**
- * =====================================================================
- * GCPROF AI Academy
- * ---------------------------------------------------------------------
- * File: CourseCard.tsx
- * ---------------------------------------------------------------------
- * Questo componente rappresenta una singola "scheda corso".
+ * ============================================================================
+ * COMPONENTE: CourseCard
+ * ----------------------------------------------------------------------------
+ * Card che rappresenta un singolo corso nel catalogo.
  *
- * RESPONSABILITÀ
- * ---------------------------------------------------------------------
- * Il componente NON conosce dove vengono recuperati i dati.
+ * RESPONSABILITÀ:
+ * ----------------------------------------------------------------------------
+ * - mostrare dati corso
+ * - navigare alla pagina dettaglio corso (/courses/[slug])
  *
- * Riceve semplicemente un oggetto Course tramite le props
- * e si limita a mostrarlo.
- *
- * Questo principio prende il nome di:
- *
- *      Presentational Component
- *
- * ovvero un componente dedicato esclusivamente
- * alla presentazione grafica.
- *
- * In futuro potrà essere riutilizzato:
- *
- * • Home
- * • Catalogo corsi
- * • Ricerca
- * • Dashboard docente
- * • Dashboard studente
- * • Preferiti
- *
- * senza alcuna modifica.
- * =====================================================================
+ * NOTA:
+ * ----------------------------------------------------------------------------
+ * Il routing è gestito tramite Next.js Link (client-side navigation)
+ * ============================================================================
  */
+
+"use client";
+
+import Link from "next/link";
 
 import { Course } from "../types/course";
 
-/**
- * Definizione delle proprietà (Props)
- * ricevute dal componente.
- */
-interface CourseCardProps {
-  /**
-   * Corso da visualizzare.
-   */
+interface Props {
   course: Course;
 }
 
-/**
- * =====================================================================
- * COMPONENTE
- * =====================================================================
- */
-export default function CourseCard({ course }: CourseCardProps) {
+export default function CourseCard({ course }: Props) {
   return (
-    <article
-      className="
-                rounded-xl
-                border
-                border-gray-200
-                bg-white
-                p-6
-                shadow-sm
-                transition
-                duration-300
-                hover:shadow-lg
-                hover:-translate-y-1
-            "
+    <Link
+      href={`/courses/${course.slug}`}
+      className="block rounded-lg border bg-white p-5 shadow-sm transition hover:shadow-md"
     >
-      {/* ==========================================================
-                Titolo
-            =========================================================== */}
+      {/* Titolo corso */}
+      <h3 className="text-lg font-semibold text-gray-900">{course.title}</h3>
 
-      <h3 className="text-xl font-bold text-slate-800">{course.title}</h3>
+      {/* Descrizione */}
+      <p className="mt-2 text-sm text-gray-600">{course.description}</p>
 
-      {/* ==========================================================
-                Livello
-            =========================================================== */}
+      {/* Meta info */}
+      <div className="mt-4 flex justify-between text-xs text-gray-500">
+        <span>{course.category}</span>
+        <span>{course.difficulty}</span>
+      </div>
 
-      <h3 className="text-sm italic text-green-600 font-semibold">
-        {course.level}
-      </h3>
-
-      {/* ==========================================================
-                Descrizione
-            =========================================================== */}
-
-      <p className=" mt-3 text-gray-600 leading-relaxed">
-        {course.description}
-      </p>
-    </article>
+      {/* CTA implicita */}
+      <div className="mt-4 text-sm font-medium text-blue-600">
+        Vai al corso →
+      </div>
+    </Link>
   );
 }
