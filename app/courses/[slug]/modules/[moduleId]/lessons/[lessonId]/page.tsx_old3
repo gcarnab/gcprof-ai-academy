@@ -33,23 +33,15 @@ export default function LessonPage() {
       <div className="flex min-h-screen flex-col bg-gray-50">
         <Navbar />
         <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
-          
-          {/* Briciole di pane / Navigazione contestuale */}
           <p className="text-sm text-gray-500">
             {course.title} {" > "} {module.title}
           </p>
-          
-          {/* Titolo della Lezione */}
           <h1 className="mt-2 text-4xl font-bold text-gray-900">
             {lesson.title}
           </h1>
-          
-          {/* Area del Player / Documento */}
           <div className="mt-8">
-            {/* 🎯 FISSAATO: Passiamo l'intero oggetto 'lesson' al renderer anziché un campo inesistente */}
-            <LessonRenderer lesson={lesson} />
+            <LessonRenderer contents={lesson.contents} />
           </div>
-
         </main>
         <Footer />
       </div>
