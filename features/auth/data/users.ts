@@ -26,13 +26,13 @@ export const users: User[] = [
     username: "user1",
     password: "user1",
     role: "student",
-    class: "1A,1B", 
+    class: "1A,1B,1C", 
   },
   {
     id: "3",
     username: "user2",
     password: "user2",
     role: "student",
-    class: "2A,2B",
+    class: "2A,2B,2C",
   },
 ];

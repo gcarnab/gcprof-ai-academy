@@ -1,39 +1,12 @@
-/**
- * ============================================================================
- * TYPE: Course (LMS Version)
- * ----------------------------------------------------------------------------
- * Estensione del modello per supportare:
- * - moduli
- * - lezioni
- * ============================================================================
- */
-
-export interface LessonContent {
-  type: "video" | "text" | "link" | "file";
-
-  title?: string;
-
-  /**
-   * URL generico:
-   * - YouTube
-   * - Google Drive
-   * - PDF
-   * - link esterni
-   */
-  url?: string;
-
-  /**
-   * contenuto testuale (futuro)
-   */
-  content?: string;
-}
+export type CourseDifficulty = "Facile" | "Intermedio" | "Avanzato";
 
 export interface Lesson {
   id: string;
   title: string;
-  duration: number; // minuti
-
-  contents: LessonContent[];
+  duration: number; // in minuti
+  contentType: "video" | "document" | "mixed";
+  youtubeUrl?: string;     // es: https://www.youtube.com/watch?v=... o https://youtu.be/...
+  googleDriveUrl?: string; // es: https://docs.google.com/document/d/.../edit o /pub
 }
 
 export interface Module {
@@ -47,23 +20,12 @@ export interface Course {
   slug: string;
   title: string;
   description: string;
-
   category: string;
-  difficulty: string;
+  difficulty: CourseDifficulty | string;
   teacher: string;
-
   estimatedHours: number;
-
   coverImage?: string;
-
   published: boolean;
-
-  modules: Module[];
-
-  /**
-   * CONTROLLO ACCESSO (Sprint 0.10)
-   * Se indefinito o vuoto, il corso è aperto a tutti.
-   * Es: ["3A", "4B"]
-   */
-  allowedClasses?: string[];
+  allowedClasses: string[];
+  modules: Module[]; // Struttura ad albero per i contenuti
 }
