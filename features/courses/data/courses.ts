@@ -2,7 +2,7 @@ import { Course } from "../types/course";
 
 export const courses: Course[] = [
   {
-    id: 1782803208645,
+    id: 1,
     title: "Informatica 1°",
     slug: "info1",
     description: "Corso per gli studenti della classe prima",
@@ -15,7 +15,7 @@ export const courses: Course[] = [
     allowedClasses: ["1A", "1B", "1C"],
     modules: [
       {
-        id: "mod-1782803103468",
+        id: "mod-11",
         title: "Guida didattica",
         lessons: [
           {
@@ -29,7 +29,7 @@ export const courses: Course[] = [
         ],
       },
       {
-        id: "mod-1782803155679",
+        id: "mod-12",
         title: "Google Sheets",
         lessons: [
           {
@@ -43,64 +43,123 @@ export const courses: Course[] = [
         ],
       },
       {
-        id: "mod-1782803731277",
+        id: "mod-13",
         title: "Video",
         lessons: [
           {
-            id: "les-1782803744829",
-            title: "GOOGLE FOGLI tutorial 1: Le basi di Google Sheets e differenze da Excel",
+            id: "les-131",
+            title:
+              "GOOGLE FOGLI tutorial 1: Le basi di Google Sheets e differenze da Excel",
             duration: 15,
             contentType: "video",
             youtubeUrl: "https://youtu.be/DVi2dTn6nTc?si=CMTvhHQKdjfADRN4",
           },
           {
-            id: "les-1782804320328",
-            title: "GOOGLE FOGLI tutorial 2: Sintassi e formule aritmetiche in Google Sheets",
+            id: "les-132",
+            title:
+              "GOOGLE FOGLI tutorial 2: Sintassi e formule aritmetiche in Google Sheets",
             duration: 15,
             contentType: "video",
             youtubeUrl: "https://youtu.be/hTpOAIHYvvc?si=sBI7sKTcGEV0AlkA",
           },
           {
-            id: "les-1782804376751",
+            id: "les-133",
             title:
               "GOOGLE FOGLI tutorial 3: Selezionare e gestire gli intervalli in Google Sheets",
             duration: 15,
             contentType: "video",
             youtubeUrl: "https://youtu.be/iUeB2vHHJL4?si=9zGL0R0Mf8JJ_GUW",
           },
+          {
+            id: "les-134",
+            title:
+              "GOOGLE FOGLI tutorial 4: Riempimento automatico di celle in Google Sheets",
+            duration: 15,
+            contentType: "video",
+            youtubeUrl: "https://youtu.be/0wz0DeQcxQM?si=TETaLD5ca0MkwgNn",
+          },
         ],
       },
     ],
   },
   {
-    id: 2,
-    slug: "python-intermedio",
-    title: "Python intermedio",
-    description: "Corso per studenti del secondo anno.",
-    category: "Programmazione",
-    difficulty: "Media",
-    teacher: "Prof. Carnabuci",
-    estimatedHours: 30,
-    published: true,
-    coverImage:
-      "https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg",
-
-    allowedClasses: ["2A", "2B", "2C"],
-    modules: [
-      {
-        id: "1",
-        title: "Intro",
-        lessons: [
-          {
-            id: "1",
-            title: "video",
-            duration: 15,
-            contentType: "video",
-            youtubeUrl: "https://youtu.be/QhcNQmfnwmk?si=YgT3JSIJiTxtL-xH",
-          },
-        ],
-      },
+    "id": 2,
+    "title": "Informatica 2°",
+    "slug": "info2",
+    "description": "Corso per gli studenti della classe seconda",
+    "category": "Informatica",
+    "difficulty": "Intermedio",
+    "teacher": "Prof. G. Carnabuci",
+    "estimatedHours": 50,
+    "coverImage": "/courses/gcprof-ai-academy_logo_info_02.png",
+    "published": true,
+    "allowedClasses": [
+      "2A",
+      "2B",
+      "2C"
     ],
+    "modules": [
+      {
+        "id": "mod-21",
+        "title": "Guida didattica",
+        "lessons": [
+          {
+            "id": "les-211",
+            "title": "Guida didattica",
+            "duration": 15,
+            "contentType": "document",
+            "googleDriveUrl": "https://docs.google.com/document/d/1Usu1lT423ayJKMJBFBIPgi_6bO4TJC5S_Vc6ekd6Jqs/edit?usp=sharing"
+          }
+        ]
+      },
+      {
+        "id": "mod-22",
+        "title": "Problem Solving",
+        "lessons": [
+          {
+            "id": "les-222",
+            "title": "INFO - PROBLEM SOLVING - (Prof. Giuseppe Carnabuci)",
+            "duration": 15,
+            "contentType": "document",
+            "googleDriveUrl": "https://docs.google.com/document/d/1QNM2Uok0JUubUTItiGT7Tjcj67iHJV3o8FJ9_v2mxEg/edit?usp=sharing"
+          }
+        ]
+      },
+      {
+        "id": "mod-23",
+        "title": "Video",
+        "lessons": [
+          {
+            "id": "les-231",
+            "title": "Python - 01. INTRO E INSTALLAZIONE",
+            "duration": 15,
+            "contentType": "video",
+            "youtubeUrl": "https://youtu.be/J3M4ZAVD9y8?si=YF0KDkiN6U28_la2"
+          },
+          {
+            "id": "les-232",
+            "title": "Python - 02. VALORI E OPERATORI",
+            "duration": 15,
+            "contentType": "video",
+            "youtubeUrl": "https://youtu.be/HVvaiMVyAi0?si=FOeUGgXeN4cLwxt5"
+          },
+          {
+            "id": "les-233",
+            "title": "Python - 03. VARIABILI E STRINGHE",
+            "duration": 15,
+            "contentType": "video",
+            "youtubeUrl": "https://youtu.be/eNZRzJQXZ0o?si=h4BmFHyTmGKzMtEa"
+          },
+          {
+            "id": "les-234",
+            "title": "Python - 04. CONVERSIONI DI TIPO, PRINT E INPUT",
+            "duration": 15,
+            "contentType": "video",
+            "youtubeUrl": "https://youtu.be/aiElE8gxw-k?si=w20JK351xqc_tH__"
+          }
+        ]
+      }
+    ]
   },
   {
     id: 3,

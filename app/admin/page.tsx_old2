@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
   const [allowedClassesInput, setAllowedClassesInput] = useState("");
   const [modules, setModules] = useState<Module[]>([]);
 
-  // Stati per la creazione rapida di Moduli/Lezioni
+  // Stati per la creazione rapida di Moduli/Lezioni all'interno del form
   const [newModuleTitle, setNewModuleTitle] = useState("");
   const [newLessonTitle, setNewLessonTitle] = useState("");
   const [newLessonType, setNewLessonType] = useState<"video" | "document">(
@@ -45,17 +45,6 @@ export default function AdminDashboardPage() {
   );
   const [newLessonYt, setNewLessonYt] = useState("");
   const [newLessonDrive, setNewLessonDrive] = useState("");
-
-  // Stati per la MODIFICA in linea di moduli e lezioni esistenti
-  const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
-  const [editingModuleTitle, setEditingModuleTitle] = useState("");
-  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
-  const [editingLessonTitle, setEditingLessonTitle] = useState("");
-  const [editingLessonType, setEditingLessonType] = useState<
-    "video" | "document"
-  >("video");
-  const [editingLessonYt, setEditingLessonYt] = useState("");
-  const [editingLessonDrive, setEditingLessonDrive] = useState("");
 
   useEffect(() => {
     refreshCourses();
@@ -77,6 +66,7 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Apre il modal in modalità "Crea"
   const openCreateModal = () => {
     setEditingCourse(null);
     setTitle("");
@@ -92,28 +82,27 @@ export default function AdminDashboardPage() {
     setIsDialogOpen(true);
   };
 
-const openEditModal = (course: Course) => {
-  setEditingCourse(course);
-  setTitle(course.title || "");
-  setSlug(course.slug || "");
-  setDescription(course.description || "");
-  setCategory(course.category || "Informatica");
-  setDifficulty(course.difficulty || "Facile");
-  setTeacher(course.teacher || "Prof. G. Carnabuci");
-  setEstimatedHours(course.estimatedHours || 20);
-  setCoverImage(course.coverImage || "📚");
-  
-  // 🎯 FIX: Protezione contro array nulli o indefiniti che bloccano il rendering
-  setAllowedClassesInput(Array.isArray(course.allowedClasses) ? course.allowedClasses.join(", ") : "");
-  setModules(Array.isArray(course.modules) ? course.modules : []);
-  
-  setIsDialogOpen(true);
-};
+  // Apre il modal in modalità "Modifica" (READ per l'UPDATE)
+  const openEditModal = (course: Course) => {
+    setEditingCourse(course);
+    setTitle(course.title);
+    setSlug(course.slug);
+    setDescription(course.description);
+    setCategory(course.category);
+    setDifficulty(course.difficulty);
+    setTeacher(course.teacher);
+    setEstimatedHours(course.estimatedHours);
+    setCoverImage(course.coverImage || "📚");
+    setAllowedClassesInput(course.allowedClasses?.join(", ") || "");
+    setModules(course.modules || []);
+    setIsDialogOpen(true);
+  };
 
+  // Eliminazione Corso (DELETE)
   const handleDelete = (courseId: number, courseTitle: string) => {
     if (
       confirm(
-        `Sei sicuro di voler eliminare definitivamente il corso "${courseTitle}"? Esta azione non è reversibile.`,
+        `Sei sicuro di voler eliminare definitivamente il corso "${courseTitle}"? Questa azione non è reversibile.`,
       )
     ) {
       deleteCmsCourse(courseId);
@@ -121,9 +110,7 @@ const openEditModal = (course: Course) => {
     }
   };
 
-  /* ============================================================================
-   * 🛠️ GESTIONE STRUTTURA: MODULI
-   * ========================================================================== */
+  // Gestione Moduli nel Form
   const addModule = () => {
     if (!newModuleTitle) return;
     const newMod: Module = {
@@ -135,34 +122,6 @@ const openEditModal = (course: Course) => {
     setNewModuleTitle("");
   };
 
-  const startEditModule = (mod: Module) => {
-    setEditingModuleId(mod.id);
-    setEditingModuleTitle(mod.title);
-  };
-
-  const saveEditedModule = (moduleId: string) => {
-    if (!editingModuleTitle) return;
-    setModules(
-      modules.map((m) =>
-        m.id === moduleId ? { ...m, title: editingModuleTitle } : m,
-      ),
-    );
-    setEditingModuleId(null);
-  };
-
-  const deleteModule = (moduleId: string) => {
-    if (
-      confirm(
-        "Sei sicuro di voler eliminare questo modulo e tutte le sue lezioni?",
-      )
-    ) {
-      setModules(modules.filter((m) => m.id !== moduleId));
-    }
-  };
-
-  /* ============================================================================
-   * 🛠️ GESTIONE STRUTTURA: LEZIONI
-   * ========================================================================== */
   const addLessonToModule = (moduleId: string) => {
     if (!newLessonTitle) return;
     const newLess: Lesson = {
@@ -184,57 +143,7 @@ const openEditModal = (course: Course) => {
     setNewLessonDrive("");
   };
 
-  const startEditLesson = (lesson: Lesson) => {
-    setEditingLessonId(lesson.id);
-    setEditingLessonTitle(lesson.title);
-    setEditingLessonType(lesson.contentType as "video" | "document");
-    setEditingLessonYt(lesson.youtubeUrl || "");
-    setEditingLessonDrive(lesson.googleDriveUrl || "");
-  };
-
-  const saveEditedLesson = (moduleId: string, lessonId: string) => {
-    if (!editingLessonTitle) return;
-
-    setModules(
-      modules.map((m) => {
-        if (m.id !== moduleId) return m;
-        return {
-          ...m,
-          lessons: m.lessons.map((l) => {
-            if (l.id !== lessonId) return l;
-            return {
-              ...l,
-              title: editingLessonTitle,
-              contentType: editingLessonType,
-              youtubeUrl:
-                editingLessonType === "video" ? editingLessonYt : undefined,
-              googleDriveUrl:
-                editingLessonType === "document"
-                  ? editingLessonDrive
-                  : undefined,
-            };
-          }),
-        };
-      }),
-    );
-
-    setEditingLessonId(null);
-  };
-
-  const deleteLesson = (moduleId: string, lessonId: string) => {
-    if (confirm("Sei sicuro di voler rimuovere questa lezione?")) {
-      setModules(
-        modules.map((m) => {
-          if (m.id !== moduleId) return m;
-          return { ...m, lessons: m.lessons.filter((l) => l.id !== lessonId) };
-        }),
-      );
-    }
-  };
-
-  /* ============================================================================
-   * SALVATAGGIO FINALE
-   * ========================================================================== */
+  // Salvataggio Finale (CREATE o UPDATE)
   const handleSaveCourse = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !slug) return;
@@ -247,7 +156,7 @@ const openEditModal = (course: Course) => {
       : [];
 
     const finalCourse: Course = {
-      id: editingCourse ? editingCourse.id : Date.now(),
+      id: editingCourse ? editingCourse.id : Date.now(), // Mantiene l'ID se modifica
       title,
       slug,
       description,
@@ -258,7 +167,7 @@ const openEditModal = (course: Course) => {
       coverImage,
       published: true,
       allowedClasses,
-      modules,
+      modules, // Include l'intera struttura di video e documenti inseriti!
     };
 
     saveCmsCourse(finalCourse);
@@ -288,8 +197,8 @@ const openEditModal = (course: Course) => {
               Pannello Amministrazione (CRUD)
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              Gestisci i corsi, modifica la struttura delle lezioni ed esporta i
-              dati completi.
+              Gestisci i corsi, esporta il codice completo e assegna contenuti
+              multimediali.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -309,7 +218,7 @@ const openEditModal = (course: Course) => {
           </div>
         </div>
 
-        {/* Tabella Principale dei Corsi */}
+        {/* Tabella con azioni di Modifica ed Eliminazione */}
         <div className="mt-8 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
             <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500 tracking-wider">
@@ -322,11 +231,13 @@ const openEditModal = (course: Course) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white text-gray-700">
+              {/* Tabella Corsi - Riga del Logo aggiornata */}
               {courses.map((course) => (
                 <tr
                   key={course.id}
                   className="hover:bg-gray-50 transition-colors"
                 >
+                  {/* 🎯 NUOVA LOGICA: Gestione intelligente del logo anche nell'Admin */}
                   <td className="px-6 py-4 w-16">
                     <div className="h-10 w-10 overflow-hidden rounded-md border bg-white flex items-center justify-center text-2xl shadow-sm">
                       {course.coverImage ? (
@@ -338,13 +249,16 @@ const openEditModal = (course: Course) => {
                             className="h-full w-full object-contain"
                           />
                         ) : (
+                          /* Se è un'emoji */
                           <span>{course.coverImage}</span>
                         )
                       ) : (
+                        /* Fallback */
                         <span>📚</span>
                       )}
                     </div>
                   </td>
+
                   <td className="px-6 py-4">
                     <div className="font-semibold text-gray-900">
                       {course.title}
@@ -353,6 +267,8 @@ const openEditModal = (course: Course) => {
                       /courses/{course.slug}
                     </div>
                   </td>
+
+                  {/* ... il resto dei campi <td> della tabella rimane invariato ... */}
                   <td className="px-6 py-4">
                     {course.allowedClasses?.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
@@ -402,7 +318,7 @@ const openEditModal = (course: Course) => {
           </table>
         </div>
 
-        {/* Form Modale Unico di Configurazione */}
+        {/* Dialog Unico per Creazione e Modifica */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -492,16 +408,16 @@ const openEditModal = (course: Course) => {
                 />
               </div>
 
-              {/* SECTION: COSTRUZIONE AVANZATA STRUTTURA ALBERO COMPONENTI */}
+              {/* 🎯 SEZIONE COSTRUZIONE CONTENUTI (VIDEO & DOCUMENTI) */}
               <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4">
                 <h3 className="font-bold text-gray-900 border-b pb-2">
                   📚 Struttura Moduli e Lezioni
                 </h3>
 
-                {/* Nuovo Modulo Input */}
+                {/* Aggiungi Modulo */}
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Nome nuovo modulo (es: Modulo 1: Fondamenti)"
+                    placeholder="Nome nuovo modulo (es: Modulo 1: Basi)"
                     value={newModuleTitle}
                     onChange={(e) => setNewModuleTitle(e.target.value)}
                   />
@@ -510,203 +426,39 @@ const openEditModal = (course: Course) => {
                   </Button>
                 </div>
 
-                {/* Lista dei Moduli */}
-                <div className="space-y-4 pt-2">
+                {/* Elenco dei moduli correnti con form inserimento lezioni */}
+                <div className="space-y-3 pt-2">
                   {modules.map((mod) => (
                     <div
                       key={mod.id}
-                      className="bg-white p-4 rounded-md border border-gray-200 shadow-sm space-y-3"
+                      className="bg-white p-3 rounded-md border border-gray-200 shadow-sm"
                     >
-                      {/* INTESTAZIONE MODULO CON EDIT IN LINEA */}
-                      <div className="flex items-center justify-between border-b pb-1.5 bg-gray-50/50 -m-4 mb-2 p-3 rounded-t-md">
-                        {editingModuleId === mod.id ? (
-                          <div className="flex items-center gap-2 w-full max-w-md">
-                            <Input
-                              size={30}
-                              className="h-7 text-xs font-semibold"
-                              value={editingModuleTitle}
-                              onChange={(e) =>
-                                setEditingModuleTitle(e.target.value)
-                              }
-                            />
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="h-7 text-[11px] bg-green-600 hover:bg-green-700 text-white"
-                              onClick={() => saveEditedModule(mod.id)}
-                            >
-                              Salva
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-[11px]"
-                              onClick={() => setEditingModuleId(null)}
-                            >
-                              Annulla
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-sm text-gray-800">
-                              📂 {mod.title}
-                            </h4>
-                            <button
-                              type="button"
-                              className="text-xs text-blue-500 hover:underline"
-                              onClick={() => startEditModule(mod)}
-                            >
-                              ✏️ Rinomina
-                            </button>
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          className="text-xs text-red-500 hover:underline font-medium"
-                          onClick={() => deleteModule(mod.id)}
-                        >
-                          🗑️ Rimuovi Modulo
-                        </button>
-                      </div>
+                      <h4 className="font-semibold text-sm text-gray-800">
+                        📂 {mod.title}
+                      </h4>
 
-                      {/* LISTA DELLE LEZIONI DEL MODULO */}
-                      <div className="space-y-2 pl-2">
+                      {/* Elenco lezioni già inserite nel modulo */}
+                      <ul className="text-xs text-gray-500 my-2 space-y-1 ml-4 list-disc">
                         {mod.lessons.map((l) => (
-                          <div
-                            key={l.id}
-                            className="p-2 border rounded-md bg-gray-50/50 flex flex-col gap-2"
-                          >
-                            {editingLessonId === l.id ? (
-                              /* MODALITÀ MODIFICA AVANZATA DELLA LEZIONE (RISOLVE IL PROBLEMA 1) */
-                              <div className="space-y-2 p-1 text-xs">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="space-y-0.5">
-                                    <Label className="text-[10px]">
-                                      Titolo Lezione
-                                    </Label>
-                                    <Input
-                                      className="h-7 text-xs"
-                                      value={editingLessonTitle}
-                                      onChange={(e) =>
-                                        setEditingLessonTitle(e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <Label className="text-[10px]">
-                                      Tipo Risorsa
-                                    </Label>
-                                    <select
-                                      className="w-full h-7 rounded-md border text-xs px-2 bg-white"
-                                      value={editingLessonType}
-                                      onChange={(e) =>
-                                        setEditingLessonType(
-                                          e.target.value as any,
-                                        )
-                                      }
-                                    >
-                                      <option value="video">
-                                        📺 Video YouTube
-                                      </option>
-                                      <option value="document">
-                                        📄 Google Drive
-                                      </option>
-                                    </select>
-                                  </div>
-                                </div>
-                                <div className="space-y-0.5">
-                                  <Label className="text-[10px]">
-                                    URL di Configurazione
-                                  </Label>
-                                  {editingLessonType === "video" ? (
-                                    <Input
-                                      className="h-7 text-xs"
-                                      value={editingLessonYt}
-                                      onChange={(e) =>
-                                        setEditingLessonYt(e.target.value)
-                                      }
-                                      placeholder="Incolla URL YouTube"
-                                    />
-                                  ) : (
-                                    <Input
-                                      className="h-7 text-xs"
-                                      value={editingLessonDrive}
-                                      onChange={(e) =>
-                                        setEditingLessonDrive(e.target.value)
-                                      }
-                                      placeholder="Incolla URL Google Docs/Drive"
-                                    />
-                                  )}
-                                </div>
-                                <div className="flex gap-2 pt-1 justify-end">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    className="h-6 text-[10px] bg-green-600 hover:bg-green-700 text-white"
-                                    onClick={() =>
-                                      saveEditedLesson(mod.id, l.id)
-                                    }
-                                  >
-                                    Aggiorna contenuto
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-6 text-[10px]"
-                                    onClick={() => setEditingLessonId(null)}
-                                  >
-                                    Annulla
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              /* VISUALIZZAZIONE DELLA LEZIONE CON PULSANTI DI CONTROLLO */
-                              <div className="flex items-center justify-between text-xs">
-                                <div className="flex items-center gap-2">
-                                  <span>
-                                    {l.contentType === "video" ? "📺" : "📄"}
-                                  </span>
-                                  <span className="font-semibold text-gray-700">
-                                    {l.title}
-                                  </span>
-                                  <span className="text-[10px] text-gray-400 italic">
-                                    (
-                                    {l.contentType === "video"
-                                      ? "YouTube"
-                                      : "Drive"}
-                                    )
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    type="button"
-                                    className="text-blue-500 hover:underline"
-                                    onClick={() => startEditLesson(l)}
-                                  >
-                                    ✏️ Modifica
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="text-red-500 hover:underline"
-                                    onClick={() => deleteLesson(mod.id, l.id)}
-                                  >
-                                    🗑️ Rimuovi
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          <li key={l.id}>
+                            <span className="font-medium text-gray-700">
+                              {l.title}
+                            </span>{" "}
+                            (
+                            {l.contentType === "video"
+                              ? "📺 Video YouTube"
+                              : "📄 Google Drive Document"}
+                            )
+                          </li>
                         ))}
-                      </div>
+                      </ul>
 
-                      {/* FORM DI AGGIUNTA RAPIDA NUOVA LEZIONE */}
+                      {/* Mini-Form per aggiungere Lezione al Modulo specifico */}
                       <div className="mt-3 p-2 bg-gray-50 rounded border space-y-2 text-xs">
                         <div className="grid grid-cols-2 gap-2">
                           <Input
                             className="h-8 text-xs"
-                            placeholder="Titolo Nuova Lezione"
+                            placeholder="Titolo Lezione"
                             value={newLessonTitle}
                             onChange={(e) => setNewLessonTitle(e.target.value)}
                           />
@@ -717,11 +469,9 @@ const openEditModal = (course: Course) => {
                               setNewLessonType(e.target.value as any)
                             }
                           >
-                            <option value="video">
-                              📺 Aggiungi Video (YouTube)
-                            </option>
+                            <option value="video">📺 Video (YouTube)</option>
                             <option value="document">
-                              📄 Aggiungi Documento (Google Drive)
+                              📄 Documento (Google Drive)
                             </option>
                           </select>
                         </div>
@@ -735,7 +485,7 @@ const openEditModal = (course: Course) => {
                         ) : (
                           <Input
                             className="h-8 text-xs"
-                            placeholder="Incolla URL Condivisione Documento o PDF Drive"
+                            placeholder="Incolla URL Condivisione Documento Google Drive"
                             value={newLessonDrive}
                             onChange={(e) => setNewLessonDrive(e.target.value)}
                           />
@@ -746,7 +496,7 @@ const openEditModal = (course: Course) => {
                           onClick={() => addLessonToModule(mod.id)}
                           className="w-full text-[11px] h-7 bg-gray-800 text-white"
                         >
-                          + Salva e collega risorsa a questo modulo
+                          + Collega Risorsa a questo Modulo
                         </Button>
                       </div>
                     </div>
