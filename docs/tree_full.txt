@@ -1,0 +1,127 @@
+       
++---app
+�   �   favicon.ico
+�   �   globals.css
+�   �   layout.tsx
+�   �   page.tsx
+�   �   
+�   +---admin
+�   �       layout.tsx
+�   �       page.tsx
+�   �       
+�   +---contacts
+�   �       actions.ts
+�   �       page.tsx
+�   �       
+�   +---courses
+�   �   �   page.tsx
+�   �   �   
+�   �   +---[slug]
+�   �       �   page.tsx
+�   �       �   
+�   �       +---modules
+�   �           +---[moduleId]
+�   �               +---lessons
+�   �                   +---[lessonId]
+�   �                           page.tsx
+�   �                           
+�   +---login
+�   �       page.tsx
+�   �       
+�   +---test
+�           page.tsx
+�           
++---components
+�   +---ui
+�           button.tsx
+�           card.tsx
+�           dialog.tsx
+�           dropdown-menu.tsx
+�           input.tsx
+�           label.tsx
+�           tabs.tsx
+�           textarea.tsx
+�           
++---docs
+�       HANDOVER.md
+�       
++---features
+�   +---auth
+�   �   +---components
+�   �   �       LoginDialog.tsx
+�   �   �       ProtectedRoute.tsx
+�   �   �       
+�   �   +---context
+�   �   �       AuthContext.tsx
+�   �   �       
+�   �   +---data
+�   �   �       users.ts
+�   �   �       
+�   �   +---services
+�   �           authService.ts
+�   �           
+�   +---courses
+�   �   �   index.ts
+�   �   �   
+�   �   +---components
+�   �   �   �   CategoryFilter.tsx
+�   �   �   �   CourseCard.tsx
+�   �   �   �   CourseList.tsx
+�   �   �   �   CourseSearch.tsx
+�   �   �   �   CoursesHeader.tsx
+�   �   �   �   
+�   �   �   +---lesson
+�   �   �           LessonRenderer.tsx
+�   �   �           
+�   �   +---data
+�   �   �       categories.ts
+�   �   �       courses.ts
+�   �   �       
+�   �   +---hooks
+�   �   �       useCourses.ts
+�   �   �       
+�   �   +---services
+�   �   �       courseService.ts
+�   �   �       
+�   �   +---types
+�   �   �       course.ts
+�   �   �       lessonContent.ts
+�   �   �       
+�   �   +---utils
+�   +---home
+�       +---components
+�               CoursePreview.tsx
+�               Footer.tsx
+�               Hero.tsx
+�               Navbar.tsx
+�               Navbar.tsx_static
+�               
++---lib
+�       utils.ts
+�                
++---public
+�   �   file.svg
+�   �   gcprof-ai-academy_logo_01.png
+�   �   gcprof-ai-academy_logo_small.png
+�   �   globe.svg
+�   �   next.svg
+�   �   vercel.svg
+�   �   window.svg
+�   �   
+�   +---courses
+�           gcprof-ai-academy_logo_info_01.png
+�           gcprof-ai-academy_logo_info_02.png
+�           
++---shared
+    +---config
+    �       navigation.ts
+    �       
+    +---layout
+    �       PublicLayout.tsx
+    �       
+    +---ui
+            Badge.tsx
+            Card.tsx
+            PageContainer.tsx
+            SectionTitle.tsx
+            
