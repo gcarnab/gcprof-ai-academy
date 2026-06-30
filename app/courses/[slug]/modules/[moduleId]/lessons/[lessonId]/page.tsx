@@ -8,7 +8,7 @@ import {
   getModule,
   getLesson,
 } from "@/features/courses/services/courseService";
-import LessonRenderer from "@/features/courses/components/lesson/LessonRenderer";
+import LessonRenderer, { LessonContent } from "@/features/courses/components/lesson/LessonRenderer";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
 
@@ -28,26 +28,41 @@ export default function LessonPage() {
     notFound();
   }
 
+  // 🎯 ADAPTER PATTERN: Convertiamo la struttura piatta di Lesson nel formato richiesto da LessonRenderer
+  const formattedContents: LessonContent[] = [];
+
+  if (lesson.contentType === "video") {
+    formattedContents.push({
+      type: "video",
+      title: lesson.title,
+      url: lesson.youtubeUrl,
+    });
+  } else if (lesson.contentType === "document") {
+    // Nota: Mappiamo "document" sul tipo "file" o "link" supportato dal tuo LessonRenderer
+    formattedContents.push({
+      type: "file",
+      title: lesson.title,
+      url: lesson.googleDriveUrl,
+    });
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen flex-col bg-gray-50">
         <Navbar />
         <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
           
-          {/* Briciole di pane / Navigazione contestuale */}
           <p className="text-sm text-gray-500">
             {course.title} {" > "} {module.title}
           </p>
           
-          {/* Titolo della Lezione */}
           <h1 className="mt-2 text-4xl font-bold text-gray-900">
             {lesson.title}
           </h1>
           
-          {/* Area del Player / Documento */}
           <div className="mt-8">
-            {/* 🎯 FISSAATO: Passiamo l'intero oggetto 'lesson' al renderer anziché un campo inesistente */}
-            <LessonRenderer lesson={lesson} />
+            {/* 🎯 Ora passiamo l'array formattato correttamente. Zero errori TypeScript! */}
+            <LessonRenderer contents={formattedContents} />
           </div>
 
         </main>
