@@ -55,7 +55,7 @@ export default function Hero() {
           </Link>
 
           <Link
-            href="/about"
+            href="/contacts"
             className="rounded-lg border border-gray-300 px-6 py-3 font-semibold text-gray-800 transition-colors hover:bg-gray-100"
           >
             Scopri di più

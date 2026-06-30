@@ -1,38 +1,36 @@
-# GCPROF-AI-ACADEMY
+# 🎓 GCProf AI Academy
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+GCProf AI Academy è una piattaforma LMS (Learning Management System) e CMS leggera, moderna e performante, progettata per la gestione e la fruizione di corsi didattici del Prof. Giuseppe Carnabuci. 
 
-## Getting Started
+Sviluppata con l'architettura moderna di **Next.js**, la piattaforma offre un'esperienza fluida e sicura sia per gli studenti che per l'amministratore.
 
-First, run the development server:
+🌐 **Sito Live:** [https://gcprof-ai-academy.vercel.app/](https://gcprof-ai-academy.vercel.app/)
 
+---
+
+## 🚀 Funzionalità Principali
+
+- **👥 Autenticazione con Ruoli:** Gestione globale dello stato utente (`Student` e `Admin`) tramite React Context, protetta da route guard per i contenuti privati.
+- **📚 Gestione Corsi Integrata:** Un'area Admin dedicata consente di modificare corsi, moduli e lezioni in tempo reale con salvataggio automatico e persistenza selettiva nel `localStorage`.
+- **🎬 Engine di Rendering Lezioni (`LessonRenderer`):** Struttura modulare ed estensibile capace di adattare e renderizzare dinamicamente video di YouTube e documenti multimediali da Google Drive.
+- **📫 Modulo Contatti con Server Actions:** Un'interfaccia contatti accattivante e integrata con i principali canali social, che sfrutta le **Next.js Server Actions** e il servizio cloud **Resend** per l'invio sicuro di email verso la casella Gmail del docente.
+- **⚡ Zero Mismatch di Idratazione:** Struttura HTML semantica ottimizzata per eliminare i conflitti di rendering server/client tipici delle applicazioni SSR complesse.
+
+---
+
+## 🛠️ Stack Tecnologico
+
+- **Framework:** Next.js 15+ (con supporto nativo a Turbopack)
+- **Linguaggio:** TypeScript (Tipizzazione forte e rigorosa per evitare errori a runtime)
+- **Stile & UI:** Tailwind CSS + Shadcn UI / Radix Primitives
+- **E-mail Service:** Resend API (SDK ufficiale per l'invio protetto lato server)
+- **Hosting & Deploy:** Vercel (CI/CD automatico ad ogni push)
+
+---
+
+## 💻 Installazione e Avvio Locale
+
+### 1. Clonare il repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+git clone [https://github.com/tuo-username/gcprof-ai-academy.git](https://github.com/tuo-username/gcprof-ai-academy.git)
+cd gcprof-ai-academy
