@@ -5,11 +5,11 @@ import bcrypt from "bcryptjs";
 export async function GET() {
   try {
     const repo = getUserRepository();
-    
+
     // Verifichiamo se l'admin esiste già per evitare duplicati
     const adminEmail = "admin@gcprofaiacademy.vercel.app";
     const existing = await repo.findByEmail(adminEmail);
-    
+
     if (existing) {
       return NextResponse.json({ message: "L'utente Admin esiste già!" });
     }
@@ -22,20 +22,24 @@ export async function GET() {
       email: adminEmail,
       passwordHash,
       role: "admin",
-      displayName: "Prof. Giuseppe Carnabuci",
-      classes: [], // Gli admin non hanno classi assegnate
+      displayName: "Admin", // o il nome che preferisci
+      classes: [],
+      status: "active", // 🎯 FIX: Aggiunta la proprietà obbligatoria richiesta dal tipo StudentUser
     });
-
+    
     return NextResponse.json({
       success: true,
       message: "Primo account inserito con successo su Supabase!",
       user: {
         email: admin.email,
         role: admin.role,
-        displayName: admin.displayName
-      }
+        displayName: admin.displayName,
+      },
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 },
+    );
   }
 }
