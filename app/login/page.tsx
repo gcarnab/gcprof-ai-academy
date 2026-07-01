@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/core/context/AuthContext";
 import { loginAction } from "@/features/auth/core/actions/loginAction";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -13,7 +19,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [isPending, startTransition] = useTransition();
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -33,7 +39,7 @@ export default function LoginPage() {
         if (result && result.success && result.user) {
           // Salva l'utente nel contesto globale V2
           login(result.user);
-          
+
           // Reindirizza l'utente in base al ruolo
           if (result.user.role === "admin") {
             router.push("/admin");
@@ -53,7 +59,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Accedi all'Academy</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            Accedi all'Academy
+          </CardTitle>
           <CardDescription className="text-center">
             Inserisci le tue credenziali per accedere ai corsi
           </CardDescription>
@@ -83,7 +91,7 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setEmail(e.target.value)} // Nota: assicurati sia e.target.value su password
+                onChange={(e) => setPassword(e.target.value)} 
                 required
                 disabled={isPending}
               />
