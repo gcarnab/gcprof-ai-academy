@@ -8,6 +8,7 @@ import LoginDialog from "@/features/auth/components/LoginDialog";
 import { useAuth } from "@/features/auth/core/context/AuthContext";
 
 export default function Navbar() {
+  // Sfruttiamo l'autenticazione centralizzata v2
   const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
 
@@ -48,18 +49,13 @@ export default function Navbar() {
         {/* MENU PRINCIPALE */}
         <nav aria-label="Navigazione principale">
           <ul className="flex items-center gap-8 text-sm">
-            {/* Nascondiamo i corsi del menu principale se lo studente è ancora pending */}
-            {navigation.map((item) => {
-              if (item.href.includes("courses") && user?.status === "pending") return null;
-              return (
-                <li key={item.href}>
-                  <Link href={item.href} className={linkClass(item.href)}>
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-            
+            {navigation.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className={linkClass(item.href)}>
+                  {item.label}
+                </Link>
+              </li>
+            ))}
             {/* Link dinamico al CMS Visibile solo agli admin */}
             {user?.role === "admin" && (
               <li>
@@ -79,24 +75,15 @@ export default function Navbar() {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm font-semibold text-gray-900">
+                  {/* 🎯 FIX v2: Cambiato da user.username a user.displayName */}
                   {user.displayName}
                 </p>
-                <div className="text-xs text-gray-500 uppercase flex flex-col items-end gap-0.5">
-                  {user.role === "admin" ? (
-                    <span>👨‍🏫 Admin</span>
-                  ) : (
-                    <>
-                      {/* 🎯 Gestione visiva dello stato Pending / Active */}
-                      {user.status === "pending" ? (
-                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                          ⏳ In attesa di attivazione
-                        </span>
-                      ) : (
-                        <span>🎓 Classi: {user.classes?.join(", ") || "Nessuna"}</span>
-                      )}
-                    </>
-                  )}
-                </div>
+                <p className="text-xs text-gray-500 uppercase">
+                  {user.role === "admin"
+                    ? "👨‍🏫 Admin"
+                    : `🎓 Classi: ${user.classes?.join(", ")}`} 
+                    {/* 🎯 FIX v2: Cambiato da user.class a user.classes.join() */}
+                </p>
               </div>
               <button
                 onClick={logout}
@@ -106,17 +93,7 @@ export default function Navbar() {
               </button>
             </div>
           ) : (
-            // 🎯 Utente non loggato: Bottone di registrazione e Login dialog affiancati
-            <div className="flex items-center gap-3">
-              <Link 
-                href="/register" 
-                className={`text-xs font-medium ${linkClass("/register")}`}
-              >
-                Registrati
-              </Link>
-              <div className="h-4 w-[1px] bg-gray-200" /> {/* Separatore visivo */}
-              <LoginDialog />
-            </div>
+            <LoginDialog />
           )}
         </div>
       </div>

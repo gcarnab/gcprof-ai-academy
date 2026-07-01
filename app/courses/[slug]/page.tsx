@@ -7,9 +7,9 @@ import {
   getCourseBySlug,
   getYouTubeEmbedUrl,
   getGoogleDriveEmbedUrl,
+  hasCourseAccess,
 } from "@/features/courses/services/courseService";
-import type { Lesson } from "@/features/courses/types/course";
-//import { useAuth } from "@/features/auth/context/AuthContext";
+import type { Lesson, Module } from "@/features/courses/types/course";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
@@ -21,35 +21,29 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const slug = params?.slug as string;
 
-  // Recupera i dati del corso tramite lo slug
+  // 1. Recuperiamo il corso (restituisce l'oggetto se lo slug esiste a sistema)
   const course = getCourseBySlug(slug, user);
-
-  // Stato per gestire la lezione correntemente selezionata nel player
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
 
-  // Se il corso non esiste, mostra la pagina 404 nativa
+  // 2. SOLO SE il corso non esiste affatto nel database/file emaniamo il 404 reale
   if (!course) {
     notFound();
   }
 
-  // Controllo autorizzazione della classe dell'utente loggato
-  const userClasses = user?.classes || [];
-  const isClassAuthorized =
-    !course.allowedClasses ||
-    course.allowedClasses.length === 0 ||
-    user?.role === "admin" ||
-    course.allowedClasses.some((ac) => userClasses.includes(ac));
+  // 3. Calcoliamo le autorizzazioni di accesso
+  const isClassAuthorized = hasCourseAccess(course, user);
+  const isPendingUser =
+    user && user.status === "pending" && user.role !== "admin";
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
       <Navbar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-12">
-        {/* INTESTAZIONE DEL CORSO CON GESTIONE LOGO MULTI-FORMATO */}
+        {/* INTESTAZIONE DEL CORSO */}
         <div className="flex flex-col gap-6 md:flex-row md:items-center border-b border-gray-200 pb-8">
           <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white p-2 shadow-sm flex items-center justify-center text-4xl">
             {course.coverImage ? (
-              /* 🎯 MODIFICA: Riconosce sia i link esterni (http) che i percorsi locali (/) */
               course.coverImage.startsWith("http") ||
               course.coverImage.startsWith("/") ? (
                 <img
@@ -59,7 +53,6 @@ export default function CourseDetailPage() {
                   loading="lazy"
                 />
               ) : (
-                /* Gestisce le Emoji */
                 <span>{course.coverImage}</span>
               )
             ) : (
@@ -77,8 +70,8 @@ export default function CourseDetailPage() {
           </div>
         </div>
 
-        {/* PLAYER DI FRUIZIONE MULTIMEDIALE INTEGRATO (EMBED) */}
-        {activeLesson && isClassAuthorized && user && (
+        {/* PLAYER DI FRUIZIONE MULTIMEDIALE INTEGRATO */}
+        {activeLesson && isClassAuthorized && user && !isPendingUser && (
           <div className="mt-8 rounded-xl border bg-white p-4 shadow-md space-y-4 animate-in fade-in duration-200">
             <div className="flex justify-between items-center border-b pb-2">
               <h3 className="text-lg font-bold text-gray-800">
@@ -94,7 +87,6 @@ export default function CourseDetailPage() {
               </Button>
             </div>
 
-            {/* Renderizzatore Video YouTube */}
             {activeLesson.contentType === "video" &&
               activeLesson.youtubeUrl && (
                 <div className="aspect-video w-full overflow-hidden rounded-lg bg-black shadow-inner">
@@ -108,7 +100,6 @@ export default function CourseDetailPage() {
                 </div>
               )}
 
-            {/* Renderizzatore Documenti Google Drive / Docs / Slide / PDF */}
             {activeLesson.contentType === "document" &&
               activeLesson.googleDriveUrl && (
                 <div className="w-full h-[650px] border overflow-hidden rounded-lg bg-gray-100 shadow-inner relative">
@@ -128,7 +119,6 @@ export default function CourseDetailPage() {
 
         {/* CORPO INFERIORE DELLA PAGINA */}
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* COLONNA SINISTRA: ELENCO MODULI E STRUTTURA DEL CORSO */}
           <div className="lg:col-span-2 space-y-6">
             <h2 className="text-xl font-bold text-gray-900">
               Moduli del corso
@@ -149,8 +139,26 @@ export default function CourseDetailPage() {
                   <LoginDialog />
                 </div>
               </div>
+            ) : isPendingUser ? (
+              /* CASO 2: UTENTE LOGGATO MA IN ATTESA DI APPROVAZIONE (PENDING) */
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center shadow-sm">
+                <span className="text-3xl">⏳</span>
+                <h3 className="text-lg font-bold text-amber-800 mt-2">
+                  Account in fase di verifica
+                </h3>
+                <p className="text-sm text-amber-700 mt-2">
+                  Ti sei registrato correttamente impostando l'accesso per
+                  questo tipo di corso. Il tuo account è attualmente{" "}
+                  <strong>in attesa di attivazione</strong> da parte dello
+                  staff.
+                </p>
+                <p className="text-xs text-amber-600 mt-3 italic">
+                  Non appena verrai abilitato, i moduli video e i materiali
+                  didattici compariranno automaticamente qui sotto.
+                </p>
+              </div>
             ) : !isClassAuthorized ? (
-              /* CASO 2: UTENTE LOGGATO MA CLASSE NON ABILITATA */
+              /* CASO 3: UTENTE LOGGATO MA CLASSE NON ABILITATA (ES. CORSO DI 2° SU STUDENTE DI 1°) */
               <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center shadow-sm">
                 <span className="text-3xl">🚫</span>
                 <h3 className="text-lg font-bold text-red-800 mt-2">
@@ -159,9 +167,7 @@ export default function CourseDetailPage() {
                 <p className="text-sm text-red-700 mt-1">
                   Il tuo utente (Classe:{" "}
                   <span className="font-bold">
-                    {user?.classes && user.classes.length > 0
-                      ? user.classes.join(", ")
-                      : "Nessuna classe"}
+                    {user.classes?.join(", ") || "Nessuna"}
                   </span>
                   ) non ha i permessi per accedere a questo materiale.
                 </p>
@@ -171,10 +177,10 @@ export default function CourseDetailPage() {
                 </p>
               </div>
             ) : (
-              /* CASO 3: ACCESSO ABILITATO -> MOSTRA I CONTENUTI */
+              /* CASO 4: ACCESSO ABILITATO -> MOSTRA I CONTENUTI */
               <div className="space-y-4">
                 {course.modules && course.modules.length > 0 ? (
-                  course.modules.map((module) => (
+                  course.modules.map((module: Module) => (
                     <div
                       key={module.id}
                       className="rounded-lg border bg-white p-4 shadow-sm"
@@ -184,7 +190,7 @@ export default function CourseDetailPage() {
                       </h3>
                       <ul className="mt-3 space-y-2 pl-2">
                         {module.lessons && module.lessons.length > 0 ? (
-                          module.lessons.map((lesson) => (
+                          module.lessons.map((lesson: Lesson) => (
                             <li
                               key={lesson.id}
                               className={`flex justify-between items-center text-sm p-2 rounded border border-transparent transition-colors ${
@@ -226,7 +232,7 @@ export default function CourseDetailPage() {
             )}
           </div>
 
-          {/* COLONNA DESTRA: BOX METADATI DEL CORSO */}
+          {/* COLONNA INFO LATERALE */}
           <div className="space-y-4 rounded-xl border bg-white p-5 shadow-sm h-fit">
             <h3 className="font-bold text-gray-900 border-b pb-2">
               Informazioni Corso

@@ -1,30 +1,9 @@
-/*
-export interface StudentUser {
-  id: string;
-  firstName: string;
-  lastName: string;
-  displayName: string;
-  email: string;
-  passwordHash: string; // Esclusivo del backend/database
-  role: "admin" | "student";
-  status: "pending" | "active" | "blocked";
-  emailVerified: boolean;
-  verificationToken?: string;
-  resetPasswordToken?: string;
-  avatar?: string;
-  createdAt: string;
-  updatedAt: string;
-  lastLogin?: string;
-  allowedClasses: string[];
-  enrolledCourses: string[];
-}
-*/
 export interface StudentUser {
   id: string;
   email: string;
   displayName: string;
   role: "admin" | "student";
-  status: "active" | "blocked";
+  status: "active" | "blocked" | "pending"; // 🎯 AGGIORNATO: Aggiunto 'pending' per la gestione iscrizioni
   createdAt: string;
   updatedAt: string;
   passwordHash: string;

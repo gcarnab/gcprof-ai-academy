@@ -6,9 +6,11 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 export interface AuthUser {
   id: string;
   email: string;
-  displayName?: string;
+  displayName: string;
   role: "admin" | "student";
+  status: "active" | "blocked" | "pending"; // 🎯 Aggiungi questa riga
   classes: string[];
+  // ... altri campi
 }
 
 // 🎯 AGGIORNAMENTO CONTRATTO: Definiamo l'interfaccia esatta esposta dall'hook

@@ -12,7 +12,7 @@ export const courses: Course[] = [
     estimatedHours: 50,
     coverImage: "/courses/gcprof-ai-academy_logo_info_01.png",
     published: true,
-    allowedClasses: ["1A", "1B", "1C"],
+    allowedClasses: ["Informatica 1°"],
     modules: [
       {
         id: "mod-11",
@@ -83,83 +83,81 @@ export const courses: Course[] = [
     ],
   },
   {
-    "id": 2,
-    "title": "Informatica 2°",
-    "slug": "info2",
-    "description": "Corso per gli studenti della classe seconda",
-    "category": "Informatica",
-    "difficulty": "Intermedio",
-    "teacher": "Prof. G. Carnabuci",
-    "estimatedHours": 50,
-    "coverImage": "/courses/gcprof-ai-academy_logo_info_02.png",
-    "published": true,
-    "allowedClasses": [
-      "2A",
-      "2B",
-      "2C"
+    id: 2,
+    title: "Informatica 2°",
+    slug: "info2",
+    description: "Corso per gli studenti della classe seconda",
+    category: "Informatica",
+    difficulty: "Intermedio",
+    teacher: "Prof. G. Carnabuci",
+    estimatedHours: 50,
+    coverImage: "/courses/gcprof-ai-academy_logo_info_02.png",
+    published: true,
+    allowedClasses: ["Informatica 2°"],
+    modules: [
+      {
+        id: "mod-21",
+        title: "Guida didattica",
+        lessons: [
+          {
+            id: "les-211",
+            title: "Guida didattica",
+            duration: 15,
+            contentType: "document",
+            googleDriveUrl:
+              "https://docs.google.com/document/d/1Usu1lT423ayJKMJBFBIPgi_6bO4TJC5S_Vc6ekd6Jqs/edit?usp=sharing",
+          },
+        ],
+      },
+      {
+        id: "mod-22",
+        title: "Problem Solving",
+        lessons: [
+          {
+            id: "les-222",
+            title: "INFO - PROBLEM SOLVING - (Prof. Giuseppe Carnabuci)",
+            duration: 15,
+            contentType: "document",
+            googleDriveUrl:
+              "https://docs.google.com/document/d/1QNM2Uok0JUubUTItiGT7Tjcj67iHJV3o8FJ9_v2mxEg/edit?usp=sharing",
+          },
+        ],
+      },
+      {
+        id: "mod-23",
+        title: "Video",
+        lessons: [
+          {
+            id: "les-231",
+            title: "Python - 01. INTRO E INSTALLAZIONE",
+            duration: 15,
+            contentType: "video",
+            youtubeUrl: "https://youtu.be/J3M4ZAVD9y8?si=YF0KDkiN6U28_la2",
+          },
+          {
+            id: "les-232",
+            title: "Python - 02. VALORI E OPERATORI",
+            duration: 15,
+            contentType: "video",
+            youtubeUrl: "https://youtu.be/HVvaiMVyAi0?si=FOeUGgXeN4cLwxt5",
+          },
+          {
+            id: "les-233",
+            title: "Python - 03. VARIABILI E STRINGHE",
+            duration: 15,
+            contentType: "video",
+            youtubeUrl: "https://youtu.be/eNZRzJQXZ0o?si=h4BmFHyTmGKzMtEa",
+          },
+          {
+            id: "les-234",
+            title: "Python - 04. CONVERSIONI DI TIPO, PRINT E INPUT",
+            duration: 15,
+            contentType: "video",
+            youtubeUrl: "https://youtu.be/aiElE8gxw-k?si=w20JK351xqc_tH__",
+          },
+        ],
+      },
     ],
-    "modules": [
-      {
-        "id": "mod-21",
-        "title": "Guida didattica",
-        "lessons": [
-          {
-            "id": "les-211",
-            "title": "Guida didattica",
-            "duration": 15,
-            "contentType": "document",
-            "googleDriveUrl": "https://docs.google.com/document/d/1Usu1lT423ayJKMJBFBIPgi_6bO4TJC5S_Vc6ekd6Jqs/edit?usp=sharing"
-          }
-        ]
-      },
-      {
-        "id": "mod-22",
-        "title": "Problem Solving",
-        "lessons": [
-          {
-            "id": "les-222",
-            "title": "INFO - PROBLEM SOLVING - (Prof. Giuseppe Carnabuci)",
-            "duration": 15,
-            "contentType": "document",
-            "googleDriveUrl": "https://docs.google.com/document/d/1QNM2Uok0JUubUTItiGT7Tjcj67iHJV3o8FJ9_v2mxEg/edit?usp=sharing"
-          }
-        ]
-      },
-      {
-        "id": "mod-23",
-        "title": "Video",
-        "lessons": [
-          {
-            "id": "les-231",
-            "title": "Python - 01. INTRO E INSTALLAZIONE",
-            "duration": 15,
-            "contentType": "video",
-            "youtubeUrl": "https://youtu.be/J3M4ZAVD9y8?si=YF0KDkiN6U28_la2"
-          },
-          {
-            "id": "les-232",
-            "title": "Python - 02. VALORI E OPERATORI",
-            "duration": 15,
-            "contentType": "video",
-            "youtubeUrl": "https://youtu.be/HVvaiMVyAi0?si=FOeUGgXeN4cLwxt5"
-          },
-          {
-            "id": "les-233",
-            "title": "Python - 03. VARIABILI E STRINGHE",
-            "duration": 15,
-            "contentType": "video",
-            "youtubeUrl": "https://youtu.be/eNZRzJQXZ0o?si=h4BmFHyTmGKzMtEa"
-          },
-          {
-            "id": "les-234",
-            "title": "Python - 04. CONVERSIONI DI TIPO, PRINT E INPUT",
-            "duration": 15,
-            "contentType": "video",
-            "youtubeUrl": "https://youtu.be/aiElE8gxw-k?si=w20JK351xqc_tH__"
-          }
-        ]
-      }
-    ]
   },
   {
     id: 3,
