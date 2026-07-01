@@ -9,8 +9,9 @@ import {
   getLesson,
 } from "@/features/courses/services/courseService";
 import LessonRenderer, { LessonContent } from "@/features/courses/components/lesson/LessonRenderer";
-import { useAuth } from "@/features/auth/context/AuthContext";
+//import { useAuth } from "@/features/auth/context/AuthContext";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
+import { useAuth } from "@/features/auth/core/context/AuthContext";
 
 export default function LessonPage() {
   const params = useParams();

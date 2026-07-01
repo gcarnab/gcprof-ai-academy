@@ -24,6 +24,7 @@
 
 import PageContainer from "@/shared/ui/PageContainer";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -32,8 +33,25 @@ export default function Footer() {
     <footer className="border-t border-gray-200 bg-white">
       {/* <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-6 py-8 text-sm text-gray-600 md:flex-row">*/}
       <PageContainer className="flex flex-col items-center justify-between gap-6 py-8 text-sm text-gray-600 md:flex-row">
-        {/* Logo */}
-        <div className="font-semibold text-gray-900">GCPROF AI Academy</div>
+        {/* LOGO */}
+        <Link href="/" className="group flex items-center gap-3 transition-all">
+          <Image
+            src="/gcprof-ai-academy_logo_small.png"
+            alt="Logo GCPROF AI Academy"
+            width={46}
+            height={46}
+            priority
+            className="transition-transform duration-300 group-hover:scale-105"
+          />
+          <div className="flex flex-col leading-none">
+            <span className="text-lg font-extrabold tracking-tight text-gray-900 group-hover:text-blue-600">
+              GCPROF
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-blue-600">
+              AI ACADEMY
+            </span>
+          </div>
+        </Link>
 
         {/* Menu Footer */}
         <nav>

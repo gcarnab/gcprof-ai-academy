@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { login } from "@/features/auth/services/authService";
-import { useAuth } from "@/features/auth/context/AuthContext";
+import { useAuth } from "@/features/auth/core/context/AuthContext";
+//import { useAuth } from "@/features/auth/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();

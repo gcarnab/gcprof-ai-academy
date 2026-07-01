@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navigation } from "@/shared/config/navigation";
 import LoginDialog from "@/features/auth/components/LoginDialog";
-import { useAuth } from "@/features/auth/context/AuthContext";
+import { useAuth } from "@/features/auth/core/context/AuthContext";
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  // Sfruttiamo l'autenticazione centralizzata v2
+  const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
 
   const isActive = (path: string): boolean => {
@@ -24,6 +25,7 @@ export default function Navbar() {
   return (
     <header className="border-b border-gray-200 bg-white shadow-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        
         {/* LOGO */}
         <Link href="/" className="group flex items-center gap-3 transition-all">
           <Image
@@ -67,16 +69,20 @@ export default function Navbar() {
 
         {/* AREA UTENTE DINAMICA */}
         <div className="flex items-center gap-4">
-          {user ? (
+          {isLoading ? (
+            <div className="text-xs text-gray-400 animate-pulse">Verifica sessione...</div>
+          ) : user ? (
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm font-semibold text-gray-900">
-                  {user.username}
+                  {/* 🎯 FIX v2: Cambiato da user.username a user.displayName */}
+                  {user.displayName}
                 </p>
                 <p className="text-xs text-gray-500 uppercase">
                   {user.role === "admin"
                     ? "👨‍🏫 Admin"
-                    : `🎓 Classe ${user.class}`}
+                    : `🎓 Classi: ${user.classes?.join(", ")}`} 
+                    {/* 🎯 FIX v2: Cambiato da user.class a user.classes.join() */}
                 </p>
               </div>
               <button

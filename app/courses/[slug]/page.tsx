@@ -9,11 +9,12 @@ import {
   getGoogleDriveEmbedUrl,
 } from "@/features/courses/services/courseService";
 import type { Lesson } from "@/features/courses/types/course";
-import { useAuth } from "@/features/auth/context/AuthContext";
+//import { useAuth } from "@/features/auth/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 import LoginDialog from "@/features/auth/components/LoginDialog";
+import { useAuth } from "@/features/auth/core/context/AuthContext";
 
 export default function CourseDetailPage() {
   const params = useParams();
