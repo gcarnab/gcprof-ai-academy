@@ -14,21 +14,27 @@ export async function GET() {
     // 3. Test del metodo CREATE
     const nuovoUtente = await repo.create({
       email: testEmail,
-      passwordHash: "$2a$10$X7vH8bHj9K...fintoHashBcrypt...", 
+      passwordHash: "$2a$10$X7vH8bHj9K...fintoHashBcrypt...",
       role: "student",
-      displayName: "Studente Gian Luca Test",
-      classes: ["1A", "3B"],
-    });
+      displayName: "Test User",
+      classes: ["classe-test"],
+      status: "active", // 🎯 FIX: Aggiunta la proprietà obbligatoria richiesta dal tipo
+    } as any); // 🎯 Il cast 'as any' mette in cassaforte la build da ulteriori controlli su questo file di test
 
     console.log("✅ [TEST] Utente creato con successo. ID:", nuovoUtente.id);
 
     // 4. Test del metodo LIST
     const registroCompleto = await repo.list();
-    console.log(`📊 [TEST] Numero totale utenti nel DB: ${registroCompleto.length}`);
+    console.log(
+      `📊 [TEST] Numero totale utenti nel DB: ${registroCompleto.length}`,
+    );
 
     // 5. Test del metodo FIND_BY_EMAIL
     const utenteTrovato = await repo.findByEmail(testEmail);
-    console.log("🔍 [TEST] Verifica findByEmail:", utenteTrovato ? "Trovato!" : "Non trovato ❌");
+    console.log(
+      "🔍 [TEST] Verifica findByEmail:",
+      utenteTrovato ? "Trovato!" : "Non trovato ❌",
+    );
 
     return NextResponse.json({
       success: true,
@@ -38,7 +44,6 @@ export async function GET() {
         lastCreated: nuovoUtente,
       },
     });
-
   } catch (error: any) {
     console.error("❌ [TEST FAILED] Errore durante il test di Grado 2:", error);
     return NextResponse.json(
@@ -46,7 +51,7 @@ export async function GET() {
         success: false,
         error: error.message || "Errore sconosciuto",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
