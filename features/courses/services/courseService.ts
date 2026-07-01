@@ -1,6 +1,6 @@
+import { AuthUser } from "@/features/auth/core/context/AuthContext";
 import { courses as staticCourses } from "../data/courses";
 import type { Course, Module, Lesson } from "../types/course";
-import type { SessionUser } from "../../auth/services/authService";
 
 /* ============================================================================
  * 1. PERSISTENZA IBRIDA & INIZIALIZZAZIONE
@@ -39,7 +39,7 @@ export function getMergedCourses(): Course[] {
  * ========================================================================== */
 export function hasCourseAccess(
   course: Course,
-  user: SessionUser | null,
+  user: AuthUser | null, // 🎯 FIX: Aggiornato da SessionUser a AuthUser
 ): boolean {
   if (!course.published) return user?.role === "admin";
 
@@ -49,7 +49,8 @@ export function hasCourseAccess(
   if (user.role === "admin") return true;
   if (!course.allowedClasses || course.allowedClasses.length === 0) return true;
 
-  const userClasses = user.class?.split(",").map((c) => c.trim()) || [];
+  // 🎯 FIX: Usiamo direttamente l'array 'classes' della V2 senza split
+  const userClasses = user.classes || [];
   return course.allowedClasses.some((allowedClass) =>
     userClasses.includes(allowedClass),
   );
@@ -59,17 +60,37 @@ export function hasCourseAccess(
  * 3. FUNZIONI DI LETTURA RIPRISTINATE (Risolve il Build Error)
  * ========================================================================== */
 
-// Recupera tutti i corsi per il Catalogo pubblico
-export function getAllCourses(user: SessionUser | null): Course[] {
-  return getMergedCourses().filter(
-    (course) => course.published || user?.role === "admin",
-  );
+/**
+ * 🎯 FIX: Recupera tutti i corsi filtrati in base ai permessi dell'utente loggato.
+ */
+export function getAllCourses(user: AuthUser | null): Course[] {
+  // Se non c'è un utente loggato, puoi decidere se mostrare solo i corsi pubblici o nessuno
+  if (!user) {
+    return staticCourses.filter(course => !course.allowedClasses || course.allowedClasses.length === 0);
+  }
+
+  // Se l'utente è un admin, ha accesso incondizionato a tutti i corsi
+  if (user.role === "admin") {
+    return staticCourses;
+  }
+
+  // Se è uno studente, filtriamo i corsi in base al nuovo array 'classes' della V2
+  const userClasses = user.classes || [];
+  
+  return staticCourses.filter((course) => {
+    // Se il corso non ha restrizioni, è accessibile a tutti
+    if (!course.allowedClasses || course.allowedClasses.length === 0) {
+      return true;
+    }
+    // Verifica se almeno una delle classi dell'utente è autorizzata per questo corso
+    return course.allowedClasses.some((allowedClass) => userClasses.includes(allowedClass));
+  });
 }
 
 // Recupera un singolo corso tramite lo Slug
 export function getCourseBySlug(
   slug: string,
-  user: SessionUser | null,
+  user: AuthUser | null,
 ): Course | undefined {
   return getMergedCourses().find((c) => c.slug === slug);
 }
@@ -78,7 +99,7 @@ export function getCourseBySlug(
 export function getModule(
   courseSlug: string,
   moduleId: string,
-  user: SessionUser | null,
+  user: AuthUser | null,
 ): Module | undefined {
   const course = getCourseBySlug(courseSlug, user);
   if (!course || !user) return undefined;
@@ -88,7 +109,8 @@ export function getModule(
     course.allowedClasses &&
     course.allowedClasses.length > 0
   ) {
-    const userClasses = user.class?.split(",").map((c) => c.trim()) || [];
+    // 🎯 FIX: Allineato all'array 'classes' nativo della V2
+    const userClasses = user.classes || [];
     const hasClass = course.allowedClasses.some((ac) =>
       userClasses.includes(ac),
     );
@@ -103,7 +125,7 @@ export function getLesson(
   courseSlug: string,
   moduleId: string,
   lessonId: string,
-  user: SessionUser | null,
+  user: AuthUser | null,
 ): Lesson | undefined {
   const module = getModule(courseSlug, moduleId, user);
   if (!module) return undefined;

@@ -33,7 +33,7 @@ export default function CourseDetailPage() {
   }
 
   // Controllo autorizzazione della classe dell'utente loggato
-  const userClasses = user?.class?.split(",").map((c) => c.trim()) || [];
+  const userClasses = user?.classes || [];
   const isClassAuthorized =
     !course.allowedClasses ||
     course.allowedClasses.length === 0 ||
@@ -158,8 +158,12 @@ export default function CourseDetailPage() {
                 </h3>
                 <p className="text-sm text-red-700 mt-1">
                   Il tuo utente (Classe:{" "}
-                  <span className="font-bold">{user.class}</span>) non ha i
-                  permessi per accedere a questo materiale.
+                  <span className="font-bold">
+                    {user?.classes && user.classes.length > 0
+                      ? user.classes.join(", ")
+                      : "Nessuna classe"}
+                  </span>
+                  ) non ha i permessi per accedere a questo materiale.
                 </p>
                 <p className="text-xs text-red-500 mt-2 font-medium">
                   Questo corso è riservato esclusivamente alle classi:{" "}
