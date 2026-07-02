@@ -25,6 +25,7 @@ Sviluppata con l'architettura moderna di **Next.js**, la piattaforma offre un'es
 - **Stile & UI:** Tailwind CSS + Shadcn UI / Radix Primitives
 - **E-mail Service:** Resend API (SDK ufficiale per l'invio protetto lato server)
 - **Hosting & Deploy:** Vercel (CI/CD automatico ad ogni push)
+- **Database** Supabase
 
 ---
 

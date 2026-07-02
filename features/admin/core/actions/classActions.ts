@@ -8,36 +8,27 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-/**
- * Crea una nuova classe accademica (coorte) nel database
- */
-export async function createAcademyClass(name: string, description: string) {
-  if (!name.trim()) {
-    return { success: false, error: "Il nome della classe è obbligatorio." };
-  }
+export async function createAcademyClass(name: string, description?: string, slug?: string) {
+  // Genera lo slug se non viene passato dal frontend (es. "Informatica 1°" -> "informatica-1")
+  const classSlug = slug || name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-");
 
-  // Generazione dello slug (es: "Informatica 1°" -> "informatica-1")
-  const slug = name
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("academy_classes")
-    .insert({
-      name,
-      slug,
-      description,
-      created_at: new Date().toISOString()
-    });
+    .insert([
+      {
+        name: name.trim(),
+        slug: classSlug,
+        description: description?.trim() || null,
+        created_at: new Date().toISOString()
+      }
+    ])
+    .select()
+    .single();
 
   if (error) {
-    return { success: false, error: `Errore durante la creazione: ${error.message}` };
+    console.error("❌ Errore creazione classe:", error.message);
+    return { success: false, error: error.message };
   }
 
-  // Rinfresca la dashboard per mostrare la nuova classe nei form
-  revalidatePath("/admin/dashboard");
-  return { success: true };
+  return { success: true, data };
 }

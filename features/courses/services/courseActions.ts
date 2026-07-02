@@ -9,11 +9,23 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+/**
+ * Helper interno per generare gli slug in modo coerente e pulito
+ */
+function generateSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-") // Sostituisce spazi e caratteri speciali con un trattino
+    .replace(/(^-|-$)/g, "");    // Pulisce eventuali trattini all'inizio o alla fine
+}
+
 /* ============================================================================
- * 🛰️ LETTURA CORSI (Risolve l'errore dell'esportazione mancante)
+ * 🛰️ LETTURA CORSI
  * ========================================================================== */
 export async function getLiveCourses(): Promise<Course[]> {
   try {
+    // 🎯 SCHEMA ALLINEATO: Scarichiamo le relazioni course_classes -> academy_classes (name)
     const { data, error } = await supabaseAdmin.from("courses").select(`
         id, 
         title, 
@@ -25,6 +37,9 @@ export async function getLiveCourses(): Promise<Course[]> {
         estimated_hours, 
         cover_image, 
         published,
+        course_classes (
+          academy_classes ( name )
+        ),
         course_modules (
           id, 
           title, 
@@ -55,6 +70,11 @@ export async function getLiveCourses(): Promise<Course[]> {
         (a: any, b: any) => a.order_index - b.order_index,
       );
 
+      // Mappiamo i nomi delle classi abilitate a questo specifico corso
+      const allowedClassesNames = (dbCourse.course_classes || [])
+        .map((cc: any) => cc.academy_classes?.name)
+        .filter(Boolean);
+
       return {
         id: dbCourse.id,
         title: dbCourse.title,
@@ -67,7 +87,8 @@ export async function getLiveCourses(): Promise<Course[]> {
         coverImage:
           dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_info_01.png",
         published: dbCourse.published ?? true,
-        allowedClasses: [], // Fallback temporaneo per la colonna mancante
+        allowedClasses: allowedClassesNames,
+
         modules: sortedModules.map((mod: any) => {
           const sortedLessons = (mod.course_lessons || []).sort(
             (a: any, b: any) => a.order_index - b.order_index,
@@ -95,15 +116,15 @@ export async function getLiveCourses(): Promise<Course[]> {
     return [];
   }
 }
+
 /* ============================================================================
  * 🟢 CRUD: CORSI (COURSES)
  * ========================================================================== */
 
 export async function upsertCourse(course: Partial<Course>) {
-  // Costruiamo il payload di base con i campi mappati sul DB
   const payload: Record<string, any> = {
     title: course.title,
-    slug: course.slug,
+    slug: course.slug || (course.title ? generateSlug(course.title) : undefined),
     description: course.description,
     category: course.category,
     difficulty: course.difficulty,
@@ -111,15 +132,14 @@ export async function upsertCourse(course: Partial<Course>) {
     estimated_hours: course.estimatedHours,
     cover_image: course.coverImage,
     published: course.published,
-    allowed_classes: course.allowedClasses,
+    // 🛡️ Nota: Non inviamo allowed_classes direttamente sulla tabella courses
+    // poiché la gestione ora avviene tramite la pivot autonoma course_classes.
   };
 
-  // Se stiamo facendo un UPDATE (l'id esiste), inseriamo l'id nello stesso oggetto
   if (course.id) {
     payload.id = course.id;
   }
 
-  // Passiamo direttamente l'oggetto pulito senza espansioni ternarie inline che confondono il compilatore
   const { data, error } = await supabaseAdmin
     .from("courses")
     .upsert(payload)
@@ -127,31 +147,56 @@ export async function upsertCourse(course: Partial<Course>) {
     .single();
 
   if (error) throw new Error(`Errore salvataggio corso: ${error.message}`);
+
+  // Se vengono passate delle classi specifiche nell'azione, aggiorna la tabella pivot
+  if (course.allowedClasses && data?.id) {
+    // 1. Svuota le vecchie relazioni per il corso
+    await supabaseAdmin.from("course_classes").delete().eq("course_id", data.id);
+
+    if (course.allowedClasses.length > 0) {
+      // 2. Prendi gli ID reali delle classi dai nomi passati
+      const { data: targetClasses } = await supabaseAdmin
+        .from("academy_classes")
+        .select("id")
+        .in("name", course.allowedClasses);
+
+      if (targetClasses && targetClasses.length > 0) {
+        const inserts = targetClasses.map((c) => ({
+          course_id: data.id,
+          class_id: c.id,
+        }));
+        await supabaseAdmin.from("course_classes").insert(inserts);
+      }
+    }
+  }
+
   revalidatePath("/courses");
   return data;
 }
 
-export async function deleteCourse(courseId: string) {
-  // Nota: Se nel DB non hai impostato il "ON DELETE CASCADE", Supabase bloccherà l'azione
-  // se ci sono moduli o lezioni collegate. Questo comportamento protegge i tuoi dati!
+// 🎯 Fissato l'argomento accettando string | number per evitare l'errore di build in page.tsx
+export async function deleteCourse(courseId: string | number) {
   const { error } = await supabaseAdmin
     .from("courses")
     .delete()
     .eq("id", courseId);
 
   if (error) {
-    throw new Error(`Impossibile eliminare il corso: ${error.message}. Assicurati di svuotare prima i suoi moduli e lezioni.`);
+    throw new Error(
+      `Impossibile eliminare il corso: ${error.message}. Assicurati di svuotare prima i suoi moduli e lezioni.`,
+    );
   }
 
   revalidatePath("/courses");
 }
+
 /* ============================================================================
  * 📂 CRUD: MODULI (MODULES)
  * ========================================================================== */
 
 export async function upsertModule(
-  courseId: string,
-  mod: { id?: string; title: string; orderIndex: number },
+  courseId: string | number,
+  mod: { id?: string | number; title: string; orderIndex: number },
 ) {
   const payload: Record<string, any> = {
     course_id: courseId,
@@ -159,7 +204,6 @@ export async function upsertModule(
     order_index: mod.orderIndex,
   };
 
-  // Se è una modifica, iniettiamo l'id nello stesso oggetto senza rompere i tipi
   if (mod.id) {
     payload.id = mod.id;
   }
@@ -174,7 +218,7 @@ export async function upsertModule(
   return data;
 }
 
-export async function deleteModule(moduleId: string) {
+export async function deleteModule(moduleId: string | number) {
   const { error } = await supabaseAdmin
     .from("course_modules")
     .delete()
@@ -186,32 +230,27 @@ export async function deleteModule(moduleId: string) {
  * 📺 CRUD: LEZIONI (LESSONS)
  * ========================================================================== */
 
-export async function upsertLesson(moduleId: string, lesson: { 
-  id?: string; 
-  title: string; 
-  contentType: "video" | "document"; 
-  externalUrl: string; 
-  orderIndex: number;
-  duration?: number;
-}) {
-  // Generiamo lo slug a partire dal titolo per soddisfare il vincolo del DB
-  const generatedSlug = lesson.title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-") // Sostituisce spazi e caratteri speciali con un trattino
-    .replace(/(^-|-$)/g, "");     // Pulisce eventuali trattini all'inizio o alla fine
-
+export async function upsertLesson(
+  moduleId: string | number,
+  lesson: {
+    id?: string | number;
+    title: string;
+    contentType: "video" | "document";
+    externalUrl: string;
+    orderIndex: number;
+    duration?: number;
+  },
+) {
   const payload: Record<string, any> = {
     module_id: moduleId,
     title: lesson.title.trim(),
-    slug: generatedSlug, // 👈 Inserito lo slug obbligatorio
+    slug: generateSlug(lesson.title),
     content_type: lesson.contentType,
     external_url: lesson.externalUrl,
     order_index: lesson.orderIndex,
     duration: lesson.duration || 15,
   };
 
-  // Se è un update, iniettiamo l'id
   if (lesson.id) {
     payload.id = lesson.id;
   }
@@ -226,7 +265,7 @@ export async function upsertLesson(moduleId: string, lesson: {
   return data;
 }
 
-export async function deleteLesson(lessonId: string) {
+export async function deleteLesson(lessonId: string | number) {
   const { error } = await supabaseAdmin
     .from("course_lessons")
     .delete()
@@ -252,7 +291,7 @@ export async function getLiveCategories(): Promise<string[]> {
 }
 
 export async function createCategory(name: string) {
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const slug = generateSlug(name);
   const { data, error } = await supabaseAdmin
     .from("course_categories")
     .insert([{ name, slug }])
@@ -267,7 +306,7 @@ export async function deleteCategory(name: string) {
   const { error } = await supabaseAdmin
     .from("course_categories")
     .delete()
-    .eq("name", name); // 👈 Filtriamo per nome anziché per ID UUID
+    .eq("name", name);
 
   if (error) {
     throw new Error(`Errore eliminazione categoria: ${error.message}`);
@@ -275,12 +314,12 @@ export async function deleteCategory(name: string) {
 }
 
 /* ============================================================================
- * 🏫 CRUD: ANAGRAFICA CLASSI (SCHOOL CLASSES)
+ * 🏫 CRUD: ANAGRAFICA CLASSI (ACADEMY CLASSES)
  * ========================================================================== */
 
 export async function getLiveClasses(): Promise<string[]> {
   const { data, error } = await supabaseAdmin
-    .from("school_classes")
+    .from("academy_classes")
     .select("name")
     .order("name", { ascending: true });
 
@@ -293,8 +332,8 @@ export async function getLiveClasses(): Promise<string[]> {
 
 export async function createSchoolClass(name: string, description?: string) {
   const { data, error } = await supabaseAdmin
-    .from("school_classes")
-    .insert([{ name, description }])
+    .from("academy_classes")
+    .insert([{ name: name.trim(), slug: generateSlug(name), description }])
     .select()
     .single();
 
@@ -302,9 +341,14 @@ export async function createSchoolClass(name: string, description?: string) {
   return data;
 }
 
-export async function upsertSchoolClass(id: string | null, name: string, description?: string) {
+export async function upsertSchoolClass(
+  id: string | number | null,
+  name: string,
+  description?: string,
+) {
   const payload: Record<string, any> = {
     name: name.trim(),
+    slug: generateSlug(name), // 🎯 RISOLTO: Ora valorizza sempre lo slug obbligatorio
     description: description?.trim() || "",
   };
 
@@ -313,7 +357,7 @@ export async function upsertSchoolClass(id: string | null, name: string, descrip
   }
 
   const { data, error } = await supabaseAdmin
-    .from("school_classes")
+    .from("academy_classes")
     .upsert(payload)
     .select()
     .single();
@@ -322,21 +366,22 @@ export async function upsertSchoolClass(id: string | null, name: string, descrip
   return data;
 }
 
-
 export async function deleteSchoolClass(className: string) {
   const { error } = await supabaseAdmin
-    .from("school_classes")
+    .from("academy_classes")
     .delete()
     .eq("name", className);
 
   if (error) {
-    throw new Error(`Impossibile eliminare la classe: ${error.message}. Verifica che non ci siano studenti o corsi attivi associati.`);
+    throw new Error(
+      `Impossibile eliminare la classe: ${error.message}. Verifica che non ci siano studenti o corsi attivi associati.`,
+    );
   }
 }
 
 export async function getClassDetails(className: string) {
   const { data, error } = await supabaseAdmin
-    .from("school_classes")
+    .from("academy_classes")
     .select("description")
     .eq("name", className)
     .maybeSingle();

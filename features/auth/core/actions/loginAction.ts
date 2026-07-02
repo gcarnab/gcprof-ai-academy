@@ -30,6 +30,14 @@ export async function loginAction(prevState: any, formData: FormData) {
 
     const result = await authService.login(validationResult.data);
 
+    // 🎯 PROTEZIONE LOGIN: Impedisce l'accesso immediato se l'utente è stato bloccato
+    if (result.user && result.user.status === "blocked") {
+      return { 
+        success: false, 
+        error: "Questo account è stato bloccato dall'amministratore." 
+      };
+    }
+
     const cookieService = new NextCookieService();
     await cookieService.setSession(result.token);
 

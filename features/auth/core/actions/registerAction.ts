@@ -2,13 +2,12 @@
 
 import { getUserRepository } from "@/features/auth/core/infrastructure/RepositoryFactory";
 import { BcryptPasswordService } from "@/features/auth/core/infrastructure/BcryptPasswordService";
-// Se usi un client supabase custom per operazioni dirette/relazionali, importalo, altrimenti la logica passa dal repository o client.
-// Qui assumiamo l'utilizzo di una transazione o del client integrato per gestire la tabella pivot Many-to-Many.
-import { createClient } from "@supabase/supabase-js"; 
+import { ResendEmailService } from "@/features/auth/core/infrastructure/ResendEmailService";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function registerAction(prevState: any, formData: FormData) {
@@ -17,10 +16,20 @@ export async function registerAction(prevState: any, formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
-  const classId = formData.get("classId") as string; // 🎯 Riceve l'ID della classe dal Form
+  const classId = formData.get("classId") as string;
 
-  if (!firstName || !lastName || !email || !password || !confirmPassword || !classId) {
-    return { success: false, error: "Tutti i campi sono obbligatori, inclusa la classe." };
+  if (
+    !firstName ||
+    !lastName ||
+    !email ||
+    !password ||
+    !confirmPassword ||
+    !classId
+  ) {
+    return {
+      success: false,
+      error: "Tutti i campi sono obbligatori, inclusa la classe.",
+    };
   }
 
   if (password !== confirmPassword) {
@@ -30,13 +39,27 @@ export async function registerAction(prevState: any, formData: FormData) {
   try {
     const repo = getUserRepository();
 
-    // 1. Verifica se l'utente esiste già
+    // 1. Verifica se l'utente esiste già (DISABILITATO PER TEST SU EMAIL CON SUFFISSO "+test")
+    const isTestEmail = email.includes("+test");
+    if (!isTestEmail) {
+      const existingUser = await repo.findByEmail(email);
+      if (existingUser) {
+        return { success: false, error: "Questa email è già registrata." };
+      }
+    } else {
+      console.log(
+        `⚠️ Modalità Test: Bypass controllo unicità per l'email ${email}`,
+      );
+    }
+
+    /*
     const existingUser = await repo.findByEmail(email);
     if (existingUser) {
       return { success: false, error: "Questa email è già registrata." };
     }
-
-    // 2. Recupera i dettagli della classe per popolare l'array testuale locale (denormalizzazione per compatibilità V2)
+    */
+   
+    // 2. Recupera i dettagli della classe
     const { data: classData, error: classErr } = await supabaseAdmin
       .from("academy_classes")
       .select("slug")
@@ -51,36 +74,98 @@ export async function registerAction(prevState: any, formData: FormData) {
     const passwordService = new BcryptPasswordService();
     const passwordHash = await passwordService.hash(password);
 
-    // 4. Creazione utente principale (Stato PENDING)
+    // 4. Creazione utente principale nel sistema V2
+    const displayName = `${firstName} ${lastName}`;
     const newUser = await repo.create({
       email,
       passwordHash,
       role: "student",
       status: "pending",
-      displayName: `${firstName} ${lastName}`,
+      displayName,
       firstName,
       lastName,
-      classes: [classData.slug], // Allineato al tipo string[] della V2 per compatibilità immediata
+      classes: [classData.slug],
       enrolledCourses: [],
       emailVerified: false,
     } as any);
 
-    // 5. Inserimento nella tabella relazionale pivot per robustezza DB
-    const { error: pivotError } = await supabaseAdmin
+    // 5. 🎯 ALLINEAMENTO TABLES: Scrittura esplicita per garantire la sincronizzazione con l'Admin Dashboard
+    // Inseriamo/Aggiorniamo la tabella 'profiles' usata da getAdminUsersList()
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .insert({
+        id: newUser.id,
+        first_name: firstName,
+        last_name: lastName,
+        display_name: displayName,
+        role: "student",
+        status: "pending",
+        created_at: new Date().toISOString(),
+      });
+
+    if (profileError) {
+      console.error(
+        "Nota/Errore inserimento profili diretti:",
+        profileError.message,
+      );
+    }
+
+    // Inseriamo nella tabella pivot 'profile_classes' letta dall'Admin Dashboard
+    const { error: profilePivotError } = await supabaseAdmin
+      .from("profile_classes")
+      .insert({ profile_id: newUser.id, class_id: classId });
+
+    if (profilePivotError) {
+      console.error(
+        "Nota/Errore tabella pivot profile_classes:",
+        profilePivotError.message,
+      );
+    }
+
+    /*
+    await supabaseAdmin
+      .from("user_classes_pivot")
+      .insert({ user_id: newUser.id, class_id: classId }).catch(() => null);
+    */
+
+    // Manteniamo per retrocompatibilità l'inserimento sul vecchio pivot se utilizzato altrove
+    const { error: oldPivotError } = await supabaseAdmin
       .from("user_classes_pivot")
       .insert({ user_id: newUser.id, class_id: classId });
 
-    if (pivotError) {
-      console.error("Errore nell'inserimento della tabella pivot:", pivotError);
-      // Logica opzionale di rollback se necessaria
+    if (oldPivotError) {
+      console.error(
+        "Nota/Errore tabella pivot obsoleta user_classes_pivot:",
+        oldPivotError.message,
+      );
     }
+
+    // ✉️ 6. INVIO NOTIFICHE EMAIL TRANSAZIONALI IN BACKGROUND
+    const emailService = new ResendEmailService();
+    startEmailDispatches(emailService, email, displayName, classData.slug);
 
     return {
       success: true,
-      message: "Registrazione completata! Il tuo account è in attesa di attivazione da parte dell'amministratore.",
+      message:
+        "Registrazione completata! Il tuo account è in attesa di attivazione da parte dell'amministratore.",
     };
   } catch (error: any) {
     console.error("Error in registerAction:", error);
-    return { success: false, error: "Errore durante la registrazione. Riprova più tardi." };
+    return {
+      success: false,
+      error: "Errore durante la registrazione. Riprova più tardi.",
+    };
   }
+}
+
+function startEmailDispatches(
+  service: ResendEmailService,
+  studentEmail: string,
+  studentName: string,
+  classSlug: string,
+) {
+  Promise.all([
+    service.sendStudentPendingEmail(studentEmail, studentName),
+    service.sendAdminNotificationEmail(studentName, studentEmail, classSlug),
+  ]).catch((err) => console.error("Errore invio email in background:", err));
 }

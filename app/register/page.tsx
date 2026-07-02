@@ -3,11 +3,12 @@
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { registerAction } from "@/features/auth/core/actions/registerAction";
-import { getClassesAction } from "@/features/auth/core/actions/getClassesAction"; // 🎯 Nuova Action
+import { getClassesAction } from "@/features/auth/core/actions/getClassesAction"; 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Eye, EyeOff } from "lucide-react";
 
 interface AcademyClass {
   id: string;
@@ -16,6 +17,8 @@ interface AcademyClass {
 
 export default function RegisterPage() {
   const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -28,7 +31,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // 🎯 Caricamento sicuro tramite Server Action
+  // Caricamento sicuro tramite Server Action
   useEffect(() => {
     async function loadClasses() {
       const result = await getClassesAction();
@@ -163,28 +166,52 @@ export default function RegisterPage() {
               </select>
             </div>
 
+            {/* Campo Password con Occhietto */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isPending || !!successMessage}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="pr-10"
+                  disabled={isPending || !!successMessage}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  disabled={isPending || !!successMessage}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
+            {/* Campo Conferma Password con Occhietto */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Conferma Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={isPending || !!successMessage}
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="pr-10"
+                  disabled={isPending || !!successMessage}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  disabled={isPending || !!successMessage}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <Button type="submit" className="w-full" disabled={isPending || !!successMessage}>

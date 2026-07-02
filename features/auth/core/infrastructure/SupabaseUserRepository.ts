@@ -1,20 +1,44 @@
 import { supabaseServer } from "./supabaseClient";
 import { IUserRepository } from "../ports/IUserRepository";
 import { StudentUser } from "../domain/user";
+import { randomUUID } from "crypto";
 
-interface SupabaseUserRow {
+interface SupabaseProfileRow {
   id: string;
   email: string;
   password_hash: string;
   role: "admin" | "student";
   display_name: string;
-  classes: string[];
+  status: "pending" | "active" | "blocked";
   created_at: string;
   updated_at: string;
 }
 
 export class SupabaseUserRepository implements IUserRepository {
-  private readonly TABLE_NAME = "users";
+  private readonly TABLE_NAME = "profiles";
+
+  private async getUserClasses(userId: string): Promise<string[]> {
+    const { data, error } = await supabaseServer
+      .from("profile_classes")
+      .select(
+        `
+        academy_classes ( name )
+      `,
+      )
+      .eq("profile_id", userId);
+
+    if (error) {
+      console.error(
+        "[SUPABASE ERROR] Errore in getUserClasses:",
+        error.message,
+      );
+      return [];
+    }
+
+    return (data || [])
+      .map((r: any) => r.academy_classes?.name)
+      .filter(Boolean);
+  }
 
   async findByEmail(email: string): Promise<StudentUser | null> {
     const cleanedEmail = email.toLowerCase().trim();
@@ -23,15 +47,17 @@ export class SupabaseUserRepository implements IUserRepository {
       .from(this.TABLE_NAME)
       .select("*")
       .eq("email", cleanedEmail)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === "PGRST116") return null;
       console.error("[SUPABASE ERROR] Errore in findByEmail:", error.message);
       throw new Error("Errore durante la ricerca dell'utente sul database.");
     }
 
-    return data ? this.mapToDomain(data as SupabaseUserRow) : null;
+    if (!data) return null;
+
+    const classes = await this.getUserClasses(data.id);
+    return this.mapToDomain(data as SupabaseProfileRow, classes);
   }
 
   async findById(id: string): Promise<StudentUser | null> {
@@ -39,27 +65,29 @@ export class SupabaseUserRepository implements IUserRepository {
       .from(this.TABLE_NAME)
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === "PGRST116") return null;
       console.error("[SUPABASE ERROR] Errore in findById:", error.message);
       throw new Error("Errore durante la ricerca dell'utente per ID.");
     }
 
-    return data ? this.mapToDomain(data as SupabaseUserRow) : null;
+    if (!data) return null;
+
+    const classes = await this.getUserClasses(id);
+    return this.mapToDomain(data as SupabaseProfileRow, classes);
   }
 
   async create(
     user: Omit<StudentUser, "id" | "createdAt" | "updatedAt">,
   ): Promise<StudentUser> {
     const dbPayload = {
+      id: randomUUID(), // 🎯 GENERA L'ID PRIMA DI INVIARE IL PAYLOAD
       email: user.email.toLowerCase().trim(),
       password_hash: user.passwordHash,
       role: user.role,
       display_name: user.displayName,
-      // Se 'classes' non esiste nell'input, proviamo a mappare 'class' o lasciamo array vuoto
-      classes: (user as any).classes || (user as any).class || [],
+      status: "pending",
     };
 
     const { data, error } = await supabaseServer
@@ -73,7 +101,7 @@ export class SupabaseUserRepository implements IUserRepository {
       throw new Error("Impossibile salvare il nuovo utente nel database.");
     }
 
-    return this.mapToDomain(data as SupabaseUserRow);
+    return this.mapToDomain(data as SupabaseProfileRow, []);
   }
 
   async update(
@@ -81,9 +109,6 @@ export class SupabaseUserRepository implements IUserRepository {
     user: Partial<Omit<StudentUser, "id" | "createdAt">>,
   ): Promise<StudentUser> {
     if (!id) {
-      console.error(
-        "[SUPABASE CRITICAL] Tentativo di update con ID nullo o vuoto.",
-      );
       throw new Error(
         "Impossibile aggiornare l'utente: ID sessione non valido.",
       );
@@ -92,7 +117,6 @@ export class SupabaseUserRepository implements IUserRepository {
     const dbPayload: Record<string, any> = {};
     const anyUser = user as any;
 
-    // Mappiamo solo i campi riconosciuti dal nostro schema Postgres
     if (user.email !== undefined)
       dbPayload.email = user.email.toLowerCase().trim();
     if (user.passwordHash !== undefined)
@@ -100,52 +124,23 @@ export class SupabaseUserRepository implements IUserRepository {
     if (user.role !== undefined) dbPayload.role = user.role;
     if (user.displayName !== undefined)
       dbPayload.display_name = user.displayName;
+    if (anyUser.status !== undefined) dbPayload.status = anyUser.status;
 
-    if (anyUser.classes !== undefined) dbPayload.classes = anyUser.classes;
-    if (anyUser.class !== undefined) dbPayload.classes = anyUser.class;
+    dbPayload.updated_at = new Date().toISOString();
 
-    if (anyUser.updatedAt !== undefined) {
-      dbPayload.updated_at =
-        typeof anyUser.updatedAt === "string"
-          ? anyUser.updatedAt
-          : new Date(anyUser.updatedAt).toISOString();
-    }
-
-    // 🛡️ INTELLIGENZA DIFENSIVA: Se la loginAction passa campi extra non mappati, dbPayload sarà {}
-    // Invece di mandare in crash la richiesta effettuando una query a vuoto, restituiamo l'utente esistente.
-    if (Object.keys(dbPayload).length === 0) {
-      console.log(
-        `ℹ️ [SUPABASE INFO] Intercettato Update no-op per ID ${id}. Nessun campo compatibile rilevato. Dati ricevuti:`,
-        user,
-      );
-
-      const currentUser = await this.findById(id);
-      if (!currentUser) {
-        throw new Error("Utente non trovato nel database per l'aggiornamento.");
-      }
-      return currentUser; // Ritorna l'utente intatto e prosegue il login senza errori!
-    }
-
-    // Se ci sono campi validi da modificare, eseguiamo l'update reale
-    const { data, error } = await supabaseServer
+    const { error } = await supabaseServer
       .from(this.TABLE_NAME)
       .update(dbPayload)
-      .eq("id", id)
-      .select("*");
+      .eq("id", id);
 
     if (error) {
       console.error("[SUPABASE ERROR] Errore in update user:", error.message);
       throw new Error("Impossibile aggiornare i dati dell'utente.");
     }
 
-    if (!data || data.length === 0) {
-      console.error(
-        `[SUPABASE WARNING] Nessun utente trovato con ID: ${id} durante l'update.`,
-      );
-      throw new Error("Utente non trovato nel database per l'aggiornamento.");
-    }
-
-    return this.mapToDomain(data[0] as SupabaseUserRow);
+    const updated = await this.findById(id);
+    if (!updated) throw new Error("Utente non trovato dopo l'aggiornamento.");
+    return updated;
   }
 
   async delete(id: string): Promise<boolean> {
@@ -154,12 +149,7 @@ export class SupabaseUserRepository implements IUserRepository {
       .delete()
       .eq("id", id);
 
-    if (error) {
-      console.error("[SUPABASE ERROR] Errore in delete user:", error.message);
-      return false;
-    }
-
-    return true;
+    return !error;
   }
 
   async list(): Promise<StudentUser[]> {
@@ -170,33 +160,32 @@ export class SupabaseUserRepository implements IUserRepository {
 
     if (error) {
       console.error("[SUPABASE ERROR] Errore in list users:", error.message);
-      throw new Error(
-        "Impossibile recuperare il registro utenti dal database.",
-      );
+      throw new Error("Impossibile recuperare il registro utenti.");
     }
 
-    const rows = (data || []) as SupabaseUserRow[];
-    return rows.map((row) => this.mapToDomain(row));
+    const users: StudentUser[] = [];
+    for (const row of data || []) {
+      const classes = await this.getUserClasses(row.id);
+      users.push(this.mapToDomain(row as SupabaseProfileRow, classes));
+    }
+
+    return users;
   }
 
-  /**
-   * 🎯 FIX TS(2322): Convertiamo i timestamp di Postgres in stringhe ISO
-   * per allinearci al tipo 'string' richiesto dal tuo StudentUser di dominio.
-   */
-  private mapToDomain(row: SupabaseUserRow): StudentUser {
+  private mapToDomain(row: SupabaseProfileRow, classes: string[]): StudentUser {
     const anyUser: any = {
       id: row.id,
       email: row.email,
       passwordHash: row.password_hash,
       role: row.role,
       displayName: row.display_name,
-      createdAt: new Date(row.created_at).toISOString(), // Output stringa ISO
-      updatedAt: new Date(row.updated_at).toISOString(), // Output stringa ISO
+      status: row.status,
+      createdAt: new Date(row.created_at).toISOString(),
+      updatedAt: new Date(row.updated_at).toISOString(),
     };
 
-    // Iniettiamo dinamicamente sia classes che class per retrocompatibilità con la UI v1/v2
-    anyUser.classes = row.classes || [];
-    anyUser.class = (row.classes || []).join(", ");
+    anyUser.classes = classes;
+    anyUser.class = classes.join(", ");
 
     return anyUser as StudentUser;
   }

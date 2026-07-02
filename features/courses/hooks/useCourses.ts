@@ -9,7 +9,7 @@ export function useCourses() {
   const { user } = useAuth();
   const [search, setSearch] = useState<string>("");
   const [category, setCategory] = useState<string>("Tutti");
-  
+
   // Stato locale per ospitare i corsi e le categorie estratti in tempo reale da Supabase
   const [dbCourses, setDbCourses] = useState<Course[]>([]);
   const [dbCategories, setDbCategories] = useState<string[]>(["Tutti"]);
@@ -24,13 +24,16 @@ export function useCourses() {
           getLiveCourses(),
           getLiveCategories(),
         ]);
-        
+
         setDbCourses(coursesData);
         if (categoriesData && categoriesData.length > 0) {
           setDbCategories(categoriesData);
         }
       } catch (error) {
-        console.error("❌ Errore durante il caricamento dei dati iniziali nell'hook:", error);
+        console.error(
+          "❌ Errore durante il caricamento dei dati iniziali nell'hook:",
+          error,
+        );
       } finally {
         setIsLoading(false);
       }
@@ -58,26 +61,28 @@ export function useCourses() {
   const allowedCourses = useMemo(() => {
     const currentUser = legacySessionUser as any;
 
-    // Se l'utente non è loggato o non è attivo/admin, vede solo i corsi pubblici (senza restrizioni di classe)
-    if (!currentUser || (currentUser.status !== "active" && currentUser.role !== "admin")) {
-      return dbCourses.filter(
-        (course) => !course.allowedClasses || course.allowedClasses.length === 0
-      );
-    }
-
-    // Se è un amministratore, vede tutti i corsi presenti nel database
-    if (currentUser.role === "admin") {
+    // 1. Se l'utente è un amministratore, ha accesso totale immediato a tutti i corsi
+    if (currentUser?.role === "admin") {
       return dbCourses;
     }
 
-    // Studente attivo: effettua l'intersezione tra le classi dell'utente e quelle del corso
+    // 2. Se l'utente è in attesa (pending) o bloccato (blocked), non può vedere nessun corso
+    if (
+      !currentUser ||
+      currentUser.status === "pending" ||
+      currentUser.status === "blocked"
+    ) {
+      return [];
+    }
+
+    // 3. Studente attivo: vede i corsi della sua classe (intersezione sui nomi reali)
     const userClasses = currentUser.classes || [];
     return dbCourses.filter((course) => {
       if (!course.allowedClasses || course.allowedClasses.length === 0) {
-        return true;
+        return true; // Corso pubblico aperto a tutti
       }
       return course.allowedClasses.some((allowedClass: string) =>
-        userClasses.includes(allowedClass)
+        userClasses.includes(allowedClass),
       );
     });
   }, [dbCourses, legacySessionUser]);
@@ -88,8 +93,11 @@ export function useCourses() {
    */
   const filteredCourses = useMemo(() => {
     return allowedCourses.filter((course) => {
-      const matchCategory = category === "Tutti" || course.category === category;
-      const matchSearch = course.title.toLowerCase().includes(search.toLowerCase());
+      const matchCategory =
+        category === "Tutti" || course.category === category;
+      const matchSearch = course.title
+        .toLowerCase()
+        .includes(search.toLowerCase());
       return matchCategory && matchSearch;
     });
   }, [allowedCourses, search, category]);

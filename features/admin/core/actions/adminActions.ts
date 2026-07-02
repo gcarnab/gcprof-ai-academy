@@ -65,3 +65,40 @@ export async function updateUserClasses(userId: string, classNames: string[]) {
   revalidatePath("/admin/dashboard");
   return { success: true };
 }
+
+/**
+ * 🎯 NUOVA: Crea una nuova classe allineata ad academy_classes generando lo slug automaticamente
+ */
+export async function createClass(name: string, description?: string) {
+  if (!name || name.trim() === "") {
+    return { success: false, error: "Il nome della classe è obbligatorio." };
+  }
+
+  // Generazione intelligente dello slug partendo dal nome (es. "Terza LSA" -> "terza-lsa")
+  const generatedSlug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")     // Sostituisce caratteri non alfanumerici (incluso il simbolo °) con un trattino
+    .replace(/(^-|-$)/g, "");         // Rimuove i trattini all'inizio o alla fine
+
+  const { data, error } = await supabaseAdmin
+    .from("academy_classes")
+    .insert([
+      {
+        name: name.trim(),
+        slug: generatedSlug,
+        description: description?.trim() || null,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("❌ [ADMIN ACTION ERROR] Creazione classe fallita:", error.message);
+    return { success: false, error: error.message };
+  }
+
+  // Forza l'aggiornamento dei percorsi amministrativi che leggono l'elenco classi
+  revalidatePath("/admin/dashboard");
+  return { success: true, data };
+}

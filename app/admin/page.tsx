@@ -1,11 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  getMergedCourses,
-  saveCmsCourse,
-  deleteCmsCourse,
-} from "@/features/courses/services/courseService";
+
 import type { Course, Module, Lesson } from "@/features/courses/types/course";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,9 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
+import { deleteCourse, getLiveCourses, upsertCourse } from "@/features/courses/services/courseActions";
 
 export default function AdminDashboardPage() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
@@ -61,8 +59,16 @@ export default function AdminDashboardPage() {
     refreshCourses();
   }, []);
 
-  const refreshCourses = () => {
-    setCourses(getMergedCourses());
+  const refreshCourses = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getLiveCourses();
+      setCourses(data || []);
+    } catch (error) {
+      console.error("Errore nel caricamento dei corsi:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleTitleChange = (val: string) => {
@@ -92,32 +98,36 @@ export default function AdminDashboardPage() {
     setIsDialogOpen(true);
   };
 
-const openEditModal = (course: Course) => {
-  setEditingCourse(course);
-  setTitle(course.title || "");
-  setSlug(course.slug || "");
-  setDescription(course.description || "");
-  setCategory(course.category || "Informatica");
-  setDifficulty(course.difficulty || "Facile");
-  setTeacher(course.teacher || "Prof. G. Carnabuci");
-  setEstimatedHours(course.estimatedHours || 20);
-  setCoverImage(course.coverImage || "📚");
-  
-  // 🎯 FIX: Protezione contro array nulli o indefiniti che bloccano il rendering
-  setAllowedClassesInput(Array.isArray(course.allowedClasses) ? course.allowedClasses.join(", ") : "");
-  setModules(Array.isArray(course.modules) ? course.modules : []);
-  
-  setIsDialogOpen(true);
-};
+  const openEditModal = (course: Course) => {
+    setEditingCourse(course);
+    setTitle(course.title || "");
+    setSlug(course.slug || "");
+    setDescription(course.description || "");
+    setCategory(course.category || "Informatica");
+    setDifficulty(course.difficulty || "Facile");
+    setTeacher(course.teacher || "Prof. G. Carnabuci");
+    setEstimatedHours(course.estimatedHours || 20);
+    setCoverImage(course.coverImage || "📚");
+    
+    setAllowedClassesInput(Array.isArray(course.allowedClasses) ? course.allowedClasses.join(", ") : "");
+    setModules(Array.isArray(course.modules) ? course.modules : []);
+    
+    setIsDialogOpen(true);
+  };
 
-  const handleDelete = (courseId: number, courseTitle: string) => {
+  const handleDelete = async (courseId: number, courseTitle: string) => {
     if (
       confirm(
-        `Sei sicuro di voler eliminare definitivamente il corso "${courseTitle}"? Esta azione non è reversibile.`,
+        `Sei sicuro di voler eliminare definitivamente il corso "${courseTitle}"? Questa azione non è reversibile.`,
       )
     ) {
-      deleteCmsCourse(courseId);
-      refreshCourses();
+      try {
+        await deleteCourse(courseId);
+        await refreshCourses();
+      } catch (error) {
+        console.error("Errore durante l'eliminazione:", error);
+        alert("Impossibile eliminare il corso.");
+      }
     }
   };
 
@@ -235,7 +245,7 @@ const openEditModal = (course: Course) => {
   /* ============================================================================
    * SALVATAGGIO FINALE
    * ========================================================================== */
-  const handleSaveCourse = (e: React.FormEvent) => {
+  const handleSaveCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !slug) return;
 
@@ -246,8 +256,8 @@ const openEditModal = (course: Course) => {
           .filter(Boolean)
       : [];
 
-    const finalCourse: Course = {
-      id: editingCourse ? editingCourse.id : Date.now(),
+    const finalCourse: Partial<Course> = {
+      ...(editingCourse && { id: editingCourse.id }),
       title,
       slug,
       description,
@@ -261,9 +271,14 @@ const openEditModal = (course: Course) => {
       modules,
     };
 
-    saveCmsCourse(finalCourse);
-    refreshCourses();
-    setIsDialogOpen(false);
+    try {
+      await upsertCourse(finalCourse);
+      setIsDialogOpen(false);
+      await refreshCourses();
+    } catch (error) {
+      console.error("Errore durante il salvataggio:", error);
+      alert("Impossibile salvare il corso sul database.");
+    }
   };
 
   const handleExportJSON = () => {
@@ -289,7 +304,7 @@ const openEditModal = (course: Course) => {
             </h1>
             <p className="mt-1 text-sm text-gray-500">
               Gestisci i corsi, modifica la struttura delle lezioni ed esporta i
-              dati completi.
+              dati completi in tempo reale su Supabase.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -311,95 +326,106 @@ const openEditModal = (course: Course) => {
 
         {/* Tabella Principale dei Corsi */}
         <div className="mt-8 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
-            <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500 tracking-wider">
-              <tr>
-                <th className="px-6 py-3.5">Logo</th>
-                <th className="px-6 py-3.5">Corso / Slug</th>
-                <th className="px-6 py-3.5">Classi</th>
-                <th className="px-6 py-3.5">Contenuti</th>
-                <th className="px-6 py-3.5 text-right">Azioni</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white text-gray-700">
-              {courses.map((course) => (
-                <tr
-                  key={course.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-6 py-4 w-16">
-                    <div className="h-10 w-10 overflow-hidden rounded-md border bg-white flex items-center justify-center text-2xl shadow-sm">
-                      {course.coverImage ? (
-                        course.coverImage.startsWith("http") ||
-                        course.coverImage.startsWith("/") ? (
-                          <img
-                            src={course.coverImage}
-                            alt={course.title}
-                            className="h-full w-full object-contain"
-                          />
-                        ) : (
-                          <span>{course.coverImage}</span>
-                        )
-                      ) : (
-                        <span>📚</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-gray-900">
-                      {course.title}
-                    </div>
-                    <div className="text-xs text-gray-400 font-mono">
-                      /courses/{course.slug}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {course.allowedClasses?.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {course.allowedClasses.map((cls) => (
-                          <span
-                            key={cls}
-                            className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-bold border"
-                          >
-                            {cls}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-xs italic text-green-600 font-medium">
-                        🔓 Tutti
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 font-medium text-gray-500">
-                    {course.modules?.length || 0} Moduli (
-                    {course.modules?.reduce(
-                      (acc, m) => acc + m.lessons.length,
-                      0,
-                    ) || 0}{" "}
-                    Lezioni)
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditModal(course)}
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                    >
-                      Modifica
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(course.id, course.title)}
-                    >
-                      Elimina
-                    </Button>
-                  </td>
+          {isLoading ? (
+            <div className="p-6 text-center text-gray-500">Caricamento corsi in corso...</div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
+              <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500 tracking-wider">
+                <tr>
+                  <th className="px-6 py-3.5">Logo</th>
+                  <th className="px-6 py-3.5">Corso / Slug</th>
+                  <th className="px-6 py-3.5">Classi</th>
+                  <th className="px-6 py-3.5">Contenuti</th>
+                  <th className="px-6 py-3.5 text-right">Azioni</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white text-gray-700">
+                {courses.map((course) => (
+                  <tr
+                    key={course.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-6 py-4 w-16">
+                      <div className="h-10 w-10 overflow-hidden rounded-md border bg-white flex items-center justify-center text-2xl shadow-sm">
+                        {course.coverImage ? (
+                          course.coverImage.startsWith("http") ||
+                          course.coverImage.startsWith("/") ? (
+                            <img
+                              src={course.coverImage}
+                              alt={course.title}
+                              className="h-full w-full object-contain"
+                            />
+                          ) : (
+                            <span>{course.coverImage}</span>
+                          )
+                        ) : (
+                          <span>📚</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-gray-900">
+                        {course.title}
+                      </div>
+                      <div className="text-xs text-gray-400 font-mono">
+                        /courses/{course.slug}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {course.allowedClasses?.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {course.allowedClasses.map((cls) => (
+                            <span
+                              key={cls}
+                              className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-bold border"
+                            >
+                              {cls}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs italic text-green-600 font-medium">
+                          🔓 Tutti
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-gray-500">
+                      {course.modules?.length || 0} Moduli (
+                      {course.modules?.reduce(
+                        (acc, m) => acc + (m.lessons?.length || 0),
+                        0,
+                      ) || 0}{" "}
+                      Lezioni)
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditModal(course)}
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                      >
+                        Modifica
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(course.id, course.title)}
+                      >
+                        Elimina
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {courses.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 italic">
+                      Nessun corso trovato nel database.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Form Modale Unico di Configurazione */}
@@ -572,13 +598,12 @@ const openEditModal = (course: Course) => {
 
                       {/* LISTA DELLE LEZIONI DEL MODULO */}
                       <div className="space-y-2 pl-2">
-                        {mod.lessons.map((l) => (
+                        {mod.lessons?.map((l) => (
                           <div
                             key={l.id}
                             className="p-2 border rounded-md bg-gray-50/50 flex flex-col gap-2"
                           >
                             {editingLessonId === l.id ? (
-                              /* MODALITÀ MODIFICA AVANZATA DELLA LEZIONE (RISOLVE IL PROBLEMA 1) */
                               <div className="space-y-2 p-1 text-xs">
                                 <div className="grid grid-cols-2 gap-2">
                                   <div className="space-y-0.5">
@@ -662,7 +687,6 @@ const openEditModal = (course: Course) => {
                                 </div>
                               </div>
                             ) : (
-                              /* VISUALIZZAZIONE DELLA LEZIONE CON PULSANTI DI CONTROLLO */
                               <div className="flex items-center justify-between text-xs">
                                 <div className="flex items-center gap-2">
                                   <span>

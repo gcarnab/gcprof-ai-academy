@@ -1,92 +1,99 @@
 import type { Course, Module, Lesson } from "../types/course";
 import { AuthUser } from "@/features/auth/core/context/AuthContext";
-import { courses as staticCourses } from "../data/courses";
 
-/* ============================================================================
- * LE TUE FUNZIONI UTILITY ORIGINALI (Senza "use server", libere di essere sincrone)
- * ========================================================================== */
-export function getMergedCourses(): Course[] {
-  if (typeof window === "undefined") return staticCourses;
-  const localData = localStorage.getItem("cms_courses");
-  if (!localData) {
-    localStorage.setItem("cms_courses", JSON.stringify(staticCourses));
-    return staticCourses;
-  }
-  try {
-    const dynamicCourses = JSON.parse(localData) as Course[];
-    const merged = [...dynamicCourses];
-    staticCourses.forEach((sc) => {
-      const existsInDynamic = dynamicCourses.some((dc) => dc.id === sc.id || dc.slug === sc.slug);
-      if (!existsInDynamic) merged.push(sc);
-    });
-    return merged;
-  } catch (e) {
-    return staticCourses;
-  }
-}
-
-export function hasCourseAccess(course: Course, user: AuthUser | null): boolean {
+/**
+ * Verifica se un utente specifico ha i permessi per accedere a un determinato corso
+ */
+export function hasCourseAccess(
+  course: Course,
+  user: AuthUser | null,
+): boolean {
   if (!course.published) return user?.role === "admin";
+
+  // 🎯 BLOCCO PENDING: Se l'utente è in attesa di approvazione, non ha mai accesso a nessun corso
+  if (user && user.status === "pending" && user.role !== "admin") {
+    return false;
+  }
+
+  // Se l'utente non è attivo (es. bloccato) e non è admin, può vedere solo i corsi liberi
   if (user && user.status !== "active" && user.role !== "admin") {
     return !course.allowedClasses || course.allowedClasses.length === 0;
   }
-  if (!user) return true;
+  
+  if (!user) return true; // Gestione ospiti (se applicabile sul catalogo)
   if (user.role === "admin") return true;
   if (!course.allowedClasses || course.allowedClasses.length === 0) return true;
+
   const userClasses = user.classes || [];
-  return course.allowedClasses.some((allowedClass) => userClasses.includes(allowedClass));
+  return course.allowedClasses.some((allowedClass) =>
+    userClasses.includes(allowedClass),
+  );
 }
 
-export function getAllCourses(user: AuthUser | null): Course[] {
-  if (!user || (user.status !== "active" && user.role !== "admin")) {
-    return getMergedCourses().filter((course) => !course.allowedClasses || course.allowedClasses.length === 0);
+/**
+ * Filtra un array di corsi passati in base ai privilegi dell'utente (utilizzabile negli hook client)
+ */
+export function filterCoursesByUser(courses: Course[], user: AuthUser | null): Course[] {
+  // 🎯 BLOCCO PENDING: Se l'utente è pending, non estrae nessun corso
+  if (user && user.status === "pending" && user.role !== "admin") {
+    return [];
   }
-  if (user.role === "admin") return getMergedCourses();
+
+  if (!user || (user.status !== "active" && user.role !== "admin")) {
+    return courses.filter(
+      (course) => !course.allowedClasses || course.allowedClasses.length === 0,
+    );
+  }
+  
+  if (user.role === "admin") return courses;
+  
   const userClasses = user.classes || [];
-  return getMergedCourses().filter((course) => {
+  return courses.filter((course) => {
     if (!course.allowedClasses || course.allowedClasses.length === 0) return true;
-    return course.allowedClasses.some((allowedClass) => userClasses.includes(allowedClass));
+    return course.allowedClasses.some((allowedClass) =>
+      userClasses.includes(allowedClass),
+    );
   });
 }
 
-export function getCourseBySlug(slug: string, user: AuthUser | null): Course | undefined {
-  return getMergedCourses().find((c) => c.slug === slug);
-}
-
-export function getModule(courseSlug: string, moduleId: string, user: AuthUser | null): Module | undefined {
-  const course = getCourseBySlug(courseSlug, user);
+/**
+ * Recupera un modulo specifico all'interno di un corso, verificando i permessi di visualizzazione
+ */
+export function getModuleFromCourse(
+  course: Course | undefined,
+  moduleId: string,
+  user: AuthUser | null,
+): Module | undefined {
   if (!course || !user) return undefined;
   if (user.role !== "admin" && user.status !== "active") return undefined;
+
   if (course.allowedClasses && course.allowedClasses.length > 0) {
     const userClasses = user.classes || [];
-    const hasClass = course.allowedClasses.some((ac) => userClasses.includes(ac));
+    const hasClass = course.allowedClasses.some((ac) =>
+      userClasses.includes(ac),
+    );
     if (!hasClass) return undefined;
   }
   return course.modules.find((m) => m.id === moduleId);
 }
 
-export function getLesson(courseSlug: string, moduleId: string, lessonId: string, user: AuthUser | null): Lesson | undefined {
-  const module = getModule(courseSlug, moduleId, user);
+/**
+ * Recupera una lezione specifica all'interno di un modulo, verificando i permessi di visualizzazione
+ */
+export function getLessonFromCourse(
+  course: Course | undefined,
+  moduleId: string,
+  lessonId: string,
+  user: AuthUser | null,
+): Lesson | undefined {
+  const module = getModuleFromCourse(course, moduleId, user);
   if (!module) return undefined;
   return module.lessons.find((l) => l.id === lessonId);
 }
 
-export function saveCmsCourse(updatedCourse: Course) {
-  if (typeof window === "undefined") return;
-  const currentCourses = getMergedCourses();
-  const index = currentCourses.findIndex((c) => c.id === updatedCourse.id || c.slug === updatedCourse.slug);
-  if (index >= 0) currentCourses[index] = updatedCourse;
-  else currentCourses.push(updatedCourse);
-  localStorage.setItem("cms_courses", JSON.stringify(currentCourses));
-}
-
-export function deleteCmsCourse(courseId: number) {
-  if (typeof window === "undefined") return;
-  const currentCourses = getMergedCourses();
-  const filtered = currentCourses.filter((c) => c.id !== courseId);
-  localStorage.setItem("cms_courses", JSON.stringify(filtered));
-}
-
+/**
+ * Trasforma un normale link di condivisione YouTube nell'URL corretto per il tag iframe embed
+ */
 export function getYouTubeEmbedUrl(url?: string): string | null {
   if (!url) return null;
   let videoId = "";
@@ -99,6 +106,9 @@ export function getYouTubeEmbedUrl(url?: string): string | null {
   return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
 }
 
+/**
+ * Trasforma un link di Google Drive (Documento, PDF, Presentazione) nel formato compatibile con l'embed/preview
+ */
 export function getGoogleDriveEmbedUrl(url: string): string | null {
   if (!url) return null;
   try {
