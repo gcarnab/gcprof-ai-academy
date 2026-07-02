@@ -1,35 +1,63 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
-import {
-  getCourseBySlug,
-  getModule,
-  getLesson,
-} from "@/features/courses/services/courseService";
+import { getLiveCourses } from "@/features/courses/services/courseActions";
 import LessonRenderer, { LessonContent } from "@/features/courses/components/lesson/LessonRenderer";
-//import { useAuth } from "@/features/auth/context/AuthContext";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
-import { useAuth } from "@/features/auth/core/context/AuthContext";
 
 export default function LessonPage() {
   const params = useParams();
-  const { user } = useAuth();
 
   const slug = params?.slug as string;
   const moduleId = params?.moduleId as string;
   const lessonId = params?.lessonId as string;
 
-  const course = getCourseBySlug(slug, user);
-  const module = getModule(slug, moduleId, user);
-  const lesson = getLesson(slug, moduleId, lessonId, user);
+  const [data, setData] = useState<{ course: any; module: any; lesson: any } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!course || !module || !lesson) {
+  useEffect(() => {
+    async function loadLessonData() {
+      setIsLoading(true);
+      const liveCourses = await getLiveCourses();
+      
+      const course = liveCourses.find((c) => c.slug === slug);
+      const module = course?.modules?.find((m: any) => m.id === moduleId);
+      const lesson = module?.lessons?.find((l: any) => l.id === lessonId);
+
+      if (course && module && lesson) {
+        setData({ course, module, lesson });
+      } else {
+        setData(null);
+      }
+      setIsLoading(false);
+    }
+    if (slug && moduleId && lessonId) {
+      loadLessonData();
+    }
+  }, [slug, moduleId, lessonId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-gray-50">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-gray-500 text-sm animate-pulse">Caricamento risorsa didattica...</div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!data) {
     notFound();
   }
 
-  // 🎯 ADAPTER PATTERN: Convertiamo la struttura piatta di Lesson nel formato richiesto da LessonRenderer
+  const { course, module, lesson } = data;
+
+  // ADAPTER PATTERN
   const formattedContents: LessonContent[] = [];
 
   if (lesson.contentType === "video") {
@@ -39,7 +67,6 @@ export default function LessonPage() {
       url: lesson.youtubeUrl,
     });
   } else if (lesson.contentType === "document") {
-    // Nota: Mappiamo "document" sul tipo "file" o "link" supportato dal tuo LessonRenderer
     formattedContents.push({
       type: "file",
       title: lesson.title,
@@ -62,7 +89,6 @@ export default function LessonPage() {
           </h1>
           
           <div className="mt-8">
-            {/* 🎯 Ora passiamo l'array formattato correttamente. Zero errori TypeScript! */}
             <LessonRenderer contents={formattedContents} />
           </div>
 

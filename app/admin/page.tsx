@@ -485,7 +485,7 @@ const openEditModal = (course: Course) => {
               </div>
 
               <div className="space-y-1">
-                <Label>Classi Abilitate (es: 1A, 1B)</Label>
+                <Label>Classi Abilitate (es: Informatica 1°, Informatica 2°)</Label>
                 <Input
                   value={allowedClassesInput}
                   onChange={(e) => setAllowedClassesInput(e.target.value)}

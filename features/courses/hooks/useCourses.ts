@@ -1,38 +1,78 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { getAllCourses } from "../services/courseService";
+import { useMemo, useState, useEffect } from "react";
+import { getLiveCourses } from "../services/courseActions"; // 🆕 Punta alle Actions dedicate!
 import { useAuth } from "@/features/auth/core/context/AuthContext";
+import { Course } from "../types/course";
 
 export function useCourses() {
   const { user } = useAuth();
   const [search, setSearch] = useState<string>("");
   const [category, setCategory] = useState<string>("Tutti");
+  
+  // Stato locale per ospitare i corsi estratti in tempo reale da Supabase
+  const [dbCourses, setDbCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Caricamento asincrono dal database all'avvio del componente
+  useEffect(() => {
+    async function loadInitialCourses() {
+      setIsLoading(true);
+      const data = await getLiveCourses();
+      setDbCourses(data);
+      setIsLoading(false);
+    }
+    loadInitialCourses();
+  }, []);
 
   /**
-   * 🎯 ADAPTER DI RETROCOMPATIBILITÀ (V2 ──► V1)
-   * Mappa il nuovo oggetto utente V2 nel vecchio formato 'SessionUser' richiesto 
-   * dal servizio dei corsi, così i filtri su ruoli e classi continueranno a funzionare.
+   * 🎯 IL TUO ADAPTER DI RETROCOMPATIBILITÀ (V2 ──► V1)
    */
   const legacySessionUser = useMemo(() => {
     if (!user) return null;
 
     return {
       ...user,
-      // Risolve la proprietà mancante usando il displayName o l'email come fallback
       username: (user as any).username || user.displayName || user.email,
-      // Garantisce che i filtri interni sulle classi leggano correttamente l'array v2 o v1
       allowedClasses: user.classes || (user as any).allowedClasses || [],
     };
   }, [user]);
 
-  // Recupera i corsi filtrati a monte in base ai permessi dell'utente loggato
+  /**
+   * 🛡️ IL TUO STRATO DI SICUREZZA APPLICATO AI DATI DEL DB
+   * Filtra i corsi in tempo reale basandosi sul ruolo e le classi dell'utente loggato
+   */
   const allowedCourses = useMemo(() => {
-    // Passiamo l'utente adattato forzando il tipo per aggirare il blocco di TypeScript v1
-    return getAllCourses(legacySessionUser as any);
-  }, [legacySessionUser]);
+    const currentUser = legacySessionUser as any;
 
-  // Applica i filtri di ricerca e categoria della UI
+    // Se l'utente non è loggato o non è attivo/admin, vede solo i corsi pubblici (senza restrizioni di classe)
+    if (!currentUser || (currentUser.status !== "active" && currentUser.role !== "admin")) {
+      return dbCourses.filter(
+        (course) => !course.allowedClasses || course.allowedClasses.length === 0
+      );
+    }
+
+    // Se è un amministratore, vede tutti i corsi presenti nel database
+    if (currentUser.role === "admin") {
+      return dbCourses;
+    }
+
+    // Studente attivo: effettua l'intersezione tra le classi dell'utente e quelle del corso
+    const userClasses = currentUser.classes || [];
+    return dbCourses.filter((course) => {
+      if (!course.allowedClasses || course.allowedClasses.length === 0) {
+        return true;
+      }
+      return course.allowedClasses.some((allowedClass: string) =>
+        userClasses.includes(allowedClass)
+      );
+    });
+  }, [dbCourses, legacySessionUser]);
+
+  /**
+   * 🔍 I TUOI FILTRI DI RICERCA E CATEGORIA DELLA UI
+   * Sistemato il controllo sul valore speciale "Tutti"
+   */
   const filteredCourses = useMemo(() => {
     return allowedCourses.filter((course) => {
       const matchCategory = category === "Tutti" || course.category === category;
@@ -48,5 +88,6 @@ export function useCourses() {
     category,
     setCategory,
     allCourses: allowedCourses,
+    isLoading, // Utile se in futuro vorrai aggiungere uno scheletrino di caricamento
   };
 }

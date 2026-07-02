@@ -1,0 +1,62 @@
+import { getAdminUsersList } from "@/features/admin/services/adminService";
+import { getMergedCourses } from "@/features/courses/services/courseService";
+import Navbar from "@/features/home/components/Navbar";
+import Footer from "@/features/home/components/Footer";
+import AdminUsersTable from "@/features/admin/components/AdminUsersTable";
+
+
+// Forza il rendering dinamico per avere sempre dati freschi dal DB ad ogni refresh
+export const dynamic = "force-dynamic";
+
+export default async function AdminDashboardPage() {
+  // Lettura dati in parallelo lato server
+  const users = await getAdminUsersList();
+  const courses = getMergedCourses();
+  
+  // Estraiamo tutte le classi uniche definite nei corsi per passarle come opzioni di assegnazione
+  const availableClasses = Array.from(
+    new Set(courses.flatMap((c) => c.allowedClasses || []))
+  );
+
+  return (
+    <div className="flex min-h-screen flex-col bg-gray-100">
+      <Navbar />
+      
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
+        <div className="sm:flex sm:items-center justify-between border-b border-gray-200 pb-6 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              Pannello di Controllo Admin
+            </h1>
+            <p className="mt-2 text-sm text-gray-700">
+              Gestione degli accessi, abilitazione studenti in attesa ed assegnazione delle coorti relazionali.
+            </p>
+          </div>
+          
+          <div className="flex gap-4 text-sm bg-white p-4 rounded-lg shadow-sm border">
+            <div className="text-center px-2">
+              <span className="block text-xl font-bold text-amber-600">
+                {users.filter(u => u.status === 'pending').length}
+              </span>
+              <span className="text-xs text-gray-500 font-medium">In attesa</span>
+            </div>
+            <div className="border-r my-1"></div>
+            <div className="text-center px-2">
+              <span className="block text-xl font-bold text-green-600">
+                {users.filter(u => u.status === 'active').length}
+              </span>
+              <span className="text-xs text-gray-500 font-medium">Attivi</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabella di gestione interattiva */}
+        <div className="bg-white rounded-xl shadow border overflow-hidden">
+          <AdminUsersTable initialUsers={users} availableClasses={availableClasses} />
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
