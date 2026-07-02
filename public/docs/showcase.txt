@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gcprof-ai-academy Showcase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background-color: #111;
+            margin: 0;
+            font-family: 'Urbanist', sans-serif;
+            color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .slide {
+            width: 100%;
+            max-width: 1280px;
+            height: 720px;
+            background-color: #0c0c0c;
+            border-radius: 20px;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            margin: 40px 0;
+            border: 1px solid #222;
+        }
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: -10%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(222, 255, 154, 0.04) 0%, transparent 70%);
+        }
+        h1, h2 { color: #f5f5f5; margin: 0; font-weight: 700; }
+        h1 span, h2 span { color: #deff9a; }
+        h1 { font-size: 64px; line-height: 1.1; }
+        h2 { font-size: 40px; margin-bottom: 30px; }
+        p { color: #cbd5e1; font-size: 18px; line-height: 1.6; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; }
+        .tile { background: #161616; padding: 30px; border-radius: 16px; border: 1px solid #333; }
+        .tile i { color: #deff9a; font-size: 32px; margin-bottom: 15px; }
+        .tile h3 { margin: 0 0 10px 0; font-size: 22px; color: #fff; }
+        .badge { background: rgba(222, 255, 154, 0.1); color: #deff9a; padding: 6px 14px; border-radius: 30px; font-size: 13px; font-weight: 700; uppercase; display: inline-block; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <span class="badge">Presentazione Ufficiale</span>
+        <h1>gcprof-ai-academy<br><span>L'E-Learning</span> del Futuro</h1>
+        <p style="color: #94a3b8; font-size: 22px; margin-top: 20px;">Architettura scalabile, Server Actions e Supabase Realtime.</p>
+    </div>
+
+    <div class="slide">
+        <h2>Il Nostro <span>Tech Stack</span></h2>
+        <div class="grid-2">
+            <div class="tile">
+                <i class="fa-solid fa-rocket"></i>
+                <h3>Next.js 15 & React 19</h3>
+                <p>Utilizzo intensivo di Server Components e useTransition per una UX fulminea e reattiva senza refresh di pagina.</p>
+            </div>
+            <div class="tile">
+                <i class="fa-solid fa-bolt"></i>
+                <h3>Supabase DB</h3>
+                <p>PostgreSQL relazionale robusto con chiamate amministrative protette lato server (bypass dei limiti TypeScript rigid).</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

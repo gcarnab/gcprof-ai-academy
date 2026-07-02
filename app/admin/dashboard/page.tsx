@@ -8,6 +8,7 @@ import AdminUsersTable from "@/features/admin/components/AdminUsersTable";
 import CreateCourseForm from "@/features/admin/components/CreateCourseForm";
 import CreateClassForm from "@/features/admin/components/CreateClassForm";
 import CourseContentEditor from "@/features/admin/components/CourseContentEditor";
+import ManageCategoriesForm from "@/features/admin/components/ManageCategoriesForm";
 
 // Forziamo Next.js a non usare la cache per questa pagina amministrativa
 export const dynamic = "force-dynamic";
@@ -26,13 +27,17 @@ export default async function AdminDashboardPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-100">
       <Navbar />
-      
+
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 space-y-10">
-        
         {/* Sezione Introduttiva Dashboard */}
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Pannello Amministratore</h1>
-          <p className="text-sm text-gray-500 mt-1">Gestisci la struttura dei corsi, le coorti di studenti e i permessi d'accesso.</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+            Pannello Amministratore
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Gestisci la struttura dei corsi, le coorti di studenti e i permessi
+            d'accesso.
+          </p>
         </div>
 
         {/* Gestione Struttura Didattica (Corsi e Moduli) */}
@@ -45,16 +50,24 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Gestione Classi Accademiche */}
-        <div className="bg-white rounded-xl shadow border overflow-hidden max-w-md">
-          <CreateClassForm />
+        {/* Gestione Classi Accademiche e Categorie */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-white rounded-xl shadow border overflow-hidden">
+            <CreateClassForm />
+          </div>
+          <div className="bg-white rounded-xl shadow border overflow-hidden">
+            <ManageCategoriesForm />{" "}
+            {/* 👈 Inserito il CRUD Categorie in tempo reale */}
+          </div>
         </div>
 
         {/* Tabella Controllo Utenti e Ruoli */}
         <div className="bg-white rounded-xl shadow border overflow-hidden">
-          <AdminUsersTable initialUsers={users} availableClasses={availableClassesNames} />
+          <AdminUsersTable
+            initialUsers={users}
+            availableClasses={availableClassesNames}
+          />
         </div>
-
       </main>
 
       <Footer />

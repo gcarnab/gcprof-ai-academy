@@ -1,117 +1,245 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { AdminClassOption } from "../services/adminCourseService";
-import { createCourseWithClasses } from "../core/actions/courseActions";
+import { useState, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  upsertCourse,
+  getLiveCourses,
+} from "@/features/courses/services/courseActions";
+import { getLiveCategories } from "@/features/courses/services/courseActions";
 
-interface CreateCourseFormProps {
-  classes: AdminClassOption[];
-}
-
-export default function CreateCourseForm({ classes }: CreateCourseFormProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+export default function CreateCourseForm({ classes }: { classes: any[] }) {
+  const [coursesList, setCoursesList] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleCheckboxChange = (classId: string) => {
-    setSelectedClassIds((prev) =>
-      prev.includes(classId) ? prev.filter((id) => id !== classId) : [...prev, classId]
-    );
+  // Stato del Form (valido sia per Crea che per Modifica)
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [difficulty, setDifficulty] = useState("Facile");
+  const [description, setDescription] = useState("");
+
+  // Carica i corsi e le categorie all'avvio per la gestione locale
+  const refreshData = async () => {
+    const [c, cat] = await Promise.all([getLiveCourses(), getLiveCategories()]);
+    setCoursesList(c);
+    setCategories(cat.filter((item) => item !== "Tutti"));
+  };
+
+  useEffect(() => {
+    refreshData();
+  }, []);
+
+  // Avvia la modalità modifica popolando il form
+  const handleEditSelect = (course: any) => {
+    setCourseId(course.id);
+    setTitle(course.title);
+    setCategory(course.category);
+    setDifficulty(course.difficulty);
+    setDescription(course.description || "");
+  };
+
+  // Resetta il form per tornare in modalità "Nuovo Corso"
+  const handleReset = () => {
+    setCourseId(null);
+    setTitle("");
+    setCategory("");
+    setDifficulty("Facile");
+    setDescription("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage(null);
+    if (!title.trim()) return;
 
     startTransition(async () => {
-      const result = await createCourseWithClasses({
-        title,
-        description,
-        classIds: selectedClassIds,
-      });
+      try {
+        const slug = title
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-");
 
-      if (result.success) {
-        setMessage({ type: "success", text: "Corso inserito e assegnato con successo!" });
-        setTitle("");
-        setDescription("");
-        setSelectedClassIds([]);
-      } else {
-        setMessage({ type: "error", text: result.error || "Qualcosa è andato storto." });
+        const numericId = courseId ? Number(courseId) : undefined;
+
+        await upsertCourse({
+          id: numericId, // 👈 Ora è un number | undefined, coerente con lo schema del DB
+          title: title.trim(),
+          slug,
+          category,
+          difficulty,
+          description,
+        });
+
+        handleReset();
+        await refreshData();
+        // Forza un reload leggero della pagina per allineare gli altri componenti della dashboard
+        window.location.reload();
+      } catch (err: any) {
+        alert("Errore durante il salvataggio: " + err.message);
       }
     });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-6">
+    <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">Crea Nuovo Corso (CMS Admin)</h2>
-        <p className="text-sm text-gray-500">Aggiungi un corso al catalogo e assegnalo istantaneamente alle classi relazionali.</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">
+          {courseId ? "📝 Modifica Corso" : "✨ Crea Nuovo Corso"}
+        </h2>
+        <p className="text-sm text-gray-500">
+          {courseId
+            ? "Stai modificando un corso esistente nel database."
+            : "Inserisci un nuovo corso formativo nell'Academy."}
+        </p>
       </div>
 
-      {message && (
-        <div className={`p-4 rounded-lg text-sm font-medium ${
-          message.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
-        }`}>
-          {message.text}
+      <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+        <div>
+          <label className="block font-medium text-gray-700 mb-1">
+            Titolo Corso
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full rounded-md border border-gray-300 p-2 text-gray-900 bg-white"
+            placeholder="Es: Corso Avanzato Python"
+            required
+          />
         </div>
-      )}
 
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-gray-700">Titolo del Corso</label>
-        <input
-          type="text"
-          required
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Es: Informatica 1°"
-          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-      </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-medium text-gray-700 mb-1">
+              Categoria
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full rounded-md border border-gray-300 p-2 text-gray-900 bg-white"
+              required
+            >
+              <option value="">-- Seleziona --</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-semibold text-gray-700">Descrizione</label>
-        <textarea
-          rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Fornisci una breve introduzione al programma del corso..."
-          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-      </div>
+          <div>
+            <label className="block font-medium text-gray-700 mb-1">
+              Difficoltà
+            </label>
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+              className="w-full rounded-md border border-gray-300 p-2 text-gray-900 bg-white"
+            >
+              <option value="Facile">Facile</option>
+              <option value="Intermedio">Intermedio</option>
+              <option value="Avanzato">Avanzato</option>
+            </select>
+          </div>
+        </div>
 
-      <div className="space-y-3">
-        <label className="block text-sm font-semibold text-gray-700">Assegna alle Classi Studenti</label>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 bg-gray-50 p-4 rounded-xl border">
-          {classes.length === 0 ? (
-            <p className="text-xs text-gray-400 italic">Nessuna classe configurata nel database.</p>
-          ) : (
-            classes.map((cls) => (
-              <label key={cls.id} className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all">
-                <input
-                  type="checkbox"
-                  checked={selectedClassIds.includes(cls.id)}
-                  onChange={() => handleCheckboxChange(cls.id)}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="font-medium">{cls.name}</span>
-              </label>
-            ))
+        <div>
+          <label className="block font-medium text-gray-700 mb-1">
+            Descrizione Breve
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            className="w-full rounded-md border border-gray-300 p-2 text-gray-900 bg-white"
+            placeholder="Descrizione sintetica del corso..."
+          />
+        </div>
+
+        <div className="flex gap-2 justify-end">
+          {courseId && (
+            <Button type="button" variant="outline" onClick={handleReset}>
+              Annulla Modifica
+            </Button>
           )}
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="bg-blue-600 text-white"
+          >
+            {courseId ? "Salva Modifiche" : "Crea Corso"}
+          </Button>
+        </div>
+      </form>
+
+      {/* Elenco Corsi per attivare la Modifica 
+      <div className="border-t pt-4">
+        <label className="block font-medium text-gray-700 mb-2 text-sm">Seleziona un corso da modificare:</label>
+        <div className="border rounded-lg divide-y bg-gray-50 max-h-40 overflow-y-auto">
+          {coursesList.map((c) => (
+            <div key={c.id} className="p-2 flex justify-between items-center bg-white text-xs text-gray-700">
+              <span className="font-medium truncate max-w-[250px]">{c.title} <span className="text-gray-400">({c.category})</span></span>
+              <button
+                onClick={() => handleEditSelect(c)}
+                className="text-blue-600 hover:underline font-semibold"
+              >
+                ✏️ Modifica
+              </button>
+            </div>
+          ))}
         </div>
       </div>
-
-      <div className="flex justify-end pt-2">
-        <Button
-          type="submit"
-          disabled={isPending}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg text-sm w-full sm:w-auto"
-        >
-          {isPending ? "Salvataggio in corso..." : "Pubblica Corso"}
-        </Button>
+*/}
+      {/* Elenco Corsi per attivare la Modifica o l'Eliminazione */}
+      <div className="border-t pt-4">
+        <label className="block font-medium text-gray-700 mb-2 text-sm">
+          Corsi censiti nel DB:
+        </label>
+        <div className="border rounded-lg divide-y bg-gray-50 max-h-40 overflow-y-auto">
+          {coursesList.map((c) => (
+            <div
+              key={c.id}
+              className="p-2 flex justify-between items-center bg-white text-xs text-gray-700"
+            >
+              <span className="font-medium truncate max-w-[200px] md:max-w-[250px]">
+                {c.title} <span className="text-gray-400">({c.category})</span>
+              </span>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  onClick={() => handleEditSelect(c)}
+                  className="text-blue-600 hover:underline font-semibold"
+                >
+                  ✏️ Modifica
+                </button>
+                <button
+                  onClick={async () => {
+                    if (
+                      window.confirm(
+                        `Vuoi davvero eliminare definitivamente il corso "${c.title}"?`,
+                      )
+                    ) {
+                      try {
+                        const { deleteCourse } =
+                          await import("@/features/courses/services/courseActions");
+                        await deleteCourse(c.id);
+                        refreshData();
+                        window.location.reload();
+                      } catch (err: any) {
+                        alert(err.message);
+                      }
+                    }
+                  }}
+                  className="text-red-500 hover:text-red-700 font-semibold"
+                >
+                  🗑️ Elimina
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </form>
+    </div>
   );
 }

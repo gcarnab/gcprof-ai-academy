@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { getLiveCourses } from "../services/courseActions"; // 🆕 Punta alle Actions dedicate!
+import { getLiveCourses, getLiveCategories } from "../services/courseActions"; // 🆕 Importazione delle Server Actions per corsi e categorie
 import { useAuth } from "@/features/auth/core/context/AuthContext";
 import { Course } from "../types/course";
 
@@ -10,19 +10,32 @@ export function useCourses() {
   const [search, setSearch] = useState<string>("");
   const [category, setCategory] = useState<string>("Tutti");
   
-  // Stato locale per ospitare i corsi estratti in tempo reale da Supabase
+  // Stato locale per ospitare i corsi e le categorie estratti in tempo reale da Supabase
   const [dbCourses, setDbCourses] = useState<Course[]>([]);
+  const [dbCategories, setDbCategories] = useState<string[]>(["Tutti"]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Caricamento asincrono dal database all'avvio del componente
+  // Caricamento asincrono parallelo dal database all'avvio del componente
   useEffect(() => {
-    async function loadInitialCourses() {
+    async function loadInitialData() {
       setIsLoading(true);
-      const data = await getLiveCourses();
-      setDbCourses(data);
-      setIsLoading(false);
+      try {
+        const [coursesData, categoriesData] = await Promise.all([
+          getLiveCourses(),
+          getLiveCategories(),
+        ]);
+        
+        setDbCourses(coursesData);
+        if (categoriesData && categoriesData.length > 0) {
+          setDbCategories(categoriesData);
+        }
+      } catch (error) {
+        console.error("❌ Errore durante il caricamento dei dati iniziali nell'hook:", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    loadInitialCourses();
+    loadInitialData();
   }, []);
 
   /**
@@ -87,7 +100,8 @@ export function useCourses() {
     setSearch,
     category,
     setCategory,
+    categories: dbCategories, // 🏷️ Array dinamico aggiornato in tempo reale dal database
     allCourses: allowedCourses,
-    isLoading, // Utile se in futuro vorrai aggiungere uno scheletrino di caricamento
+    isLoading,
   };
 }

@@ -24,7 +24,6 @@ export default function Navbar() {
   return (
     <header className="border-b border-gray-200 bg-white shadow-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        
         {/* LOGO */}
         <Link href="/" className="group flex items-center gap-3 transition-all">
           <Image
@@ -50,7 +49,8 @@ export default function Navbar() {
           <ul className="flex items-center gap-8 text-sm">
             {/* Nascondiamo i corsi del menu principale se lo studente è ancora pending */}
             {navigation.map((item) => {
-              if (item.href.includes("courses") && user?.status === "pending") return null;
+              if (item.href.includes("courses") && user?.status === "pending")
+                return null;
               return (
                 <li key={item.href}>
                   <Link href={item.href} className={linkClass(item.href)}>
@@ -59,22 +59,37 @@ export default function Navbar() {
                 </li>
               );
             })}
-            
+
             {/* 🎯 NUOVO ACCAGGIO DASHBOARD: Sostituisce il vecchio CMS Admin statico con la rotta V2 */}
             {user?.role === "admin" && (
               <li>
-                <Link href="/admin/dashboard" className={linkClass("/admin/dashboard")}>
+                <Link
+                  href="/admin/dashboard"
+                  className={linkClass("/admin/dashboard")}
+                >
                   ⚙️ Dashboard Admin
                 </Link>
               </li>
             )}
+
+            <li>
+              <Link
+                href="/credits"
+                className="text-sm font-medium text-gray-600 hover:text-purple-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-50"
+              >
+                🏅 Credits
+              </Link>
+            </li>
+            
           </ul>
         </nav>
 
         {/* AREA UTENTE DINAMICA */}
         <div className="flex items-center gap-4">
           {isLoading ? (
-            <div className="text-xs text-gray-400 animate-pulse">Verifica sessione...</div>
+            <div className="text-xs text-gray-400 animate-pulse">
+              Verifica sessione...
+            </div>
           ) : user ? (
             <div className="flex items-center gap-4">
               <div className="text-right">
@@ -83,7 +98,9 @@ export default function Navbar() {
                 </p>
                 <div className="text-xs text-gray-500 uppercase flex flex-col items-end gap-0.5">
                   {user.role === "admin" ? (
-                    <span className="font-medium text-purple-600">👨‍🏫 Admin</span>
+                    <span className="font-medium text-purple-600">
+                      👨‍🏫 Admin
+                    </span>
                   ) : (
                     <>
                       {/* Gestione visiva dello stato Pending / Active */}
@@ -92,7 +109,9 @@ export default function Navbar() {
                           ⏳ In attesa di attivazione
                         </span>
                       ) : (
-                        <span>🎓 Classi: {user.classes?.join(", ") || "Nessuna"}</span>
+                        <span>
+                          🎓 Classi: {user.classes?.join(", ") || "Nessuna"}
+                        </span>
                       )}
                     </>
                   )}
@@ -108,8 +127,8 @@ export default function Navbar() {
           ) : (
             // Utente non loggato
             <div className="flex items-center gap-3">
-              <Link 
-                href="/register" 
+              <Link
+                href="/register"
                 className={`text-xs font-medium ${linkClass("/register")}`}
               >
                 Registrati
