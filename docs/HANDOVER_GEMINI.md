@@ -42,45 +42,260 @@ Abbiamo architettato e blindato un sistema RBAC (Role-Based Access Control) basa
 ---
 
 ## 📂 2. FILE SYSTEM TREE DEL PROGETTO
-La struttura attuale delle cartelle e dei file chiave coinvolti nella logica è la seguente:
+Questo è il tree aggiornato della struttura del progetto su cui stiamo lavorando:
 
-gcprof-ai-academy/
-├── app/
-│   ├── api/
-│   │   └── classes/
-│   │       └── route.ts             # API per popolare la dropdown classi dal DB
-│   ├── courses/
-│   │   └── [slug]/
-│   │       └── page.tsx             # Pagina di fruizione protetta (No falsi 404)
-│   └── register/
-│       └── page.tsx                 # Form di registrazione studenti
-├── components/
-│   └── ui/
-│       └── button.tsx               # Componentistica base UI (shadcn)
-├── features/
-│   ├── auth/
-│   │   ├── components/
-│   │   │   └── LoginDialog.tsx
-│   │   └── core/
-│   │       ├── actions/
-│   │       │   └── registerAction.ts # Server Action di registrazione (Usa supabaseAdmin)
-│   │       └── context/
-│   │           └── AuthContext.tsx   # Gestione stato utente, sessione e badge
-│   ├── courses/
-│   │   ├── data/
-│   │   │   └── courses.ts           # Database statico/fallback dei corsi
-│   │   ├── services/
-│   │   │   └── courseService.ts     # Logica CRUD, getCourseBySlug e hasCourseAccess
-│   │   └── types/
-│   │       └── course.ts            # Definizione tipi TypeScript (Course, Module, Lesson)
-│   └── home/
-│       └── components/
-│           ├── Navbar.tsx           # Navbar dinamica reattiva allo stato/ruolo
-│           └── Footer.tsx
-├── lib/
-│   └── supabase.ts                  # Client Supabase centralizzato (createClient)
-├── .env.local                       # File variabili d'ambiente (SUPABASE_URL, ecc.)
-└── README-DB.md                     # Documentazione dello schema relazionale
+GCPROF-AI-ACADEMY
+|   .env.local
+|   .gitignore
+|   components.json
+|   eslint.config.mjs
+|   next-env.d.ts
+|   next.config.ts
+|   package-lock.json
+|   package.json
+|   postcss.config.mjs
+|   proxy.ts
+|   README.md
+|   tree.txt
+|   tsconfig.json
+|   
++---app
+|   |   favicon.ico
+|   |   globals.css
+|   |   layout.tsx
+|   |   page.tsx
+|   |   
+|   +---admin
+|   |   |   layout.tsx
+|   |   |   page.tsx
+|   |   |   
+|   |   \---dashboard
+|   |           page.tsx
+|   |           page.tsx_old
+|   |           page.tsx_old2
+|   |           
+|   +---api
+|   |   +---auth
+|   |   |   +---logout
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---session
+|   |   |           route.ts
+|   |   |           
+|   |   +---classes
+|   |   |       route.ts
+|   |   |       
+|   |   +---docs
+|   |   |   |   route.ts
+|   |   |   |   
+|   |   |   \---config
+|   |   |           route.ts
+|   |   |           
+|   |   +---seed-admin
+|   |   |       route.ts
+|   |   |       
+|   |   \---test-db
+|   |           route.ts
+|   |           
+|   +---contacts
+|   |       actions.ts
+|   |       page.tsx
+|   |       
+|   +---courses
+|   |   |   page.tsx
+|   |   |   
+|   |   \---[slug]
+|   |       |   page.tsx
+|   |       |   
+|   |       \---modules
+|   |           \---[moduleId]
+|   |               \---lessons
+|   |                   \---[lessonId]
+|   |                           page.tsx
+|   |                           
+|   +---credits
+|   |       CreditsClientWrapper.tsx
+|   |       page.tsx
+|   |       
+|   +---dashboard
+|   |       page.tsx
+|   |       
+|   +---login
+|   |       page.tsx
+|   |       
+|   \---register
+|           page.tsx
+|           
++---components
+|   |   ShowcaseSlides.tsx
+|   |   
+|   \---ui
+|           button.tsx
+|           card.tsx
+|           dialog.tsx
+|           dropdown-menu.tsx
+|           input.tsx
+|           label.tsx
+|           tabs.tsx
+|           textarea.tsx
+|           
++---docs
+|       AUTH_ARCHITECTURE.md
+|       credits.md
+|       HANDOVER_GEMINI.md
+|       HANDOVER_GPT.md
+|       README-DB.md
+|       schema_01.sql
+|       schema_02.sql
+|       tree_full.txt
+|       
++---features
+|   +---admin
+|   |   +---components
+|   |   |       AdminUsersTable.tsx
+|   |   |       CourseContentEditor.tsx
+|   |   |       CreateClassForm.tsx
+|   |   |       CreateCourseForm.tsx
+|   |   |       ManageCategoriesForm.tsx
+|   |   |       
+|   |   +---core
+|   |   |   \---actions
+|   |   |           adminActions.ts
+|   |   |           classActions.ts
+|   |   |           courseActions.ts
+|   |   |           structureActions.ts
+|   |   |           
+|   |   \---services
+|   |           adminCourseService.ts
+|   |           adminService.ts
+|   |           adminStructureService.ts
+|   |           
+|   +---auth
+|   |   +---components
+|   |   |       LoginDialog.tsx
+|   |   |       ProtectedRoute.tsx
+|   |   |       
+|   |   \---core
+|   |       +---actions
+|   |       |       getClassesAction.ts
+|   |       |       getSessionAction.ts
+|   |       |       loginAction.ts
+|   |       |       logoutAction.ts
+|   |       |       registerAction.ts
+|   |       |       
+|   |       +---constants
+|   |       |       AuthConstants.ts
+|   |       |       CookieConstants.ts
+|   |       |       TokenConstants.ts
+|   |       |       
+|   |       +---context
+|   |       |       AuthContext.tsx
+|   |       |       
+|   |       +---domain
+|   |       |       user.ts
+|   |       |       
+|   |       +---dto
+|   |       |       AuthDto.ts
+|   |       |       
+|   |       +---errors
+|   |       |       AuthError.ts
+|   |       |       InvalidCredentialsError.ts
+|   |       |       UnauthorizedError.ts
+|   |       |       UserAlreadyExistsError.ts
+|   |       |       
+|   |       +---infrastructure
+|   |       |       BcryptPasswordService.ts
+|   |       |       JoseTokenService.ts
+|   |       |       Logger.ts
+|   |       |       MemoryUserRepository.ts
+|   |       |       NextCookieService.ts
+|   |       |       RepositoryFactory.ts
+|   |       |       supabaseClient.ts
+|   |       |       SupabaseUserRepository.ts
+|   |       |       
+|   |       +---ports
+|   |       |       ICookieService.ts
+|   |       |       IPasswordService.ts
+|   |       |       ITokenService.ts
+|   |       |       IUserRepository.ts
+|   |       |       
+|   |       +---services
+|   |       |       AuthService.ts
+|   |       |       
+|   |       \---validators
+|   |               AuthValidators.ts
+|   |               
+|   +---courses
+|   |   |   index.ts
+|   |   |   
+|   |   +---components
+|   |   |   |   CategoryFilter.tsx
+|   |   |   |   CourseCard.tsx
+|   |   |   |   CourseList.tsx
+|   |   |   |   CourseSearch.tsx
+|   |   |   |   CoursesHeader.tsx
+|   |   |   |   
+|   |   |   \---lesson
+|   |   |           LessonRenderer.tsx
+|   |   |           
+|   |   +---data
+|   |   |       categories.ts
+|   |   |       courses.ts
+|   |   |       
+|   |   +---hooks
+|   |   |       useCourses.ts
+|   |   |       
+|   |   +---services
+|   |   |       courseActions.ts
+|   |   |       courseService.ts
+|   |   |       
+|   |   \---types
+|   |           course.ts
+|   |           lessonContent.ts
+|   |           
+|   \---home
+|       \---components
+|               CoursePreview.tsx
+|               Footer.tsx
+|               Hero.tsx
+|               Navbar.tsx
+|               
++---lib
+|       supabase.ts
+|       utils.ts
+|       
+|               
++---public
+|   |   file.svg
+|   |   gcprof-ai-academy_logo_01.png
+|   |   gcprof-ai-academy_logo_small.png
+|   |   globe.svg
+|   |   next.svg
+|   |   vercel.svg
+|   |   window.svg
+|   |   
+|   +---courses
+|   |       gcprof-ai-academy_logo_info_01.png
+|   |       gcprof-ai-academy_logo_info_02.png
+|   |       gcprof-ai-academy_logo_info_03.png
+|   |       gcprof-ai-academy_logo_info_04.png
+|   |       
+|   \---docs
+|           gcprof-ai-academy-showcase.pdf
+|           showcase.txt
+|           
+\---shared
+    +---config
+    |       navigation.ts
+    |       
+    +---layout
+    |       PublicLayout.tsx
+    |       
+    \---ui
+            Badge.tsx
+            Card.tsx
+            PageContainer.tsx
+            SectionTitle.tsx
 
 ---
 
@@ -146,6 +361,165 @@ CREATE POLICY "Gli Admin hanno controllo totale sui profili" ON public.profiles 
 
 COMMIT;
 
+
+Di seguito gli script SQL aggiornati che definiscono la struttura del nostro DB, le policy RLS e i trigger:
+
+## Table `users`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `email` | `text` |  Unique |
+| `password_hash` | `text` |  |
+| `role` | `text` |  |
+| `display_name` | `text` |  |
+| `classes` | `_text` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+| `status` | `text` |  |
+| `emailVerified` | `bool` |  |
+
+## Table `academy_classes`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `slug` | `text` |  Unique |
+| `name` | `text` |  |
+| `description` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  |
+
+## Table `user_classes_pivot`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `user_id` | `uuid` | Primary |
+| `class_id` | `uuid` | Primary |
+| `created_at` | `timestamptz` |  |
+
+## Table `profiles`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `first_name` | `varchar` |  Nullable |
+| `last_name` | `varchar` |  Nullable |
+| `display_name` | `varchar` |  Nullable |
+| `role` | `varchar` |  |
+| `status` | `varchar` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+
+## Table `profile_classes`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `profile_id` | `uuid` | Primary |
+| `class_id` | `uuid` | Primary |
+| `assigned_at` | `timestamptz` |  |
+
+## Table `courses`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `slug` | `varchar` |  Unique |
+| `title` | `varchar` |  |
+| `description` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+| `category` | `varchar` |  Nullable |
+| `difficulty` | `varchar` |  Nullable |
+| `teacher` | `varchar` |  Nullable |
+| `estimated_hours` | `int4` |  Nullable |
+| `cover_image` | `text` |  Nullable |
+| `published` | `bool` |  Nullable |
+
+## Table `course_modules`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `course_id` | `uuid` |  Nullable |
+| `title` | `varchar` |  |
+| `order_index` | `int4` |  |
+| `created_at` | `timestamptz` |  |
+
+## Table `course_lessons`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `module_id` | `uuid` |  Nullable |
+| `title` | `varchar` |  |
+| `slug` | `varchar` |  |
+| `video_url` | `text` |  Nullable |
+| `content` | `text` |  Nullable |
+| `order_index` | `int4` |  |
+| `created_at` | `timestamptz` |  |
+| `content_type` | `varchar` |  Nullable |
+| `duration` | `int4` |  Nullable |
+| `external_url` | `text` |  Nullable |
+
+## Table `course_classes`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `course_id` | `uuid` | Primary |
+| `class_id` | `uuid` | Primary |
+| `assigned_at` | `timestamptz` |  |
+
+## Table `course_categories`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `name` | `varchar` |  Unique |
+| `slug` | `varchar` |  Unique |
+| `created_at` | `timestamptz` |  |
+
+## Table `school_classes`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `name` | `varchar` |  Unique |
+| `description` | `varchar` |  Nullable |
+| `created_at` | `timestamptz` |  |
+
+## Table `document_configs`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `text` | Primary |
+| `label` | `text` |  |
+| `file_path` | `text` |  |
+| `is_active` | `bool` |  Nullable |
+| `updated_at` | `timestamptz` |  |
 
 
 

@@ -17,8 +17,9 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
   const { user, isLoading: authLoading } = useAuth();
   const [isPending, startTransition] = useTransition();
 
-  // Ruolo Amministratore reale
+  // Controllo autorizzazione basato sul contesto reattivo reale
   const isAdmin = user?.role === "admin";
+  const isActive = user?.status === "active" || user?.role === "admin"; // Admin attivo di default
 
   const [tabs, setTabs] = useState<DocConfig[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>("markdown");
@@ -29,8 +30,10 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // 1. Carica le configurazioni dinamiche (Sempre accessibile in lettura)
+  // 1. Carica le configurazioni dinamiche dal Database
   useEffect(() => {
+    if (!isActive) return;
+
     fetch("/api/docs/config")
       .then((res) => {
         if (!res.ok) throw new Error("Impossibile recuperare i canali di configurazione");
@@ -41,19 +44,24 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
         const formState: Record<string, string> = {};
         data.forEach((item) => { formState[item.id] = item.file_path; });
         setEditingConfig(formState);
+        
+        // Imposta il primo tab disponibile come attivo se non è vuoto
+        if (data.length > 0 && !data.some(t => t.id === "markdown")) {
+          setActiveTabId(data[0].id);
+        }
       })
       .catch((err) => setFetchError(err.message));
-  }, [saveSuccess]);
+  }, [saveSuccess, isActive]);
 
-  // 2. Carica le slide HTML (Sempre accessibile in lettura)
+  // 2. Carica il file TXT delle slide HTML
   useEffect(() => {
-    if (activeTabId === "html") {
+    if (activeTabId === "html" && isActive) {
       fetch("/showcase/index.txt")
         .then((res) => res.text())
         .then((text) => setHtmlSlides(text))
         .catch(() => setHtmlSlides("<h1>Errore nel caricamento del template delle slide</h1>"));
     }
-  }, [activeTabId]);
+  }, [activeTabId, isActive]);
 
   const handleFileBrowse = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
     const file = e.target.files?.[0];
@@ -79,28 +87,44 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
           alert(`Errore lato server: ${errData.error}`);
         }
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : "Errore di rete";
+        const errorMessage = err instanceof Error ? err.message : "Errore di rete durante il salvataggio";
         alert(errorMessage);
       }
     });
   };
 
+  // Parsing sicuro del testo per eliminare vulnerabilità XSS
   const renderSafeText = (text: string) => {
-    const cleanText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const cleanText = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
     const withBold = cleanText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     const withCode = withBold.replace(/`(.*?)`/g, '<code class="bg-slate-100 text-purple-600 px-1 py-0.5 rounded border font-mono text-xs">$1</code>');
+    
     return <span dangerouslySetInnerHTML={{ __html: withCode }} />;
   };
 
   if (authLoading) {
-    return <div className="text-center p-12 text-slate-500 font-medium">Inizializzazione Workspace...</div>;
+    return <div className="text-center p-12 text-slate-500 font-medium">Inizializzazione Workspace Sicuro...</div>;
+  }
+
+  // Schermata protetta per utenti non registrati o bloccati
+  if (!user || !isActive) {
+    return (
+      <div className="p-8 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-center">
+        <h3 className="font-bold text-lg">Accesso Limitato o Non Autorizzato</h3>
+        <p className="text-sm mt-1">Esegui l'accesso con un account attivo per visualizzare i documenti della piattaforma.</p>
+      </div>
+    );
   }
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
   return (
     <div className="space-y-6">
-      {/* HEADER DINAMICO IN BASE ALLO STATO DI AUTENTICAZIONE */}
+      {/* Intestazione */}
       <div className="flex justify-between items-center border-b pb-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900">Document Workspace</h1>
@@ -108,17 +132,13 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
         </div>
         
         <div className="text-xs font-bold px-3 py-1.5 rounded-xl border bg-slate-100 text-slate-700">
-          {user ? (
-            <span>👤 Utente: <span className="text-purple-600">{user.displayName}</span> ({isAdmin ? "Amministratore" : "Sola Lettura"})</span>
-          ) : (
-            <span className="text-amber-600">🌐 Visualizzazione Pubblica (Sola Lettura)</span>
-          )}
+          👤 Utente: <span className="text-purple-600">{user.displayName}</span> ({user.role === "admin" ? "Amministratore" : "Studente Sola Lettura"})
         </div>
       </div>
 
       {fetchError && <div className="p-4 bg-red-50 text-red-600 text-xs rounded-xl">{fetchError}</div>}
 
-      {/* PANNELLO DI MODIFICA DEI PERCORSI: COMPARIRE SOLO SE LOGGATO COME ADMIN */}
+      {/* PANNELLO ADMIN: Visibile SOLO se l'utente loggato ha ruolo esplicito 'admin' */}
       {isAdmin && (
         <div className="p-6 bg-slate-900 text-white rounded-2xl space-y-4 shadow-lg border border-slate-800">
           <div className="flex justify-between items-center border-b border-slate-800 pb-2">
@@ -159,9 +179,11 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
         </div>
       )}
 
-      {/* VISUALIZZATORE UNIFICATO IN SOLA LETTURA (Sempre Visibile a Tutti) */}
+      {/* VISUALIZZATORE UNIFICATO (Disponibile per studenti in Sola Lettura e per Admin) */}
       <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
+        {/* Barra dei Tab Dinamica alimentata unicamente dal DB (Risolto l'errore del tab duplicato) */}
         <div className="bg-slate-900 p-4 flex flex-wrap gap-2 justify-end border-b border-slate-800">
+          {/* Se il database non fornisce un record esplicito per il markdown, lo generiamo come fallback iniziale */}
           {!tabs.some(t => t.id === "markdown") && (
             <button
               onClick={() => setActiveTabId("markdown")}
@@ -182,6 +204,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
           ))}
         </div>
 
+        {/* Schermo di Rendering Intelligente */}
         <div className="relative w-full aspect-video bg-slate-100 min-h-[550px]">
           {activeTabId === "markdown" && (
             <div className="absolute inset-0 w-full h-full p-8 md:p-12 overflow-y-auto bg-white prose text-slate-800">
