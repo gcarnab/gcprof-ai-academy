@@ -1,6 +1,5 @@
 import { IUserRepository } from "../ports/IUserRepository";
 import { StudentUser } from "../domain/user";
-import { ACCOUNT_STATUS, AUTH_ROLES } from "../constants/AuthConstants";
 
 export class MemoryUserRepository implements IUserRepository {
   private static usersCollection: StudentUser[] = [

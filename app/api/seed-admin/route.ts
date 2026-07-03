@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getUserRepository } from "@/features/auth/core/infrastructure/RepositoryFactory";
+import { getUserRepository } from "@/features/auth/infrastructure/RepositoryFactory";
 import bcrypt from "bcryptjs";
 
 export async function GET() {

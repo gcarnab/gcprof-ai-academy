@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { JoseTokenService } from "@/features/auth/core/infrastructure/JoseTokenService";
-import { NextCookieService } from "@/features/auth/core/infrastructure/NextCookieService";
+import { JoseTokenService } from "@/features/auth/infrastructure/JoseTokenService";
+import { NextCookieService } from "@/features/auth/infrastructure/NextCookieService";
 
 interface ExtendedTokenPayload {
   id: string;

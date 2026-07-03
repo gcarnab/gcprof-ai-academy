@@ -14,8 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 
 // Sincronizzazione con l'architettura v2 (Server Actions e Context)
-import { useAuth } from "@/features/auth/core/context/AuthContext";
-import { loginAction } from "@/features/auth/core/actions/loginAction";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { loginAction } from "@/features/auth/actions/loginAction";
 
 export default function LoginDialog() {
   const { login } = useAuth(); // 🎯 Estraiamo solo 'login'

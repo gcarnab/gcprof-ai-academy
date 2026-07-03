@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { useAuth } from "@/features/auth/core/context/AuthContext";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 interface DocConfig {
   id: string;

@@ -13,9 +13,11 @@ export interface StudentUser {
   allowedClasses?: string[];   // Compatibilità per logiche legacy v1
   class?: string;              // Stringa d'appoggio per la UI dei moduli
   
-  // Altri campi opzionali del tuo dominio
+  // Campi del profilo utente
   firstName?: string;
   lastName?: string;
+  avatarUrl?: string;          // 🎯 NUOVO: URL pubblico della foto del profilo
+  
   emailVerified?: boolean;
   enrolledCourses?: string[];
 }

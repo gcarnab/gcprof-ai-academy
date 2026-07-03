@@ -24,10 +24,10 @@ export async function GET() {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     const userId = payload.id as string;
 
-    // 1. Leggiamo lo stato e il ruolo reali da profiles
+    // 1. 🎯 AGGIORNATO: Leggiamo tutti i dati del profilo in tempo reale dal DB (compresi i nuovi campi)
     const { data: profile, error: dbError } = await supabaseAdmin
       .from("profiles")
-      .select("status, role")
+      .select("status, role, display_name, first_name, last_name, avatar_url")
       .eq("id", userId)
       .maybeSingle();
 
@@ -38,7 +38,7 @@ export async function GET() {
 
     const finalStatus = profile.role === "admin" ? "active" : profile.status;
 
-    // 2. 🎯 CORREZIONE SCHEMA: Join esatta tra profile_classes e academy_classes
+    // 2. CORREZIONE SCHEMA: Join esatta tra profile_classes e academy_classes
     const { data: relations, error: relError } = await supabaseAdmin
       .from("profile_classes")
       .select(`
@@ -55,13 +55,17 @@ export async function GET() {
       .map((r: any) => r.academy_classes?.name)
       .filter(Boolean);
 
+    // Mappatura finale dell'oggetto utente da inviare al front-end Context
     const user = {
       id: userId,
       email: payload.email,
       role: profile.role || payload.role,
-      displayName: payload.displayName,
-      classes: currentClasses, // Nomi testuali reali
-      status: finalStatus
+      displayName: profile.display_name || payload.displayName, // 🎯 Prende il valore fresco dal DB
+      classes: currentClasses,
+      status: finalStatus,
+      firstName: profile.first_name || undefined,   // 🎯 NUOVO: Mappato in camelCase
+      lastName: profile.last_name || undefined,     // 🎯 NUOVO: Mappato in camelCase
+      avatarUrl: profile.avatar_url || undefined,   // 🎯 NUOVO: Mappato in camelCase
     };
 
     return NextResponse.json({ user });

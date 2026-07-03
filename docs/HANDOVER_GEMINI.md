@@ -1,48 +1,12 @@
-Agisci come un Esperto Senior Software Architect specializzato in Next.js, React e Clean Architecture. Dobbiamo riprendere il refactoring Enterprise v2 dell'applicazione "gcprof-ai-academy". Il progetto è stato appena aggiornato a Next.js 16.2.9 (con Turbopack abilitato), React 19.2.7 e TypeScript 5. 
+Agisci come un Esperto Senior Software Architect specializzato in Next.js, React e Clean Architecture. Dobbiamo riprendere il refactoring Enterprise v2 dell'applicazione "gcprof-ai-academy". Stiamo lavorando al progetto "GCPROF AI Academy (V2)", una piattaforma LMS avanzata basata su Next.js (App Router, TypeScript, Turbopack) e Supabase (Auth, PostgreSQL, RLS). 
+Di seguito trovi il contesto completo, lo schema del database e la struttura del progetto "gcprof-ai-academy". Il tuo compito è assorbire queste informazioni e attendere le mie prossime istruzioni operative per continuare lo sviluppo.
 
-Stiamo lavorando al progetto "GCPROF AI Academy (V2)", una piattaforma LMS avanzata basata su Next.js (App Router, TypeScript, Turbopack) e Supabase (Auth, PostgreSQL, RLS). 
+### 1. PANORAMICA DEL PROGETTO
+Il progetto è una piattaforma Academy ("gcprof-ai-academy") per la gestione di corsi, moduli e lezioni multimediali, con un controllo degli accessi granulare basato sulle classi scolastiche. L'applicazione utilizza Next.js con Server Actions (`"use server"`) e Supabase come backend tramite `supabaseAdmin` (`@supabase/supabase-js`).
 
----
-
-## 🎯 1. BUSINESS LOGIC & STATO DEL PROGETTO (V2)
-
-### 🛠️ STATO ATTUALE DELL'ARCHITETTURA (LATO AUTH)
-Abbiamo già implementato e stabilizzato con successo i seguenti livelli all'interno di `features/auth/core/`:
-
-1. DOMINIO & PORT (Disaccoppiati):
-   - Entità `StudentUser`: contiene `id`, `email`, `passwordHash`, `role` ('admin'|'student'), `displayName`, `classes: string[]`, `createdAt`, `updatedAt`.
-   - Interfaccia `IUserRepository`: definisce i contratti asincroni `findByEmail`, `create`, e `list`.
-   - Interfaccia `ITokenService` e costanti di configurazione per il JWT.
-
-2. INFRASTRUTTURA & ADAPTERS CORE:
-   - `JoseTokenService`: gestisce emissione, verifica e decodifica dei JWT tramite la libreria 'jose' (Edge-ready).
-   - `NextCookieService`: incapsula la gestione dei cookie crittografati HTTP-Only tramite le API native `cookies()` di Next.js.
-
-3. SERVER ACTIONS (React 19):
-   - `registerAction.ts`: esegue la validazione dell'input con Zod, l'hashing della password con `bcryptjs`, e salva l'utente tramite il repository corrente.
-   - `loginAction.ts`: verifica le credenziali, genera il JWT e setta il cookie HTTP-Only.
-   - `logoutAction.ts`: rimuove in sicurezza il cookie di sessione.
-   - `getSessionAction.ts`: recupera, convalida e decodifica il token lato server per passarlo al client.
-
-4. SICUREZZA ROUTING (Next.js 16):
-   - File `proxy.ts` (radice del progetto): sostituisce la vecchia convenzione `middleware.ts`. Intercetta le richieste a livello Edge, convalida il JWT e gestisce i redirect di sicurezza per le rotte protette (`/dashboard`, `/admin`) e per quelle di autenticazione.
-
-5. LAYER CLIENT & REATTIVITÀ:
-   - `AuthContext.tsx`: React Context client-side che inizializza lo stato dell'utente tramite `getSessionAction`, esponendo l'hook custom `useAuth()`.
-   - `LoginDialog.tsx`: componente Shadcn/UI stabilizzato. Usa `useTransition` di React 19 per invocare asincronamente `loginAction` e, in caso di successo, chiama `refreshSession()` del contesto per aggiornare istantaneamente la UI senza ricaricare la pagina. Include il toggle per mostrare/nascondere la password.
-   - `Navbar.tsx`: componente ufficiale aggiornato per consumare i dati reattivi di `useAuth` utilizzando le proprietà v2 (`user.displayName` e l'array `user.classes`).
-
-
-Abbiamo architettato e blindato un sistema RBAC (Role-Based Access Control) basato su relazioni reali e stati approvativi:
-1. **Registrazione & Stato:** I nuovi utenti si registrano scegliendo una classe di appartenenza dal DB. Il loro profilo viene creato nativamente su Supabase Auth e specchiato in `public.profiles` con stato iniziale 'pending'.
-2. **Sicurezza Navbar:** La Navbar si adatta dinamicamente: mostra un badge ambrato "⏳ In attesa di attivazione" per i 'pending', un badge accademico "🎓 Classi: ..." per gli 'active', e "👨‍🏫 Admin" per gli amministratori.
-3. **Flusso dei Corsi (No Falsi 404):** Nel file `page.tsx` di dettaglio corso (`app/courses/[slug]/page.tsx`), il sistema lancia un 404 reale SOLO se lo slug del corso non esiste nel sistema. Se il corso esiste, ma uno studente attivo di un'altra classe (es. Studente di 1° su Corso di 2°) tenta l'accesso, la pagina si carica regolarmente ma oscura i moduli mostrando un box rosso di "Accesso Riservato". 
-4. **Variabili d'ambiente:** Configurate nel file `.env.local` come `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` lato server, gestite tramite un'inizializzazione sicura nel client centralizzato.
-
----
-
-## 📂 2. FILE SYSTEM TREE DEL PROGETTO
+### 📂 2. FILE SYSTEM TREE DEL PROGETTO
 Questo è il tree aggiornato della struttura del progetto su cui stiamo lavorando:
+
 
 GCPROF-AI-ACADEMY
 |   .env.local
@@ -297,229 +261,84 @@ GCPROF-AI-ACADEMY
             PageContainer.tsx
             SectionTitle.tsx
 
----
 
-## 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
-Le tabelle e le politiche di sicurezza (RLS) attive su Supabase sono state generate ed eseguite con questo script:
+
+
+### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
+Il database gestisce ID flessibili (che possono essere stringhe/UUID o interi autoincrementanti). Le relazioni pivot collegano i corsi alle classi abilitate.
 
 ```sql
-BEGIN;
-
--- 1. Tabella Classi
-CREATE TABLE IF NOT EXISTS public.academy_classes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+-- Anagrafica Classi
+CREATE TABLE academy_classes (
+    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 2. Tabella Profili (Estensione di auth.users)
-CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    first_name VARCHAR(255),
-    last_name VARCHAR(255),
-    display_name VARCHAR(510),
-    role VARCHAR(50) DEFAULT 'student'::character varying NOT NULL,
-    status VARCHAR(50) DEFAULT 'pending'::character varying NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    CONSTRAINT check_role CHECK (role IN ('admin', 'student')),
-    CONSTRAINT check_status CHECK (status IN ('pending', 'active', 'blocked'))
+-- Anagrafica Categorie Corsi
+CREATE TABLE course_categories (
+    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. Tabella di Giunzione Molti-a-Molti (Utenti <-> Classi)
-CREATE TABLE IF NOT EXISTS public.profile_classes (
-    profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-    class_id UUID REFERENCES public.academy_classes(id) ON DELETE CASCADE,
-    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    PRIMARY KEY (profile_id, class_id)
+-- Tabella Corsi
+CREATE TABLE courses (
+    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    category VARCHAR(255) DEFAULT 'Informatica',
+    difficulty VARCHAR(50) DEFAULT 'Facile',
+    teacher VARCHAR(255) DEFAULT 'Prof. G. Carnabuci',
+    estimated_hours INT DEFAULT 0,
+    cover_image VARCHAR(255) DEFAULT '/courses/gcprof-ai-academy_logo_info_01.png',
+    published BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. Trigger calcolo Display Name automatico
-CREATE OR REPLACE FUNCTION public.set_display_name()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.display_name := TRIM(COALESCE(NEW.first_name, '') || ' ' || COALESCE(NEW.last_name, ''));
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- Relazione Pivot autonoma: Corsi <-> Classi Abilitate
+CREATE TABLE course_classes (
+    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    course_id BIGINT REFERENCES courses(id) ON DELETE CASCADE,
+    class_id BIGINT REFERENCES academy_classes(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(course_id, class_id)
+);
 
-CREATE OR REPLACE TRIGGER trigger_set_display_name
-BEFORE INSERT OR UPDATE OF first_name, last_name ON public.profiles
-FOR EACH ROW EXECUTE FUNCTION public.set_display_name();
+-- Tabella Moduli (collegati ai Corsi)
+CREATE TABLE course_modules (
+    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    course_id BIGINT REFERENCES courses(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    order_index INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- 5. Row Level Security (RLS)
-ALTER TABLE public.academy_classes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profile_classes ENABLE ROW LEVEL SECURITY;
+-- Tabella Lezioni (collegate ai Moduli)
+CREATE TABLE course_lessons (
+    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    module_id BIGINT REFERENCES course_modules(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    content_type VARCHAR(50) NOT NULL, -- 'video' | 'document'
+    external_url TEXT NOT NULL,
+    order_index INT NOT NULL DEFAULT 0,
+    duration INT DEFAULT 15,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-CREATE POLICY "Classi leggibili da utenti autenticati" ON public.academy_classes FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Classi modificabili solo dagli Admin" ON public.academy_classes FOR ALL TO authenticated USING (auth.jwt() ->> 'role' = 'admin');
-CREATE POLICY "Gli utenti possono leggere il proprio profilo" ON public.profiles FOR SELECT TO authenticated USING (auth.uid() = id);
-CREATE POLICY "Gli Admin hanno controllo totale sui profili" ON public.profiles FOR ALL TO authenticated USING (auth.jwt() ->> 'role' = 'admin');
+create table public.document_configs (
+  id text not null,
+  label text not null,
+  file_path text not null,
+  is_active boolean null default true,
+  updated_at timestamp with time zone not null default timezone ('utc'::text, now()),
+  constraint document_configs_pkey primary key (id)
+) TABLESPACE pg_default;
 
-COMMIT;
-
-
-Di seguito gli script SQL aggiornati che definiscono la struttura del nostro DB, le policy RLS e i trigger:
-
-## Table `users`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `email` | `text` |  Unique |
-| `password_hash` | `text` |  |
-| `role` | `text` |  |
-| `display_name` | `text` |  |
-| `classes` | `_text` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `status` | `text` |  |
-| `emailVerified` | `bool` |  |
-
-## Table `academy_classes`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `slug` | `text` |  Unique |
-| `name` | `text` |  |
-| `description` | `text` |  Nullable |
-| `created_at` | `timestamptz` |  |
-
-## Table `user_classes_pivot`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `user_id` | `uuid` | Primary |
-| `class_id` | `uuid` | Primary |
-| `created_at` | `timestamptz` |  |
-
-## Table `profiles`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `first_name` | `varchar` |  Nullable |
-| `last_name` | `varchar` |  Nullable |
-| `display_name` | `varchar` |  Nullable |
-| `role` | `varchar` |  |
-| `status` | `varchar` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-
-## Table `profile_classes`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `profile_id` | `uuid` | Primary |
-| `class_id` | `uuid` | Primary |
-| `assigned_at` | `timestamptz` |  |
-
-## Table `courses`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `slug` | `varchar` |  Unique |
-| `title` | `varchar` |  |
-| `description` | `text` |  Nullable |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `category` | `varchar` |  Nullable |
-| `difficulty` | `varchar` |  Nullable |
-| `teacher` | `varchar` |  Nullable |
-| `estimated_hours` | `int4` |  Nullable |
-| `cover_image` | `text` |  Nullable |
-| `published` | `bool` |  Nullable |
-
-## Table `course_modules`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `course_id` | `uuid` |  Nullable |
-| `title` | `varchar` |  |
-| `order_index` | `int4` |  |
-| `created_at` | `timestamptz` |  |
-
-## Table `course_lessons`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `module_id` | `uuid` |  Nullable |
-| `title` | `varchar` |  |
-| `slug` | `varchar` |  |
-| `video_url` | `text` |  Nullable |
-| `content` | `text` |  Nullable |
-| `order_index` | `int4` |  |
-| `created_at` | `timestamptz` |  |
-| `content_type` | `varchar` |  Nullable |
-| `duration` | `int4` |  Nullable |
-| `external_url` | `text` |  Nullable |
-
-## Table `course_classes`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `course_id` | `uuid` | Primary |
-| `class_id` | `uuid` | Primary |
-| `assigned_at` | `timestamptz` |  |
-
-## Table `course_categories`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `name` | `varchar` |  Unique |
-| `slug` | `varchar` |  Unique |
-| `created_at` | `timestamptz` |  |
-
-## Table `school_classes`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `name` | `varchar` |  Unique |
-| `description` | `varchar` |  Nullable |
-| `created_at` | `timestamptz` |  |
-
-## Table `document_configs`
-
-### Columns
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `text` | Primary |
-| `label` | `text` |  |
-| `file_path` | `text` |  |
-| `is_active` | `bool` |  Nullable |
-| `updated_at` | `timestamptz` |  |
-
-
+---
 

@@ -35,6 +35,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |       
 |   |   |   \---session
 |   |   |           route.ts
+|   |   |           route.ts_old
 |   |   |           
 |   |   +---classes
 |   |   |       route.ts
@@ -44,6 +45,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |   
 |   |   |   \---config
 |   |   |           route.ts
+|   |   |           route.ts_old
 |   |   |           
 |   |   +---seed-admin
 |   |   |       route.ts
@@ -96,12 +98,13 @@ GCPROF-AI-ACADEMY
 +---docs
 |       AUTH_ARCHITECTURE.md
 |       credits.md
+|       DB_DUMP.sql
 |       HANDOVER_GEMINI.md
 |       HANDOVER_GPT.md
 |       README-DB.md
 |       schema_01.sql
 |       schema_02.sql
-|       tree_full.txt
+|       tree.txt
 |       
 +---features
 |   +---admin
@@ -164,6 +167,7 @@ GCPROF-AI-ACADEMY
 |   |       |       MemoryUserRepository.ts
 |   |       |       NextCookieService.ts
 |   |       |       RepositoryFactory.ts
+|   |       |       ResendEmailService.ts
 |   |       |       supabaseClient.ts
 |   |       |       SupabaseUserRepository.ts
 |   |       |       
@@ -193,8 +197,8 @@ GCPROF-AI-ACADEMY
 |   |   |           LessonRenderer.tsx
 |   |   |           
 |   |   +---data
-|   |   |       categories.ts
-|   |   |       courses.ts
+|   |   |       categories.ts_old
+|   |   |       courses.ts_old
 |   |   |       
 |   |   +---hooks
 |   |   |       useCourses.ts
@@ -217,8 +221,7 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|       
-|               
+|                   
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -234,9 +237,12 @@ GCPROF-AI-ACADEMY
 |   |       gcprof-ai-academy_logo_info_03.png
 |   |       gcprof-ai-academy_logo_info_04.png
 |   |       
-|   \---docs
-|           gcprof-ai-academy-showcase.pdf
-|           showcase.txt
+|   +---docs
+|   |       gcprof-ai-academy-showcase.pdf
+|   |       showcase.txt
+|   |       
+|   \---showcase
+|           index.txt
 |           
 \---shared
     +---config

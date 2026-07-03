@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { AdminUserRow } from "../services/adminService";
-import { updateUserStatus, updateUserClasses } from "../core/actions/adminActions";
+import { updateUserStatus, updateUserClasses } from "../actions/adminActions";
 import { Button } from "@/components/ui/button";
 
 interface AdminUsersTableProps {

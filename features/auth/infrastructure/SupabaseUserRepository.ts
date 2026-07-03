@@ -10,6 +10,9 @@ interface SupabaseProfileRow {
   role: "admin" | "student";
   display_name: string;
   status: "pending" | "active" | "blocked";
+  first_name: string | null;   // 🎯 NUOVO
+  last_name: string | null;    // 🎯 NUOVO
+  avatar_url: string | null;   // 🎯 NUOVO
   created_at: string;
   updated_at: string;
 }
@@ -20,11 +23,9 @@ export class SupabaseUserRepository implements IUserRepository {
   private async getUserClasses(userId: string): Promise<string[]> {
     const { data, error } = await supabaseServer
       .from("profile_classes")
-      .select(
-        `
+      .select(`
         academy_classes ( name )
-      `,
-      )
+      `)
       .eq("profile_id", userId);
 
     if (error) {
@@ -88,6 +89,9 @@ export class SupabaseUserRepository implements IUserRepository {
       role: user.role,
       display_name: user.displayName,
       status: "pending",
+      first_name: user.firstName || null,
+      last_name: user.lastName || null,
+      avatar_url: user.avatarUrl || null,
     };
 
     const { data, error } = await supabaseServer
@@ -125,6 +129,11 @@ export class SupabaseUserRepository implements IUserRepository {
     if (user.displayName !== undefined)
       dbPayload.display_name = user.displayName;
     if (anyUser.status !== undefined) dbPayload.status = anyUser.status;
+    
+    // Mappatura nuovi campi profilo
+    if (user.firstName !== undefined) dbPayload.first_name = user.firstName;
+    if (user.lastName !== undefined) dbPayload.last_name = user.lastName;
+    if (user.avatarUrl !== undefined) dbPayload.avatar_url = user.avatarUrl;
 
     dbPayload.updated_at = new Date().toISOString();
 
@@ -180,6 +189,9 @@ export class SupabaseUserRepository implements IUserRepository {
       role: row.role,
       displayName: row.display_name,
       status: row.status,
+      firstName: row.first_name || undefined,   // 🎯 Mappatura in camelCase
+      lastName: row.last_name || undefined,     // 🎯 Mappatura in camelCase
+      avatarUrl: row.avatar_url || undefined,   // 🎯 Mappatura in camelCase
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString(),
     };

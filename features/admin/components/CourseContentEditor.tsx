@@ -6,7 +6,7 @@ import {
   addModule, 
   addLesson, 
   getCourseStructureAction 
-} from "../core/actions/structureActions";
+} from "../actions/structureActions";
 import { 
   deleteModule, 
   deleteLesson, 

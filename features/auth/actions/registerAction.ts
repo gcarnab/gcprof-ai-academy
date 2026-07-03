@@ -1,8 +1,8 @@
 "use server";
 
-import { getUserRepository } from "@/features/auth/core/infrastructure/RepositoryFactory";
-import { BcryptPasswordService } from "@/features/auth/core/infrastructure/BcryptPasswordService";
-import { ResendEmailService } from "@/features/auth/core/infrastructure/ResendEmailService";
+import { getUserRepository } from "@/features/auth/infrastructure/RepositoryFactory";
+import { BcryptPasswordService } from "@/features/auth/infrastructure/BcryptPasswordService";
+import { ResendEmailService } from "@/features/auth/infrastructure/ResendEmailService";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -39,7 +39,6 @@ export async function registerAction(prevState: any, formData: FormData) {
   try {
     const repo = getUserRepository();
 
-    // 1. Verifica se l'utente esiste già (DISABILITATO PER TEST SU EMAIL CON SUFFISSO "+test")
     const isTestEmail = email.includes("+test");
     if (!isTestEmail) {
       const existingUser = await repo.findByEmail(email);
@@ -51,18 +50,11 @@ export async function registerAction(prevState: any, formData: FormData) {
         `⚠️ Modalità Test: Bypass controllo unicità per l'email ${email}`,
       );
     }
-
-    /*
-    const existingUser = await repo.findByEmail(email);
-    if (existingUser) {
-      return { success: false, error: "Questa email è già registrata." };
-    }
-    */
    
-    // 2. Recupera i dettagli della classe
+    // 🎯 FISSATO: Selezioniamo sia 'name' che 'slug' per risolvere il disallineamento
     const { data: classData, error: classErr } = await supabaseAdmin
       .from("academy_classes")
-      .select("slug")
+      .select("name, slug")
       .eq("id", classId)
       .single();
 
@@ -70,27 +62,26 @@ export async function registerAction(prevState: any, formData: FormData) {
       return { success: false, error: "La classe selezionata non è valida." };
     }
 
-    // 3. Hash della password
     const passwordService = new BcryptPasswordService();
     const passwordHash = await passwordService.hash(password);
 
-    // 4. Creazione utente principale nel sistema V2
     const displayName = `${firstName} ${lastName}`;
+    
+    // 🎯 FISSATO: Salviamo classData.name nell'array classes (es. "PRIMA") coerentemente con getLiveCourses()
+    // 💡 NOTA TEST: Se vuoi l'accesso immediato senza approvazione admin, cambia status in "active"
     const newUser = await repo.create({
       email,
       passwordHash,
       role: "student",
-      status: "pending",
+      status: "pending", 
       displayName,
       firstName,
       lastName,
-      classes: [classData.slug],
+      classes: [classData.name], 
       enrolledCourses: [],
       emailVerified: false,
     } as any);
 
-    // 5. 🎯 ALLINEAMENTO TABLES: Scrittura esplicita per garantire la sincronizzazione con l'Admin Dashboard
-    // Inseriamo/Aggiorniamo la tabella 'profiles' usata da getAdminUsersList()
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .insert({
@@ -99,7 +90,7 @@ export async function registerAction(prevState: any, formData: FormData) {
         last_name: lastName,
         display_name: displayName,
         role: "student",
-        status: "pending",
+        status: "pending", // Deve matchare lo status dell'oggetto utente superiore
         created_at: new Date().toISOString(),
       });
 
@@ -110,7 +101,6 @@ export async function registerAction(prevState: any, formData: FormData) {
       );
     }
 
-    // Inseriamo nella tabella pivot 'profile_classes' letta dall'Admin Dashboard
     const { error: profilePivotError } = await supabaseAdmin
       .from("profile_classes")
       .insert({ profile_id: newUser.id, class_id: classId });
@@ -122,13 +112,6 @@ export async function registerAction(prevState: any, formData: FormData) {
       );
     }
 
-    /*
-    await supabaseAdmin
-      .from("user_classes_pivot")
-      .insert({ user_id: newUser.id, class_id: classId }).catch(() => null);
-    */
-
-    // Manteniamo per retrocompatibilità l'inserimento sul vecchio pivot se utilizzato altrove
     const { error: oldPivotError } = await supabaseAdmin
       .from("user_classes_pivot")
       .insert({ user_id: newUser.id, class_id: classId });
@@ -140,7 +123,6 @@ export async function registerAction(prevState: any, formData: FormData) {
       );
     }
 
-    // ✉️ 6. INVIO NOTIFICHE EMAIL TRANSAZIONALI IN BACKGROUND
     const emailService = new ResendEmailService();
     startEmailDispatches(emailService, email, displayName, classData.slug);
 

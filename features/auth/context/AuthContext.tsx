@@ -2,15 +2,17 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-// Definiamo il tipo dell'utente nel contesto (allineato alla v2)
+// Definiamo il tipo dell'utente nel contesto (allineato alla v2 e alla feature Profilo)
 export interface AuthUser {
   id: string;
   email: string;
   displayName: string;
   role: "admin" | "student";
-  status: "active" | "blocked" | "pending"; // 🎯 Aggiungi questa riga
+  status: "active" | "blocked" | "pending";
   classes: string[];
-  // ... altri campi
+  firstName?: string;   // 🎯 NUOVO
+  lastName?: string;    // 🎯 NUOVO
+  avatarUrl?: string;   // 🎯 NUOVO
 }
 
 // 🎯 AGGIORNAMENTO CONTRATTO: Definiamo l'interfaccia esatta esposta dall'hook

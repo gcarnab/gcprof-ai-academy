@@ -1,5 +1,5 @@
 import type { Course, Module, Lesson } from "../types/course";
-import { AuthUser } from "@/features/auth/core/context/AuthContext";
+import { AuthUser } from "@/features/auth/context/AuthContext";
 
 /**
  * Verifica se un utente specifico ha i permessi per accedere a un determinato corso
@@ -10,20 +10,20 @@ export function hasCourseAccess(
 ): boolean {
   if (!course.published) return user?.role === "admin";
 
-  // 🎯 BLOCCO PENDING: Se l'utente è in attesa di approvazione, non ha mai accesso a nessun corso
+  // 🎯 BLOCCO PENDING: Se l'utente è in attesa di approvazione, non ha mai accesso
   if (user && user.status === "pending" && user.role !== "admin") {
     return false;
   }
 
-  // Se l'utente non è attivo (es. bloccato) e non è admin, può vedere solo i corsi liberi
+  // Se l'utente è bloccato e non è admin, non accede a nulla
   if (user && user.status !== "active" && user.role !== "admin") {
-    return !course.allowedClasses || course.allowedClasses.length === 0;
+    return false;
   }
   
-  if (!user) return true; // Gestione ospiti (se applicabile sul catalogo)
+  if (!user) return false; // 🎯 MODIFICATO: Gli ospiti non loggati non accedono ai corsi interni
   if (user.role === "admin") return true;
-  if (!course.allowedClasses || course.allowedClasses.length === 0) return true;
 
+  // 🎯 MODIFICATO: Eliminato il fallback permissivo. Lo studente accede SOLO se c'è corrispondenza di classe
   const userClasses = user.classes || [];
   return course.allowedClasses.some((allowedClass) =>
     userClasses.includes(allowedClass),
@@ -31,25 +31,22 @@ export function hasCourseAccess(
 }
 
 /**
- * Filtra un array di corsi passati in base ai privilegi dell'utente (utilizzabile negli hook client)
+ * Filtra un array di corsi passati in base ai privilegi dell'utente (utilizzato nel catalogo)
  */
 export function filterCoursesByUser(courses: Course[], user: AuthUser | null): Course[] {
-  // 🎯 BLOCCO PENDING: Se l'utente è pending, non estrae nessun corso
   if (user && user.status === "pending" && user.role !== "admin") {
     return [];
   }
 
   if (!user || (user.status !== "active" && user.role !== "admin")) {
-    return courses.filter(
-      (course) => !course.allowedClasses || course.allowedClasses.length === 0,
-    );
+    return []; // Ospiti o utenti non attivi non vedono corsi protetti
   }
   
   if (user.role === "admin") return courses;
   
+  // 🎯 MODIFICATO: Filtro stringente sulle classi associate al corso
   const userClasses = user.classes || [];
   return courses.filter((course) => {
-    if (!course.allowedClasses || course.allowedClasses.length === 0) return true;
     return course.allowedClasses.some((allowedClass) =>
       userClasses.includes(allowedClass),
     );
@@ -67,13 +64,13 @@ export function getModuleFromCourse(
   if (!course || !user) return undefined;
   if (user.role !== "admin" && user.status !== "active") return undefined;
 
-  if (course.allowedClasses && course.allowedClasses.length > 0) {
-    const userClasses = user.classes || [];
-    const hasClass = course.allowedClasses.some((ac) =>
-      userClasses.includes(ac),
-    );
-    if (!hasClass) return undefined;
-  }
+  const userClasses = user.classes || [];
+  const hasClass = course.allowedClasses.some((ac) =>
+    userClasses.includes(ac),
+  );
+  
+  if (user.role !== "admin" && !hasClass) return undefined;
+  
   return course.modules.find((m) => m.id === moduleId);
 }
 
@@ -101,6 +98,7 @@ export function getYouTubeEmbedUrl(url?: string): string | null {
     const urlParams = new URLSearchParams(new URL(url).search);
     videoId = urlParams.get("v") || "";
   } else if (url.includes("youtu.be/")) {
+    
     videoId = url.split("youtu.be/")[1]?.split("?")[0] || "";
   } else if (url.includes("youtube.com/embed/")) return url;
   return videoId ? `https://www.youtube.com/embed/${videoId}` : null;

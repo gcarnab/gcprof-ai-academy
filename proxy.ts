@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
-import { COOKIE_CONSTANTS } from "./features/auth/core/constants/CookieConstants";
-import { TOKEN_CONSTANTS } from "./features/auth/core/constants/TokenConstants";
+import { COOKIE_CONSTANTS } from "./features/auth/constants/CookieConstants";
+import { TOKEN_CONSTANTS } from "./features/auth/constants/TokenConstants";
 
 const PROTECTED_ROUTES = ["/dashboard", "/admin", "/profilo", "/corsi"];
 const AUTH_ROUTES = ["/auth-test/login", "/auth-test/register", "/login"];

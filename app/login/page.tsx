@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/features/auth/core/context/AuthContext";
-import { loginAction } from "@/features/auth/core/actions/loginAction";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { loginAction } from "@/features/auth/actions/loginAction";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

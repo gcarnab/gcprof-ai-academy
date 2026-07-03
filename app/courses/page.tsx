@@ -1,23 +1,3 @@
-/**
- * ============================================================================
- * PAGINA: /courses
- * ----------------------------------------------------------------------------
- * Questa è la pagina del Catalogo Corsi.
- *
- * RESPONSABILITÀ:
- * ----------------------------------------------------------------------------
- * - orchestrare i componenti della feature courses
- * - collegare UI e logica (useCourses)
- * - NON contenere logica di business
- *
- * ARCHITETTURA:
- * ----------------------------------------------------------------------------
- * UI → Components
- * State → useCourses
- * Data → Database (Supabase)
- * ============================================================================
- */
-
 "use client";
 
 import { useCourses } from "@/features/courses/hooks/useCourses";
@@ -27,7 +7,7 @@ import CategoryFilter from "@/features/courses/components/CategoryFilter";
 import CoursesHeader from "@/features/courses/components/CoursesHeader";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
-import { useAuth } from "@/features/auth/core/context/AuthContext";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 export default function CoursesPage() {
   const { user } = useAuth(); // 🎯 Recuperiamo la sessione utente

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navigation } from "@/shared/config/navigation";
 import LoginDialog from "@/features/auth/components/LoginDialog";
-import { useAuth } from "@/features/auth/core/context/AuthContext";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 export default function Navbar() {
   const { user, logout, isLoading } = useAuth();
@@ -60,7 +60,7 @@ export default function Navbar() {
               );
             })}
 
-            {/* 🎯 NUOVO ACCAGGIO DASHBOARD: Sostituisce il vecchio CMS Admin statico con la rotta V2 */}
+            {/* 🎯 DASHBOARD DASHBOARD: Sostituisce il vecchio CMS Admin statico con la rotta V2 */}
             {user?.role === "admin" && (
               <li>
                 <Link
@@ -80,7 +80,18 @@ export default function Navbar() {
                 🏅 Credits
               </Link>
             </li>
-            
+
+            {/* 🎯 MODIFICATO: Il link del profilo viene mostrato solo se l'utente è loggato */}
+            {user && (
+              <li>
+                <Link
+                  href="/profile"
+                  className="text-sm font-medium text-gray-600 hover:text-purple-600 transition-colors px-3 py-2 rounded-md hover:bg-gray-50"
+                >
+                  👤 Profile
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
 

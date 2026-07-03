@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
-import { AuthProvider } from "@/features/auth/core/context/AuthContext"; //V2
+import { AuthProvider } from "@/features/auth/context/AuthContext"; //V2
 //import { AuthProvider } from "@/features/auth/context/AuthContext"; //V1
 
 // Inizializziamo il font Geist impostando la variabile CSS
