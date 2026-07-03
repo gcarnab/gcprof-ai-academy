@@ -35,8 +35,6 @@ GCPROF-AI-ACADEMY
 |   |   |   
 |   |   \---dashboard
 |   |           page.tsx
-|   |           page.tsx_old
-|   |           page.tsx_old2
 |   |           
 |   +---api
 |   |   +---auth
@@ -55,10 +53,7 @@ GCPROF-AI-ACADEMY
 |   |   |   \---config
 |   |   |           route.ts
 |   |   |           
-|   |   +---seed-admin
-|   |   |       route.ts
-|   |   |       
-|   |   \---test-db
+|   |   \---seed-admin
 |   |           route.ts
 |   |           
 |   +---contacts
@@ -87,6 +82,9 @@ GCPROF-AI-ACADEMY
 |   +---login
 |   |       page.tsx
 |   |       
+|   +---profile
+|   |       page.tsx
+|   |       
 |   \---register
 |           page.tsx
 |           
@@ -106,89 +104,93 @@ GCPROF-AI-ACADEMY
 +---docs
 |       AUTH_ARCHITECTURE.md
 |       credits.md
+|       DB_DUMP.sql
 |       HANDOVER_GEMINI.md
 |       HANDOVER_GPT.md
 |       README-DB.md
 |       schema_01.sql
 |       schema_02.sql
-|       tree_full.txt
+|       tree.txt
 |       
 +---features
 |   +---admin
+|   |   +---actions
+|   |   |       adminActions.ts
+|   |   |       assignCourseClassAction.ts
+|   |   |       bulkActivateUsersAction.ts
+|   |   |       classActions.ts
+|   |   |       courseActions.ts
+|   |   |       structureActions.ts
+|   |   |       
 |   |   +---components
+|   |   |       AdminStatsDashboard.tsx
 |   |   |       AdminUsersTable.tsx
+|   |   |       AssignCourseClassForm.tsx
 |   |   |       CourseContentEditor.tsx
 |   |   |       CreateClassForm.tsx
 |   |   |       CreateCourseForm.tsx
 |   |   |       ManageCategoriesForm.tsx
 |   |   |       
-|   |   +---core
-|   |   |   \---actions
-|   |   |           adminActions.ts
-|   |   |           classActions.ts
-|   |   |           courseActions.ts
-|   |   |           structureActions.ts
-|   |   |           
 |   |   \---services
 |   |           adminCourseService.ts
 |   |           adminService.ts
 |   |           adminStructureService.ts
 |   |           
 |   +---auth
+|   |   +---actions
+|   |   |       getClassesAction.ts
+|   |   |       getSessionAction.ts
+|   |   |       loginAction.ts
+|   |   |       logoutAction.ts
+|   |   |       registerAction.ts
+|   |   |       
 |   |   +---components
 |   |   |       LoginDialog.tsx
 |   |   |       ProtectedRoute.tsx
 |   |   |       
-|   |   \---core
-|   |       +---actions
-|   |       |       getClassesAction.ts
-|   |       |       getSessionAction.ts
-|   |       |       loginAction.ts
-|   |       |       logoutAction.ts
-|   |       |       registerAction.ts
-|   |       |       
-|   |       +---constants
-|   |       |       AuthConstants.ts
-|   |       |       CookieConstants.ts
-|   |       |       TokenConstants.ts
-|   |       |       
-|   |       +---context
-|   |       |       AuthContext.tsx
-|   |       |       
-|   |       +---domain
-|   |       |       user.ts
-|   |       |       
-|   |       +---dto
-|   |       |       AuthDto.ts
-|   |       |       
-|   |       +---errors
-|   |       |       AuthError.ts
-|   |       |       InvalidCredentialsError.ts
-|   |       |       UnauthorizedError.ts
-|   |       |       UserAlreadyExistsError.ts
-|   |       |       
-|   |       +---infrastructure
-|   |       |       BcryptPasswordService.ts
-|   |       |       JoseTokenService.ts
-|   |       |       Logger.ts
-|   |       |       MemoryUserRepository.ts
-|   |       |       NextCookieService.ts
-|   |       |       RepositoryFactory.ts
-|   |       |       supabaseClient.ts
-|   |       |       SupabaseUserRepository.ts
-|   |       |       
-|   |       +---ports
-|   |       |       ICookieService.ts
-|   |       |       IPasswordService.ts
-|   |       |       ITokenService.ts
-|   |       |       IUserRepository.ts
-|   |       |       
-|   |       +---services
-|   |       |       AuthService.ts
-|   |       |       
-|   |       \---validators
-|   |               AuthValidators.ts
-|   |               
+|   |   +---constants
+|   |   |       AuthConstants.ts
+|   |   |       CookieConstants.ts
+|   |   |       TokenConstants.ts
+|   |   |       
+|   |   +---context
+|   |   |       AuthContext.tsx
+|   |   |       
+|   |   +---domain
+|   |   |       user.ts
+|   |   |       
+|   |   +---dto
+|   |   |       AuthDto.ts
+|   |   |       
+|   |   +---errors
+|   |   |       AuthError.ts
+|   |   |       InvalidCredentialsError.ts
+|   |   |       UnauthorizedError.ts
+|   |   |       UserAlreadyExistsError.ts
+|   |   |       
+|   |   +---infrastructure
+|   |   |       BcryptPasswordService.ts
+|   |   |       JoseTokenService.ts
+|   |   |       Logger.ts
+|   |   |       MemoryUserRepository.ts
+|   |   |       NextCookieService.ts
+|   |   |       RepositoryFactory.ts
+|   |   |       ResendEmailService.ts
+|   |   |       supabaseClient.ts
+|   |   |       SupabaseUserRepository.ts
+|   |   |       
+|   |   +---ports
+|   |   |       ICookieService.ts
+|   |   |       IPasswordService.ts
+|   |   |       ITokenService.ts
+|   |   |       IUserRepository.ts
+|   |   |       
+|   |   +---services
+|   |   |       AuthService.ts
+|   |   |       
+|   |   \---validators
+|   |           AuthValidators.ts
+|   |           
 |   +---courses
 |   |   |   index.ts
 |   |   |   
@@ -202,12 +204,11 @@ GCPROF-AI-ACADEMY
 |   |   |   \---lesson
 |   |   |           LessonRenderer.tsx
 |   |   |           
-|   |   +---data
-|   |   |       categories.ts
-|   |   |       courses.ts
-|   |   |       
 |   |   +---hooks
 |   |   |       useCourses.ts
+|   |   |       
+|   |   +---queries
+|   |   |       getStudentCourses.ts
 |   |   |       
 |   |   +---services
 |   |   |       courseActions.ts
@@ -217,18 +218,24 @@ GCPROF-AI-ACADEMY
 |   |           course.ts
 |   |           lessonContent.ts
 |   |           
-|   \---home
-|       \---components
-|               CoursePreview.tsx
-|               Footer.tsx
-|               Hero.tsx
-|               Navbar.tsx
+|   +---home
+|   |   \---components
+|   |           CoursePreview.tsx
+|   |           Footer.tsx
+|   |           Hero.tsx
+|   |           Navbar.tsx
+|   |           
+|   \---profile
+|       +---components
+|       |       ProfileForm.tsx
+|       |       
+|       \---services
+|               profileActions.ts
 |               
 +---lib
 |       supabase.ts
 |       utils.ts
-|       
-|               
+|                    
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -244,101 +251,180 @@ GCPROF-AI-ACADEMY
 |   |       gcprof-ai-academy_logo_info_03.png
 |   |       gcprof-ai-academy_logo_info_04.png
 |   |       
-|   \---docs
-|           gcprof-ai-academy-showcase.pdf
-|           showcase.txt
+|   +---docs
+|   |       gcprof-ai-academy-showcase.pdf
+|   |       showcase.txt
+|   |       
+|   \---showcase
+|           index.txt
 |           
-\---shared
-    +---config
-    |       navigation.ts
-    |       
-    +---layout
-    |       PublicLayout.tsx
-    |       
-    \---ui
-            Badge.tsx
-            Card.tsx
-            PageContainer.tsx
-            SectionTitle.tsx
-
-
++---shared
+|   +---config
+|   |       navigation.ts
+|   |       
+|   +---layout
+|   |       PublicLayout.tsx
+|   |       
+|   \---ui
+|           Badge.tsx
+|           Card.tsx
+|           PageContainer.tsx
+|           SectionTitle.tsx
+|           
++---supabase
+|   |   .gitignore
+|   |   config.toml
+|   |   
+|   \---.temp
+|           gotrue-version
+|           linked-project.json
+|           pooler-url
+|           postgres-version
+|           project-ref
+|           rest-version
+|           storage-migration
+|           storage-version
+|           
+\---types
+        database.types.ts
+        
 
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 Il database gestisce ID flessibili (che possono essere stringhe/UUID o interi autoincrementanti). Le relazioni pivot collegano i corsi alle classi abilitate.
 
-```sql
--- Anagrafica Classi
-CREATE TABLE academy_classes (
-    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    slug VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT DEFAULT '',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+## Table `academy_classes`
 
--- Anagrafica Categorie Corsi
-CREATE TABLE course_categories (
-    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    slug VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+### Columns
 
--- Tabella Corsi
-CREATE TABLE courses (
-    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT DEFAULT '',
-    category VARCHAR(255) DEFAULT 'Informatica',
-    difficulty VARCHAR(50) DEFAULT 'Facile',
-    teacher VARCHAR(255) DEFAULT 'Prof. G. Carnabuci',
-    estimated_hours INT DEFAULT 0,
-    cover_image VARCHAR(255) DEFAULT '/courses/gcprof-ai-academy_logo_info_01.png',
-    published BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `slug` | `text` |  Unique |
+| `name` | `text` |  |
+| `description` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  |
 
--- Relazione Pivot autonoma: Corsi <-> Classi Abilitate
-CREATE TABLE course_classes (
-    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    course_id BIGINT REFERENCES courses(id) ON DELETE CASCADE,
-    class_id BIGINT REFERENCES academy_classes(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(course_id, class_id)
-);
+## Table `profiles`
 
--- Tabella Moduli (collegati ai Corsi)
-CREATE TABLE course_modules (
-    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    course_id BIGINT REFERENCES courses(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    order_index INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+### Columns
 
--- Tabella Lezioni (collegate ai Moduli)
-CREATE TABLE course_lessons (
-    id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    module_id BIGINT REFERENCES course_modules(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL,
-    content_type VARCHAR(50) NOT NULL, -- 'video' | 'document'
-    external_url TEXT NOT NULL,
-    order_index INT NOT NULL DEFAULT 0,
-    duration INT DEFAULT 15,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `first_name` | `varchar` |  Nullable |
+| `last_name` | `varchar` |  Nullable |
+| `display_name` | `varchar` |  Nullable |
+| `role` | `varchar` |  |
+| `status` | `varchar` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+| `email` | `text` |  Nullable Unique |
+| `password_hash` | `text` |  Nullable |
+| `avatar_url` | `text` |  Nullable |
 
-create table public.document_configs (
-  id text not null,
-  label text not null,
-  file_path text not null,
-  is_active boolean null default true,
-  updated_at timestamp with time zone not null default timezone ('utc'::text, now()),
-  constraint document_configs_pkey primary key (id)
-) TABLESPACE pg_default;
+## Table `profile_classes`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `profile_id` | `uuid` | Primary |
+| `class_id` | `uuid` | Primary |
+| `assigned_at` | `timestamptz` |  |
+
+## Table `courses`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `slug` | `varchar` |  Unique |
+| `title` | `varchar` |  |
+| `description` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+| `category` | `varchar` |  Nullable |
+| `difficulty` | `varchar` |  Nullable |
+| `teacher` | `varchar` |  Nullable |
+| `estimated_hours` | `int4` |  Nullable |
+| `cover_image` | `text` |  Nullable |
+| `published` | `bool` |  Nullable |
+
+## Table `course_modules`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `course_id` | `uuid` |  Nullable |
+| `title` | `varchar` |  |
+| `order_index` | `int4` |  |
+| `created_at` | `timestamptz` |  |
+
+## Table `course_lessons`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `module_id` | `uuid` |  Nullable |
+| `title` | `varchar` |  |
+| `slug` | `varchar` |  |
+| `video_url` | `text` |  Nullable |
+| `content` | `text` |  Nullable |
+| `order_index` | `int4` |  |
+| `created_at` | `timestamptz` |  |
+| `content_type` | `varchar` |  Nullable |
+| `duration` | `int4` |  Nullable |
+| `external_url` | `text` |  Nullable |
+
+## Table `course_classes`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `course_id` | `uuid` | Primary |
+| `class_id` | `uuid` | Primary |
+| `assigned_at` | `timestamptz` |  |
+
+## Table `course_categories`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `name` | `varchar` |  Unique |
+| `slug` | `varchar` |  Unique |
+| `created_at` | `timestamptz` |  |
+
+## Table `document_configs`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `text` | Primary |
+| `label` | `text` |  |
+| `file_path` | `text` |  |
+| `is_active` | `bool` |  Nullable |
+| `updated_at` | `timestamptz` |  |
+
+## Table `profile_courses`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `profile_id` | `uuid` | Primary |
+| `course_id` | `uuid` | Primary |
+| `enrolled_at` | `timestamptz` |  |
+
 
 ---
 
