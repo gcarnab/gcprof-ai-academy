@@ -1,76 +1,81 @@
-import { getAdminUsersList } from "@/features/admin/services/adminService";
-import { getAvailableClassesForCourses } from "@/features/admin/services/adminCourseService";
-import { getAllCoursesList } from "@/features/admin/services/adminStructureService";
+import { getAdminDashboardStats } from "@/features/admin/services/adminStatsService";
 
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
+
 import AdminUsersTable from "@/features/admin/components/AdminUsersTable";
 import CreateCourseForm from "@/features/admin/components/CreateCourseForm";
 import CreateClassForm from "@/features/admin/components/CreateClassForm";
 import CourseContentEditor from "@/features/admin/components/CourseContentEditor";
 import ManageCategoriesForm from "@/features/admin/components/ManageCategoriesForm";
 import AssignCourseClassForm from "@/features/admin/components/AssignCourseClassForm";
-import AdminStatsDashboard from "@/features/admin/components/AdminStatsDashboard"; // 👈 NUOVO IMPORT
+import AdminStatsDashboard from "@/features/admin/components/AdminStatsDashboard";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const [users, dbClasses, dbCourses] = await Promise.all([
-    getAdminUsersList().catch(() => []),
-    getAvailableClassesForCourses().catch(() => []),
-    getAllCoursesList().catch(() => []),
-  ]);
+  // 🔥 UNICA CHIAMATA CENTRALIZZATA
+  const stats = await getAdminDashboardStats();
 
-  const availableClassesNames = (dbClasses || []).map((c) => c.name);
+  // ✅ FIX: classes stanno dentro raw
+  const availableClassesNames = (stats.raw.classes || []).map(
+    (c: any) => c.name
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-100">
       <Navbar />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 space-y-10">
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-10 px-4 py-10">
+        {/* HEADER */}
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
             Pannello Amministratore
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-sm text-gray-500">
             Gestisci la struttura dei corsi, le coorti di studenti e i permessi d'accesso.
           </p>
         </div>
 
-        {/* 👈 NUOVA SEZIONE STATS */}
-        <div className="bg-white rounded-xl shadow border overflow-hidden">
-          <AdminStatsDashboard users={users} />
+        {/* STATS DASHBOARD */}
+        <div className="overflow-hidden rounded-xl border bg-white shadow">
+          <AdminStatsDashboard stats={stats} />
         </div>
 
-        {/* Gestione Struttura Didattica */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl shadow border overflow-hidden">
-            <CreateCourseForm classes={dbClasses} />
+        {/* GESTIONE STRUTTURA DIDATTICA */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <div className="overflow-hidden rounded-xl border bg-white shadow">
+            <CreateCourseForm classes={stats.raw.classes} />
           </div>
-          <div className="bg-white rounded-xl shadow border overflow-hidden">
-            <CourseContentEditor courses={dbCourses} />
+
+          <div className="overflow-hidden rounded-xl border bg-white shadow">
+            <CourseContentEditor courses={stats.raw.courses} />
           </div>
         </div>
 
-        {/* Gestione Classi e Assegnazioni Corsi */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl shadow border overflow-hidden">
+        {/* CLASSI E ASSEGNAZIONI */}
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <div className="overflow-hidden rounded-xl border bg-white shadow">
             <CreateClassForm />
           </div>
-          <div className="bg-white rounded-xl shadow border overflow-hidden">
-            <AssignCourseClassForm courses={dbCourses} classes={dbClasses} />
+
+          <div className="overflow-hidden rounded-xl border bg-white shadow">
+            <AssignCourseClassForm
+              courses={stats.raw.courses}
+              classes={stats.raw.classes}
+            />
           </div>
         </div>
 
-        {/* Gestione Categorie */}
-        <div className="bg-white rounded-xl shadow border overflow-hidden">
+        {/* CATEGORIE */}
+        <div className="overflow-hidden rounded-xl border bg-white shadow">
           <ManageCategoriesForm />
         </div>
 
-        {/* 👈 TABELLA UTENTI AGGIORNATA CON FILTRI E BULK ACTION */}
-        <div className="bg-white rounded-xl shadow border overflow-hidden">
+        {/* TABELLA UTENTI */}
+        <div className="overflow-hidden rounded-xl border bg-white shadow">
           <AdminUsersTable
-            initialUsers={users}
+            initialUsers={stats.raw.users}
             availableClasses={availableClassesNames}
           />
         </div>

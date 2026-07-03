@@ -9,20 +9,18 @@ import CreateCourseForm from "@/features/admin/components/CreateCourseForm";
 import CreateClassForm from "@/features/admin/components/CreateClassForm";
 import CourseContentEditor from "@/features/admin/components/CourseContentEditor";
 import ManageCategoriesForm from "@/features/admin/components/ManageCategoriesForm";
-import AssignCourseClassForm from "@/features/admin/components/AssignCourseClassForm"; // 👈 NUOVO IMPORT
+import AssignCourseClassForm from "@/features/admin/components/AssignCourseClassForm";
+import AdminStatsDashboard from "@/features/admin/components/AdminStatsDashboard"; // 👈 NUOVO IMPORT
 
-// Forziamo Next.js a non usare la cache per questa pagina amministrativa
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  // Eseguiamo tutte le query in parallelo lato server per ottimizzare le performance
   const [users, dbClasses, dbCourses] = await Promise.all([
     getAdminUsersList().catch(() => []),
     getAvailableClassesForCourses().catch(() => []),
     getAllCoursesList().catch(() => []),
   ]);
 
-  // Estraiamo in sicurezza i nomi delle classi controllando che dbClasses esista
   const availableClassesNames = (dbClasses || []).map((c) => c.name);
 
   return (
@@ -30,18 +28,21 @@ export default async function AdminDashboardPage() {
       <Navbar />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 space-y-10">
-        {/* Sezione Introduttiva Dashboard */}
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
             Pannello Amministratore
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Gestisci la struttura dei corsi, le coorti di studenti e i permessi
-            d'accesso.
+            Gestisci la struttura dei corsi, le coorti di studenti e i permessi d'accesso.
           </p>
         </div>
 
-        {/* Gestione Struttura Didattica (Corsi e Moduli) */}
+        {/* 👈 NUOVA SEZIONE STATS */}
+        <div className="bg-white rounded-xl shadow border overflow-hidden">
+          <AdminStatsDashboard users={users} />
+        </div>
+
+        {/* Gestione Struttura Didattica */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-xl shadow border overflow-hidden">
             <CreateCourseForm classes={dbClasses} />
@@ -57,7 +58,6 @@ export default async function AdminDashboardPage() {
             <CreateClassForm />
           </div>
           <div className="bg-white rounded-xl shadow border overflow-hidden">
-            {/* 👈 Nuovo Pannello per associare Corsi alle Classi */}
             <AssignCourseClassForm courses={dbCourses} classes={dbClasses} />
           </div>
         </div>
@@ -67,7 +67,7 @@ export default async function AdminDashboardPage() {
           <ManageCategoriesForm />
         </div>
 
-        {/* Tabella Controllo Utenti e Ruoli */}
+        {/* 👈 TABELLA UTENTI AGGIORNATA CON FILTRI E BULK ACTION */}
         <div className="bg-white rounded-xl shadow border overflow-hidden">
           <AdminUsersTable
             initialUsers={users}

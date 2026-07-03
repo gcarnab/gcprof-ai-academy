@@ -32,10 +32,24 @@ export async function getFullCourseStructure(courseId: string) {
 }
 
 export async function getAllCoursesList() {
-    const { data, error } = await supabaseAdmin
-      .from("courses")
-      .select("id, title, slug, created_at")
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return data || [];
+  const { data, error } = await supabaseAdmin
+    .from("courses")
+    .select(`
+      id,
+      title,
+      slug,
+      created_at,
+      category,
+      course_modules (
+        id,
+        course_lessons (
+          id
+        )
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return data || [];
 }

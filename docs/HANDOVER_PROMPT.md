@@ -98,6 +98,7 @@ GCPROF-AI-ACADEMY
 |           dropdown-menu.tsx
 |           input.tsx
 |           label.tsx
+|           select.tsx
 |           tabs.tsx
 |           textarea.tsx
 |           
@@ -124,7 +125,11 @@ GCPROF-AI-ACADEMY
 |   |   |       
 |   |   +---components
 |   |   |       AdminStatsDashboard.tsx
+|   |   |       AdminUsersClassesEditor.tsx
+|   |   |       AdminUsersHeader.tsx
+|   |   |       AdminUsersRow.tsx
 |   |   |       AdminUsersTable.tsx
+|   |   |       AdminUsersToolbar.tsx
 |   |   |       AssignCourseClassForm.tsx
 |   |   |       CourseContentEditor.tsx
 |   |   |       CreateClassForm.tsx
@@ -235,7 +240,7 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|                    
+|            
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -288,6 +293,7 @@ GCPROF-AI-ACADEMY
 \---types
         database.types.ts
         
+
 
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
