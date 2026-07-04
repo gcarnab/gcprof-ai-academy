@@ -28,9 +28,9 @@ export async function sendContactEmail(formData: FormData) {
 
   try {
     await resend.emails.send({
-      from: "GCProf Academy <onboarding@resend.dev>",
+      from: "GCPROF-ACADEMY.COM <noreply@gcprof-academy.com>",
       to: "gcarnab74@gmail.com", // 👈 SOSTITUISCI CON LA TUA GMAIL REALMENTE REGISTRATA SU RESEND
-      subject: `✉️ Nuovo messaggio da ${name} - GCProf Academy`,
+      subject: `✉️ Nuovo messaggio da ${name} - GCPROF-ACADEMY.COM`,
       replyTo: email, // Ti permette di rispondere direttamente all'utente cliccando su "Rispondi" in Gmail
       html: `
         <h2>Nuovo messaggio dal modulo contatti</h2>

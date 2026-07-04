@@ -35,7 +35,7 @@ GCPROF-AI-ACADEMY
 |   |   |   
 |   |   \---dashboard
 |   |           page.tsx
-|   |           page.tsx_old
+|   |           page.tsx_old_single
 |   |           
 |   +---api
 |   |   +---auth
@@ -104,54 +104,101 @@ GCPROF-AI-ACADEMY
 |           textarea.tsx
 |           
 +---docs
-|       AUTH_ARCHITECTURE.md
-|       credits.md
-|       DB_DUMP.sql
-|       HANDOVER_PROMPT.md
-|       README-DB.md
-|       schema_01.sql
-|       schema_02.sql
-|       tree.txt
-|       
+|   |   AUTH_ARCHITECTURE.md
+|   |   credits.md
+|   |   DB_DUMP.sql
+|   |   HANDOVER_PROMPT.md
+|   |   README-DB.md
+|   |   tree.txt
+|   |   
+|   \---sql
+|           01_mail_center_schema.sql
+|           02_seed_mail_settings.sql
+|           03_seed_mail_templates.sql
+|           schema_01.sql
+|           schema_02.sql
+|           
 +---features
 |   +---admin
-|   |   +---actions
-|   |   |       adminActions.ts
-|   |   |       assignCourseClassAction.ts
-|   |   |       bulkActivateUsersAction.ts
-|   |   |       classActions.ts
-|   |   |       courseActions.ts
-|   |   |       structureActions.ts
-|   |   |       
-|   |   +---components
-|   |   |   |   AdminDashboard.tsx
-|   |   |   |   AdminHeader.tsx
-|   |   |   |   AdminStatsDashboard.tsx
-|   |   |   |   AdminTabs.tsx
-|   |   |   |   AdminUsersClassesEditor.tsx
-|   |   |   |   AdminUsersHeader.tsx
-|   |   |   |   AdminUsersRow.tsx
-|   |   |   |   AdminUsersTable.tsx
-|   |   |   |   AdminUsersToolbar.tsx
-|   |   |   |   AssignCourseClassForm.tsx
-|   |   |   |   CourseContentEditor.tsx
-|   |   |   |   CreateClassForm.tsx
-|   |   |   |   CreateCourseForm.tsx
-|   |   |   |   ManageCategoriesForm.tsx
-|   |   |   |   
-|   |   |   \---stats
-|   |   |           BarChartCard.tsx
-|   |   |           DonutChartCard.tsx
-|   |   |           PieChartCard.tsx
-|   |   |           StatsKpiCards.tsx
-|   |   |           StudentsByClassChart.tsx
+|   |   +---courses
+|   |   |   +---actions
+|   |   |   |       assignCourseClassAction.ts
+|   |   |   |       classActions.ts
+|   |   |   |       courseActions.ts
+|   |   |   |       structureActions.ts
+|   |   |   |       
+|   |   |   +---components
+|   |   |   |       AssignCourseClassForm.tsx
+|   |   |   |       CourseContentEditor.tsx
+|   |   |   |       CoursesTab.tsx
+|   |   |   |       CreateClassForm.tsx
+|   |   |   |       CreateCourseForm.tsx
+|   |   |   |       ManageCategoriesForm.tsx
+|   |   |   |       
+|   |   |   \---services
+|   |   |           adminCourseService.ts
+|   |   |           adminStructureService.ts
 |   |   |           
-|   |   \---services
-|   |           adminCourseService.ts
-|   |           adminService.ts
-|   |           adminStatsService.ts
-|   |           adminStructureService.ts
-|   |           
+|   |   +---dashboard
+|   |   |   +---actions
+|   |   |   |       adminActions.ts
+|   |   |   |       
+|   |   |   \---components
+|   |   |           AdminDashboard.tsx
+|   |   |           AdminHeader.tsx
+|   |   |           AdminTabs.tsx
+|   |   |           
+|   |   +---mail
+|   |   |   +---actions
+|   |   |   |       mailSettingsActions.ts
+|   |   |   |       mailTemplateActions.ts
+|   |   |   |       mailTestActions.ts
+|   |   |   |       
+|   |   |   +---components
+|   |   |   |       MailDashboard.tsx
+|   |   |   |       MailSettingsCard.tsx
+|   |   |   |       MailTab.tsx
+|   |   |   |       MailTemplateEditor.tsx
+|   |   |   |       MailTemplateList.tsx
+|   |   |   |       MailTestSender.tsx
+|   |   |   |       
+|   |   |   +---services
+|   |   |   |       MailSettingsService.ts
+|   |   |   |       MailTemplateService.ts
+|   |   |   |       
+|   |   |   \---types
+|   |   |           mail.ts
+|   |   |           
+|   |   +---stats
+|   |   |   +---components
+|   |   |   |   |   AdminStatsDashboard.tsx
+|   |   |   |   |   StatsTab.tsx
+|   |   |   |   |   
+|   |   |   |   \---charts
+|   |   |   |           BarChartCard.tsx
+|   |   |   |           DonutChartCard.tsx
+|   |   |   |           PieChartCard.tsx
+|   |   |   |           StatsKpiCards.tsx
+|   |   |   |           StudentsByClassChart.tsx
+|   |   |   |           
+|   |   |   \---services
+|   |   |           adminStatsService.ts
+|   |   |           
+|   |   \---users
+|   |       +---actions
+|   |       |       bulkActivateUsersAction.ts
+|   |       |       
+|   |       +---components
+|   |       |       AdminUsersClassesEditor.tsx
+|   |       |       AdminUsersHeader.tsx
+|   |       |       AdminUsersRow.tsx
+|   |       |       AdminUsersTable.tsx
+|   |       |       AdminUsersToolbar.tsx
+|   |       |       UsersTab.tsx
+|   |       |       
+|   |       \---services
+|   |               adminService.ts
+|   |               
 |   +---auth
 |   |   +---actions
 |   |   |       getClassesAction.ts
@@ -251,7 +298,7 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|              
+|         
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -303,8 +350,6 @@ GCPROF-AI-ACADEMY
 |           
 \---types
         database.types.ts
-        
-
         
 
 
@@ -444,6 +489,47 @@ Il database gestisce ID flessibili (che possono essere stringhe/UUID o interi au
 | `course_id` | `uuid` | Primary |
 | `enrolled_at` | `timestamptz` |  |
 
+## Table `mail_settings`
 
----
+### Columns
 
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `text` | Primary |
+| `value` | `text` |  |
+| `updated_at` | `timestamptz` |  |
+
+## Table `mail_templates`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `template_key` | `text` |  Unique |
+| `name` | `varchar` |  |
+| `description` | `text` |  Nullable |
+| `subject` | `varchar` |  |
+| `title_override` | `varchar` |  Nullable |
+| `body_text_override` | `text` |  Nullable |
+| `enabled` | `bool` |  |
+| `version` | `int4` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+| `updated_by` | `uuid` |  Nullable |
+
+## Table `mail_logs`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `template_key` | `text` |  |
+| `recipient` | `text` |  |
+| `subject` | `text` |  |
+| `status` | `text` |  |
+| `provider` | `text` |  |
+| `provider_id` | `text` |  Nullable |
+| `error_message` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  |

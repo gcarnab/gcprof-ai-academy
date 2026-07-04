@@ -94,15 +94,20 @@ GCPROF-AI-ACADEMY
 |           textarea.tsx
 |           
 +---docs
-|       AUTH_ARCHITECTURE.md
-|       credits.md
-|       DB_DUMP.sql
-|       HANDOVER_PROMPT.md
-|       README-DB.md
-|       schema_01.sql
-|       schema_02.sql
-|       tree.txt
-|       
+|   |   AUTH_ARCHITECTURE.md
+|   |   credits.md
+|   |   DB_DUMP.sql
+|   |   HANDOVER_PROMPT.md
+|   |   README-DB.md
+|   |   tree.txt
+|   |   
+|   \---sql
+|           01_mail_center_schema.sql
+|           02_seed_mail_settings.sql
+|           03_seed_mail_templates.sql
+|           schema_01.sql
+|           schema_02.sql
+|           
 +---features
 |   +---admin
 |   |   +---courses
@@ -134,8 +139,25 @@ GCPROF-AI-ACADEMY
 |   |   |           AdminTabs.tsx
 |   |   |           
 |   |   +---mail
-|   |   |   \---components
-|   |   |           MailTab.tsx
+|   |   |   +---actions
+|   |   |   |       mailSettingsActions.ts
+|   |   |   |       mailTemplateActions.ts
+|   |   |   |       mailTestActions.ts
+|   |   |   |       
+|   |   |   +---components
+|   |   |   |       MailDashboard.tsx
+|   |   |   |       MailSettingsCard.tsx
+|   |   |   |       MailTab.tsx
+|   |   |   |       MailTemplateEditor.tsx
+|   |   |   |       MailTemplateList.tsx
+|   |   |   |       MailTestSender.tsx
+|   |   |   |       
+|   |   |   +---services
+|   |   |   |       MailSettingsService.ts
+|   |   |   |       MailTemplateService.ts
+|   |   |   |       
+|   |   |   \---types
+|   |   |           mail.ts
 |   |   |           
 |   |   +---stats
 |   |   |   +---components
@@ -266,7 +288,7 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|                   
+|         
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
