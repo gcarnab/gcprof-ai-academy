@@ -20,7 +20,7 @@ interface AdminUsersRowProps {
 
   onStatusChange: (
     userId: string,
-    newStatus: "active" | "blocked" | "pending"
+    newStatus: "active" | "blocked" | "pending",
   ) => void;
 }
 
@@ -44,9 +44,7 @@ export default function AdminUsersRow({
           {user.display_name || "Utente Senza Nome"}
         </div>
 
-        <div className="mt-0.5 font-mono text-xs text-gray-400">
-          {user.id}
-        </div>
+        <div className="mt-0.5 font-mono text-xs text-gray-400">{user.id}</div>
       </td>
 
       {/* Ruolo */}
@@ -69,8 +67,8 @@ export default function AdminUsersRow({
             user.status === "active"
               ? "border-green-200 bg-green-50 text-green-700"
               : user.status === "blocked"
-              ? "border-red-200 bg-red-50 text-red-700"
-              : "border-amber-200 bg-amber-50 text-amber-700"
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-amber-200 bg-amber-50 text-amber-700"
           }`}
         >
           {user.status === "active" && "● Attivo"}

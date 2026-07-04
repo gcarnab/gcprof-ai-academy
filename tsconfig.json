@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "next.config.ts", "features/admin/components/AdminUsersToolbar.tsx_old", "features/admin/components/AdminUsersToolbar.tsx_old2", "app/admin/dashboard/page.tsx_old"  ],
+, "next.config.ts" ],
   "exclude": ["node_modules"]
 }

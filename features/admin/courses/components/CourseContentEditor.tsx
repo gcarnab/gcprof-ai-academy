@@ -2,17 +2,16 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  addModule, 
-  addLesson, 
-  getCourseStructureAction 
-} from "../actions/structureActions";
+
 import { 
   deleteModule, 
   deleteLesson, 
   upsertModule, 
   upsertLesson 
 } from "@/features/courses/services/courseActions";
+
+
+import { addLesson, addModule, getCourseStructureAction } from "../actions/structureActions";
 
 export default function CourseContentEditor({ courses }: { courses: any[] }) {
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");

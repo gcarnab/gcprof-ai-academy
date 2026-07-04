@@ -59,19 +59,8 @@ export default function Navbar() {
                 </li>
               );
             })}
-
-            {/* 🎯 DASHBOARD DASHBOARD: Sostituisce il vecchio CMS Admin statico con la rotta V2 */}
-            {user?.role === "admin" && (
-              <li>
-                <Link
-                  href="/admin/dashboard"
-                  className={linkClass("/admin/dashboard")}
-                >
-                  ⚙️ Dashboard Admin
-                </Link>
-              </li>
-            )}
-
+            
+            {/* Credits */}
             <li>
               <Link
                 href="/credits"
@@ -80,6 +69,18 @@ export default function Navbar() {
                 🏅 Credits
               </Link>
             </li>
+
+            {/* 🎯 DASHBOARD DASHBOARD: Sostituisce il vecchio CMS Admin statico con la rotta V2 */}
+            {user?.role === "admin" && (
+              <li>
+                <Link
+                  href="/admin/dashboard"
+                  className={linkClass("/admin/dashboard")}
+                >
+                  ⚙️ Dashboard
+                </Link>
+              </li>
+            )}
 
             {/* 🎯 MODIFICATO: Il link del profilo viene mostrato solo se l'utente è loggato */}
             {user && (

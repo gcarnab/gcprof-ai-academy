@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { assignCourseClassAction } from "@/features/admin/actions/assignCourseClassAction";
+import { assignCourseClassAction } from "@/features/admin/courses/actions/assignCourseClassAction";
 
 interface Course {
   id: string;

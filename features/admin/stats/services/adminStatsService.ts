@@ -1,11 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
-import { getAdminUsersList } from "./adminService";
-import { getAvailableClassesForCourses } from "./adminCourseService";
-import { getAllCoursesList } from "./adminStructureService";
+import { getAdminUsersList } from "../../users/services/adminService";
+import { getAvailableClassesForCourses } from "../../courses/services/adminCourseService";
+import { getAllCoursesList } from "../../courses/services/adminStructureService";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 /**
@@ -15,7 +15,6 @@ const supabaseAdmin = createClient(
  * - safe per nested relations Supabase
  */
 export async function getAdminDashboardStats() {
-
   const [users, classes, courses] = await Promise.all([
     getAdminUsersList(),
     getAvailableClassesForCourses(),
@@ -110,9 +109,8 @@ export async function getAdminDashboardStats() {
     .map((c: any) => {
       const lessons =
         c.course_modules?.reduce(
-          (acc: number, m: any) =>
-            acc + (m.course_lessons?.length ?? 0),
-          0
+          (acc: number, m: any) => acc + (m.course_lessons?.length ?? 0),
+          0,
         ) ?? 0;
 
       return {

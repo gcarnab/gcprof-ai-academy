@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-
 import { AdminUserRow } from "../services/adminService";
-import { updateUserStatus, updateUserClasses } from "../actions/adminActions";
-
+import { updateUserClasses, updateUserStatus } from "../../dashboard/actions/adminActions";
 import AdminUsersHeader from "./AdminUsersHeader";
-import AdminUsersRow from "./AdminUsersRow";
 import AdminUsersToolbar from "./AdminUsersToolbar";
+import AdminUsersRow from "./AdminUsersRow";
+
+
 
 interface AdminUsersTableProps {
   initialUsers: AdminUserRow[];

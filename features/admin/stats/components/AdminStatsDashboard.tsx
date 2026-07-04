@@ -1,9 +1,9 @@
 "use client";
 
-import StatsKpiCards from "./stats/StatsKpiCards";
-import PieChartCard from "./stats/PieChartCard";
-import BarChartCard from "./stats/BarChartCard";
-import DonutChartCard from "./stats/DonutChartCard";
+import PieChartCard from "./charts/PieChartCard";
+import BarChartCard from "./charts/BarChartCard";
+import DonutChartCard from "./charts/DonutChartCard";
+import StatsKpiCards from "./charts/StatsKpiCards";
 
 type Props = {
   stats: any;

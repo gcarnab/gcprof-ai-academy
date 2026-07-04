@@ -35,6 +35,7 @@ GCPROF-AI-ACADEMY
 |   |   |   
 |   |   \---dashboard
 |   |           page.tsx
+|   |           page.tsx_old
 |   |           
 |   +---api
 |   |   +---auth
@@ -106,8 +107,7 @@ GCPROF-AI-ACADEMY
 |       AUTH_ARCHITECTURE.md
 |       credits.md
 |       DB_DUMP.sql
-|       HANDOVER_GEMINI.md
-|       HANDOVER_GPT.md
+|       HANDOVER_PROMPT.md
 |       README-DB.md
 |       schema_01.sql
 |       schema_02.sql
@@ -124,21 +124,32 @@ GCPROF-AI-ACADEMY
 |   |   |       structureActions.ts
 |   |   |       
 |   |   +---components
-|   |   |       AdminStatsDashboard.tsx
-|   |   |       AdminUsersClassesEditor.tsx
-|   |   |       AdminUsersHeader.tsx
-|   |   |       AdminUsersRow.tsx
-|   |   |       AdminUsersTable.tsx
-|   |   |       AdminUsersToolbar.tsx
-|   |   |       AssignCourseClassForm.tsx
-|   |   |       CourseContentEditor.tsx
-|   |   |       CreateClassForm.tsx
-|   |   |       CreateCourseForm.tsx
-|   |   |       ManageCategoriesForm.tsx
-|   |   |       
+|   |   |   |   AdminDashboard.tsx
+|   |   |   |   AdminHeader.tsx
+|   |   |   |   AdminStatsDashboard.tsx
+|   |   |   |   AdminTabs.tsx
+|   |   |   |   AdminUsersClassesEditor.tsx
+|   |   |   |   AdminUsersHeader.tsx
+|   |   |   |   AdminUsersRow.tsx
+|   |   |   |   AdminUsersTable.tsx
+|   |   |   |   AdminUsersToolbar.tsx
+|   |   |   |   AssignCourseClassForm.tsx
+|   |   |   |   CourseContentEditor.tsx
+|   |   |   |   CreateClassForm.tsx
+|   |   |   |   CreateCourseForm.tsx
+|   |   |   |   ManageCategoriesForm.tsx
+|   |   |   |   
+|   |   |   \---stats
+|   |   |           BarChartCard.tsx
+|   |   |           DonutChartCard.tsx
+|   |   |           PieChartCard.tsx
+|   |   |           StatsKpiCards.tsx
+|   |   |           StudentsByClassChart.tsx
+|   |   |           
 |   |   \---services
 |   |           adminCourseService.ts
 |   |           adminService.ts
+|   |           adminStatsService.ts
 |   |           adminStructureService.ts
 |   |           
 |   +---auth
@@ -240,7 +251,7 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|            
+|              
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -292,6 +303,8 @@ GCPROF-AI-ACADEMY
 |           
 \---types
         database.types.ts
+        
+
         
 
 
