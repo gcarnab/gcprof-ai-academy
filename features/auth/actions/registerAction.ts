@@ -20,7 +20,7 @@ function mapMailSettingsToVariables(
 ): Record<string, string> {
   return settings.reduce(
     (acc, item) => {
-      acc[item.id] = item.value;
+      acc[item.id.toLowerCase()] = item.value;
       return acc;
     },
     {} as Record<string, string>,

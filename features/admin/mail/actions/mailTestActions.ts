@@ -3,6 +3,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { EmailService } from "@/features/admin/mail/services/EmailService"; // 🎯 AGGIORNATO: Import del nuovo servizio basato su Gmail SMTP
 import { MailTemplateEngine } from "../services/MailTemplateEngine";
+import { MailTemplateKeys } from "../constants/MailTemplateKeys";
 
 /**
  * Converte mail_settings in mappa variabili
@@ -12,7 +13,7 @@ function mapMailSettingsToVariables(
 ): Record<string, string> {
   return settings.reduce(
     (acc, item) => {
-      acc[item.id] = item.value;
+      acc[item.id.toLowerCase()] = item.value;
       return acc;
     },
     {} as Record<string, string>,
@@ -30,6 +31,11 @@ export async function sendTestMailAction(
   try {
     const db = getSupabaseAdmin();
 
+    const validTemplateKeys = Object.values(MailTemplateKeys);
+
+    if (!validTemplateKeys.includes(templateKey as any)) {
+      throw new Error(`Template non supportato: ${templateKey}`);
+    }
     // 1. FETCH TEMPLATE
     const { data: template, error: templateError } = await db
       .from("mail_templates")
