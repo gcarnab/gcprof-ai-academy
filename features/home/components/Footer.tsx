@@ -28,6 +28,9 @@ import Image from "next/image";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const appName = process.env.NEXT_PUBLIC_APP_NAME || "GCPROF";
+  const appSubtitle = process.env.NEXT_PUBLIC_APP_SUBTITLE || "ACADEMY";
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "V 1.0";
 
   return (
     <footer className="border-t border-gray-200 bg-white">
@@ -37,7 +40,7 @@ export default function Footer() {
         <Link href="/" className="group flex items-center gap-3 transition-all">
           <Image
             src="/gcprof-ai-academy_logo_small.png"
-            alt="Logo GCPROF AI Academy"
+            alt={`Logo ${appName} ${appSubtitle}`}
             width={46}
             height={46}
             priority
@@ -45,10 +48,10 @@ export default function Footer() {
           />
           <div className="flex flex-col leading-none">
             <span className="text-lg font-extrabold tracking-tight text-gray-900 group-hover:text-blue-600">
-              GCPROF
+              {appName}
             </span>
             <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-blue-600">
-              AI ACADEMY
+              {appSubtitle} ({appVersion})
             </span>
           </div>
         </Link>
@@ -83,7 +86,7 @@ export default function Footer() {
         </nav>
 
         {/* Copyright */}
-        <p>© {currentYear} GCPROF AI Academy</p>
+        <p>© {currentYear} {appName} {appSubtitle} ({appVersion}) </p>
       </PageContainer>
       {/*</div>*/}
     </footer>

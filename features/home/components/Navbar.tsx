@@ -13,7 +13,7 @@ export default function Navbar() {
 
   // 🌐 DISACCOPPIAMENTO STRINGHE BRAND (Configurabili da .env)
   const appName = process.env.NEXT_PUBLIC_APP_NAME || "GCPROF";
-  const appSubtitle = process.env.NEXT_PUBLIC_APP_SUBTITLE || "AI ACADEMY";
+  const appSubtitle = process.env.NEXT_PUBLIC_APP_SUBTITLE || "ACADEMY";
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "V 1.0";
 
   const isActive = (path: string): boolean => {

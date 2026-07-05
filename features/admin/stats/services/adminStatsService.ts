@@ -21,6 +21,9 @@ export async function getAdminDashboardStats() {
     getAllCoursesList(),
   ]);
 
+  // 🌐 CONFIGURAZIONE DINAMICA LIMITE CLASSIFICHE (Es. Top 5, Top 10)
+  const statsLimit = parseInt(process.env.NEXT_PUBLIC_ADMIN_STATS_LIMIT || "5", 10);
+
   // =========================
   // KPI BASE
   // =========================
@@ -58,7 +61,6 @@ export async function getAdminDashboardStats() {
   // =========================
   // COURSES CHARTS
   // =========================
-
   const coursesByCategory = courses.reduce((acc: any, c: any) => {
     const category =
       c.category ||
@@ -76,15 +78,13 @@ export async function getAdminDashboardStats() {
   };
 
   // =========================
-  // 📌 MODULES + LESSONS (FIX ROBUSTO)
+  // 📌 MODULES + LESSONS
   // =========================
-
   let totalModules = 0;
   let totalLessons = 0;
 
   for (const course of courses) {
     const modules = course.course_modules ?? [];
-
     totalModules += modules.length;
 
     for (const module of modules) {
@@ -94,16 +94,15 @@ export async function getAdminDashboardStats() {
   }
 
   // =========================
-  // 📊 NUOVI GRAFICI LMS
+  // 📊 GRAFICI LMS CON LIMITI DINAMICI
   // =========================
-
   const modulesPerCourse = courses
     .map((c: any) => ({
       title: c.title,
       modules: c.course_modules?.length ?? 0,
     }))
     .sort((a, b) => b.modules - a.modules)
-    .slice(0, 5);
+    .slice(0, statsLimit);
 
   const lessonsPerCourse = courses
     .map((c: any) => {
@@ -119,7 +118,7 @@ export async function getAdminDashboardStats() {
       };
     })
     .sort((a, b) => b.lessons - a.lessons)
-    .slice(0, 5);
+    .slice(0, statsLimit);
 
   const courseComplexity = {
     "Semplici (1-3 moduli)": 0,
@@ -146,7 +145,6 @@ export async function getAdminDashboardStats() {
       modules: totalModules,
       lessons: totalLessons,
     },
-
     charts: {
       usersByRole,
       usersByStatus,
@@ -157,7 +155,6 @@ export async function getAdminDashboardStats() {
       lessonsPerCourse,
       courseComplexity,
     },
-
     raw: {
       users,
       classes,
