@@ -8,25 +8,30 @@ import CoursesHeader from "@/features/courses/components/CoursesHeader";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
 
 export default function CoursesPage() {
   const { user } = useAuth(); // 🎯 Recuperiamo la sessione utente
-  
+
   // 🎯 Recuperiamo categories direttamente dall'hook dinamico collegato al DB
-  const { 
-    courses, 
-    search, 
-    setSearch, 
-    category, 
-    setCategory, 
-    categories, 
-    isLoading 
+  const {
+    courses,
+    search,
+    setSearch,
+    category,
+    setCategory,
+    categories,
+    isLoading,
   } = useCourses();
 
-  const isPendingUser = user && user.status === "pending" && user.role !== "admin";
+  const isPendingUser =
+    user && user.status === "pending" && user.role !== "admin";
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
+      {/* 🎯 IL SENSORE ATTIVO IN BACKGROUND */}
+      <ActivityTracker />
+      
       <Navbar />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">
@@ -36,10 +41,13 @@ export default function CoursesPage() {
           // 🎯 Schermata di blocco dedicata all'utente registrato ma non ancora attivato
           <div className="mt-12 rounded-xl border border-amber-200 bg-amber-50 p-10 text-center shadow-sm max-w-2xl mx-auto">
             <span className="text-4xl">⏳</span>
-            <h3 className="text-xl font-bold text-amber-800 mt-3">Account in fase di verifica</h3>
+            <h3 className="text-xl font-bold text-amber-800 mt-3">
+              Account in fase di verifica
+            </h3>
             <p className="text-sm text-amber-700 mt-2">
-              Il tuo profilo è stato registrato con successo ed è in attesa di abilitazione da parte del docente. 
-              Riceverai una notifica email non appena l'accesso sarà attivo.
+              Il tuo profilo è stato registrato con successo ed è in attesa di
+              abilitazione da parte del docente. Riceverai una notifica email
+              non appena l'accesso sarà attivo.
             </p>
           </div>
         ) : (
