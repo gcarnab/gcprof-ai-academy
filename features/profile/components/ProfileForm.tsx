@@ -166,7 +166,7 @@ export default function ProfileForm() {
                 : "Scegli una nuova foto"}
             </Button>
             <p className="text-xs text-muted-foreground">
-              Formati supportati: JPEG, PNG, GIF. Dimensione massima 1MB.
+              Formati supportati: JPG, JPEG, PNG, GIF. Dimensione massima 1MB.
             </p>
           </div>
         </CardContent>

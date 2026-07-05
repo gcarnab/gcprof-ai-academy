@@ -50,7 +50,7 @@ export default function LoginPage() {
             if (result.user.role === "admin") {
               router.push("/admin/dashboard");
             } else {
-              router.push("/dashboard");
+              router.push("/"); //TO_DO
             }
           } else {
             setError(result?.error || "Credenziali non valide.");

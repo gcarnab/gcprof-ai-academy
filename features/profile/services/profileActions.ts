@@ -67,9 +67,9 @@ export async function uploadAvatar(userId: string, formData: FormData) {
   }
 
   // 🛡️ Sicurezza: Validazione dei formati immagine consentiti lato server
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  const allowedTypes = ["image/jpg","image/jpeg", "image/png", "image/webp", "image/gif"];
   if (!allowedTypes.includes(file.type)) {
-    throw new Error("Formato file non supportato. Seleziona un'immagine JPEG, PNG, WEBP o GIF.");
+    throw new Error("Formato file non supportato. Seleziona un'immagine JPG, JPEG, PNG, WEBP o GIF.");
   }
 
   // 🛡️ Sicurezza: Controllo della dimensione massima (2MB)
