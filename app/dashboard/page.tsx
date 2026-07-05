@@ -36,7 +36,7 @@ export default async function DashboardPage() {
           "use server";
           const cs = new NextCookieService();
           await cs.clearSession();
-          redirect("/auth-test/login");
+          redirect("/");
         }}>
           <button type="submit" className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-semibold transition-colors">
             Disconnetti

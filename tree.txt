@@ -47,6 +47,11 @@ GCPROF-AI-ACADEMY
 |   |   \---seed-admin
 |   |           route.ts
 |   |           
+|   +---auth
+|   |   \---reset-password
+|   |           page.tsx
+|   |           ResetPasswordClient.tsx
+|   |           
 |   +---contacts
 |   |       actions.ts
 |   |       page.tsx
@@ -72,6 +77,7 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---login
 |   |       page.tsx
+|   |       page.tsx_old
 |   |       
 |   +---profile
 |   |       page.tsx
@@ -152,6 +158,9 @@ GCPROF-AI-ACADEMY
 |   |   |   |       MailTemplateList.tsx
 |   |   |   |       MailTestSender.tsx
 |   |   |   |       
+|   |   |   +---constants
+|   |   |   |       MailTemplateKeys.ts
+|   |   |   |       
 |   |   |   +---providers
 |   |   |   |       EmailProvider.ts
 |   |   |   |       GmailProvider.ts
@@ -198,6 +207,7 @@ GCPROF-AI-ACADEMY
 |   |               
 |   +---auth
 |   |   +---actions
+|   |   |       confirmPasswordResetAction.ts
 |   |   |       getClassesAction.ts
 |   |   |       getSessionAction.ts
 |   |   |       loginAction.ts
@@ -249,6 +259,7 @@ GCPROF-AI-ACADEMY
 |   |   |       
 |   |   +---services
 |   |   |       AuthService.ts
+|   |   |       PasswordResetService.ts
 |   |   |       
 |   |   \---validators
 |   |           AuthValidators.ts
@@ -297,7 +308,7 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|                    
+|       
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png

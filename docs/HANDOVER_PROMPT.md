@@ -7,7 +7,6 @@ Il progetto è una piattaforma Academy ("gcprof-ai-academy") per la gestione di 
 ### 📂 2. FILE SYSTEM TREE DEL PROGETTO
 Questo è il tree aggiornato della struttura del progetto su cui stiamo lavorando:
 
-
 GCPROF-AI-ACADEMY
 |   .env.local
 |   .gitignore
@@ -57,6 +56,11 @@ GCPROF-AI-ACADEMY
 |   |   \---seed-admin
 |   |           route.ts
 |   |           
+|   +---auth
+|   |   \---reset-password
+|   |           page.tsx
+|   |           ResetPasswordClient.tsx
+|   |           
 |   +---contacts
 |   |       actions.ts
 |   |       page.tsx
@@ -82,6 +86,7 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---login
 |   |       page.tsx
+|   |       page.tsx_old
 |   |       
 |   +---profile
 |   |       page.tsx
@@ -162,6 +167,9 @@ GCPROF-AI-ACADEMY
 |   |   |   |       MailTemplateList.tsx
 |   |   |   |       MailTestSender.tsx
 |   |   |   |       
+|   |   |   +---constants
+|   |   |   |       MailTemplateKeys.ts
+|   |   |   |       
 |   |   |   +---providers
 |   |   |   |       EmailProvider.ts
 |   |   |   |       GmailProvider.ts
@@ -208,6 +216,7 @@ GCPROF-AI-ACADEMY
 |   |               
 |   +---auth
 |   |   +---actions
+|   |   |       confirmPasswordResetAction.ts
 |   |   |       getClassesAction.ts
 |   |   |       getSessionAction.ts
 |   |   |       loginAction.ts
@@ -259,6 +268,7 @@ GCPROF-AI-ACADEMY
 |   |   |       
 |   |   +---services
 |   |   |       AuthService.ts
+|   |   |       PasswordResetService.ts
 |   |   |       
 |   |   \---validators
 |   |           AuthValidators.ts
@@ -307,7 +317,7 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|                    
+|       
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -360,6 +370,7 @@ GCPROF-AI-ACADEMY
 \---types
         database.types.ts
         
+       
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 Il database gestisce ID flessibili (che possono essere stringhe/UUID o interi autoincrementanti). Le relazioni pivot collegano i corsi alle classi abilitate.
@@ -540,3 +551,19 @@ Il database gestisce ID flessibili (che possono essere stringhe/UUID o interi au
 | `provider_id` | `text` |  Nullable |
 | `error_message` | `text` |  Nullable |
 | `created_at` | `timestamptz` |  |
+
+## Table `password_reset_tokens`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `user_id` | `uuid` |  |
+| `token` | `text` |  Unique |
+| `expires_at` | `timestamp` |  |
+| `used` | `bool` |  |
+| `created_at` | `timestamp` |  |
+
+
+

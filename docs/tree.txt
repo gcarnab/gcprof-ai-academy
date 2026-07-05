@@ -72,6 +72,7 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---login
 |   |       page.tsx
+|   |       page.tsx_old
 |   |       
 |   +---profile
 |   |       page.tsx
@@ -151,6 +152,9 @@ GCPROF-AI-ACADEMY
 |   |   |   |       MailTemplateEditor.tsx
 |   |   |   |       MailTemplateList.tsx
 |   |   |   |       MailTestSender.tsx
+|   |   |   |       
+|   |   |   +---constants
+|   |   |   |       MailTemplateKeys.ts
 |   |   |   |       
 |   |   |   +---providers
 |   |   |   |       EmailProvider.ts
@@ -297,7 +301,8 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|                    
+|       
+|               
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
