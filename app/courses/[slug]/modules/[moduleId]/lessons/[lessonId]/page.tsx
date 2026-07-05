@@ -5,8 +5,11 @@ import { notFound, useParams } from "next/navigation";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 import { getLiveCourses } from "@/features/courses/services/courseActions";
-import LessonRenderer, { LessonContent } from "@/features/courses/components/lesson/LessonRenderer";
+import LessonRenderer, {
+  LessonContent,
+} from "@/features/courses/components/lesson/LessonRenderer";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
+import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
 
 export default function LessonPage() {
   const params = useParams();
@@ -15,14 +18,18 @@ export default function LessonPage() {
   const moduleId = params?.moduleId as string;
   const lessonId = params?.lessonId as string;
 
-  const [data, setData] = useState<{ course: any; module: any; lesson: any } | null>(null);
+  const [data, setData] = useState<{
+    course: any;
+    module: any;
+    lesson: any;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadLessonData() {
       setIsLoading(true);
       const liveCourses = await getLiveCourses();
-      
+
       const course = liveCourses.find((c) => c.slug === slug);
       const module = course?.modules?.find((m: any) => m.id === moduleId);
       const lesson = module?.lessons?.find((l: any) => l.id === lessonId);
@@ -44,7 +51,9 @@ export default function LessonPage() {
       <div className="flex min-h-screen flex-col bg-gray-50">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
-          <div className="text-gray-500 text-sm animate-pulse">Caricamento risorsa didattica...</div>
+          <div className="text-gray-500 text-sm animate-pulse">
+            Caricamento risorsa didattica...
+          </div>
         </main>
         <Footer />
       </div>
@@ -77,21 +86,21 @@ export default function LessonPage() {
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen flex-col bg-gray-50">
+        {/* 🎯 IL SENSORE ATTIVO IN BACKGROUND */}
+        <ActivityTracker />
         <Navbar />
         <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
-          
           <p className="text-sm text-gray-500">
             {course.title} {" > "} {module.title}
           </p>
-          
+
           <h1 className="mt-2 text-4xl font-bold text-gray-900">
             {lesson.title}
           </h1>
-          
+
           <div className="mt-8">
             <LessonRenderer contents={formattedContents} />
           </div>
-
         </main>
         <Footer />
       </div>

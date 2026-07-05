@@ -14,7 +14,7 @@ export default async function DashboardPage() {
 
   // Se non c'è una sessione valida, reindirizziamo al login
   if (!user) {
-    redirect("/auth-test/login");
+    redirect("/");
   }
 
   // Recuperiamo i corsi associati alla classe dello studente in tempo reale

@@ -10,9 +10,6 @@ const supabaseAdmin = createClient(
 
 /**
  * SERVICE CENTRALE STATISTICHE ADMIN DASHBOARD
- * - zero logica UI
- * - tutti i dati già normalizzati
- * - safe per nested relations Supabase
  */
 export async function getAdminDashboardStats() {
   const [users, classes, courses] = await Promise.all([
@@ -21,8 +18,9 @@ export async function getAdminDashboardStats() {
     getAllCoursesList(),
   ]);
 
-  // 🌐 CONFIGURAZIONE DINAMICA LIMITE CLASSIFICHE (Es. Top 5, Top 10)
+  // 🌐 CONFIGURAZIONE DINAMICA CONFIGURATA DA .ENV
   const statsLimit = parseInt(process.env.NEXT_PUBLIC_ADMIN_STATS_LIMIT || "5", 10);
+  const engagementLimit = parseInt(process.env.NEXT_PUBLIC_ADMIN_STATS_ENGAGEMENT_LIMIT || "8", 10);
 
   // =========================
   // KPI BASE
@@ -46,7 +44,6 @@ export async function getAdminDashboardStats() {
 
   const studentsByClass = users.reduce((acc: any, u: any) => {
     const userClasses = u.classes || [];
-
     if (userClasses.length === 0) {
       acc["Senza Classe"] = (acc["Senza Classe"] || 0) + 1;
     } else {
@@ -54,20 +51,31 @@ export async function getAdminDashboardStats() {
         acc[c] = (acc[c] || 0) + 1;
       });
     }
-
     return acc;
   }, {});
+
+  // 🎯 NUOVO: CALCOLO ENGAGEMENT TEMPO DI ATTIVITÀ STUDENTI
+  const studentEngagement = users
+    .filter((u: any) => u.role === "student")
+    .map((u: any) => {
+      // 🛠️ Generazione deterministica temporanea (Simulazione ore di studio stabili)
+      // Verrà sostituita da u.total_hours_active una volta inserita la colonna nel DB
+      const pseudoHours = ((u.display_name?.length || 5) * 3 + (u.created_at ? 14 : 5)) % 65;
+      
+      return {
+        name: u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email || "Studente",
+        //hours: pseudoHours,
+        hours: u.total_minutes_active ?? 0,
+      };
+    })
+    .sort((a, b) => b.hours - a.hours)
+    .slice(0, engagementLimit);
 
   // =========================
   // COURSES CHARTS
   // =========================
   const coursesByCategory = courses.reduce((acc: any, c: any) => {
-    const category =
-      c.category ||
-      c.categories?.name ||
-      c.course_categories?.name ||
-      "Senza categoria";
-
+    const category = c.category || c.categories?.name || c.course_categories?.name || "Senza categoria";
     acc[category] = (acc[category] || 0) + 1;
     return acc;
   }, {});
@@ -94,7 +102,7 @@ export async function getAdminDashboardStats() {
   }
 
   // =========================
-  // 📊 GRAFICI LMS CON LIMITI DINAMICI
+  // 📊 GRAFICI LMS
   // =========================
   const modulesPerCourse = courses
     .map((c: any) => ({
@@ -106,16 +114,8 @@ export async function getAdminDashboardStats() {
 
   const lessonsPerCourse = courses
     .map((c: any) => {
-      const lessons =
-        c.course_modules?.reduce(
-          (acc: number, m: any) => acc + (m.course_lessons?.length ?? 0),
-          0,
-        ) ?? 0;
-
-      return {
-        title: c.title,
-        lessons,
-      };
+      const lessons = c.course_modules?.reduce((acc: number, m: any) => acc + (m.course_lessons?.length ?? 0), 0) ?? 0;
+      return { title: c.title, lessons };
     })
     .sort((a, b) => b.lessons - a.lessons)
     .slice(0, statsLimit);
@@ -128,15 +128,11 @@ export async function getAdminDashboardStats() {
 
   courses.forEach((c: any) => {
     const modules = c.course_modules?.length ?? 0;
-
     if (modules <= 3) courseComplexity["Semplici (1-3 moduli)"]++;
     else if (modules <= 7) courseComplexity["Medio (4-7 moduli)"]++;
     else courseComplexity["Complessi (8+ moduli)"]++;
   });
 
-  // =========================
-  // OUTPUT UNIFICATO
-  // =========================
   return {
     totals: {
       users: totalUsers,
@@ -149,16 +145,13 @@ export async function getAdminDashboardStats() {
       usersByRole,
       usersByStatus,
       studentsByClass,
+      studentEngagement, // 🎯 Esposto per la UI
       coursesByCategory,
       publishedCourses,
       modulesPerCourse,
       lessonsPerCourse,
       courseComplexity,
     },
-    raw: {
-      users,
-      classes,
-      courses,
-    },
+    raw: { users, classes, courses },
   };
 }
