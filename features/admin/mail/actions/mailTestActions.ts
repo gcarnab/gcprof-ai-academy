@@ -1,7 +1,7 @@
 "use server";
 
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { ResendEmailService } from "@/features/auth/infrastructure/ResendEmailService";
+import { EmailService } from "@/features/admin/mail/services/EmailService"; // 🎯 AGGIORNATO: Import del nuovo servizio basato su Gmail SMTP
 import { MailTemplateEngine } from "../services/MailTemplateEngine";
 
 /**
@@ -10,10 +10,13 @@ import { MailTemplateEngine } from "../services/MailTemplateEngine";
 function mapMailSettingsToVariables(
   settings: { id: string; value: string }[],
 ): Record<string, string> {
-  return settings.reduce((acc, item) => {
-    acc[item.id] = item.value;
-    return acc;
-  }, {} as Record<string, string>);
+  return settings.reduce(
+    (acc, item) => {
+      acc[item.id] = item.value;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
 }
 
 export async function sendTestMailAction(
@@ -51,7 +54,25 @@ export async function sendTestMailAction(
       throw new Error("Errore caricamento mail_settings");
     }
 
-    const variables = mapMailSettingsToVariables(settings ?? []);
+    const globalVariables = mapMailSettingsToVariables(settings ?? []);
+
+    const variables = {
+      ...globalVariables,
+
+      // Variabili demo per il rendering dei template
+      first_name: "Mario",
+      last_name: "Rossi",
+      display_name: "Mario Rossi",
+
+      email: recipient,
+
+      class_name: "Classe Demo",
+      class_slug: "classe-demo",
+
+      // Alias retrocompatibili
+      studentName: "Mario Rossi",
+      studentEmail: recipient,
+    };
 
     // 3. TEMPLATE ENGINE (SAFE RENDER)
     const engine = new MailTemplateEngine(variables);
@@ -69,40 +90,42 @@ export async function sendTestMailAction(
 
     // 4. HTML COMPOSITION
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-        <h2>${title}</h2>
-        <div>${body}</div>
-        <hr style="margin: 24px 0;" />
-        <p style="font-size: 12px; color: #666;">
-          Email di test — GCProf AI Academy
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+        <h2 style="color: #1e293b; margin-bottom: 16px;">${title}</h2>
+        <div style="color: #334155; line-height: 1.6;">${body}</div>
+        <hr style="margin: 24px 0; border: 0; border-top: 1px solid #e2e8f0;" />
+        <p style="font-size: 12px; color: #64748b;">
+          Email di test — GCProf AI Academy (gcprof-academy.com)
         </p>
       </div>
     `;
 
-    // 5. SEND EMAIL
-    const mailService = new ResendEmailService();
+    // 5. SEND EMAIL VIA GMAIL SMTP
+    const mailService = new EmailService();
 
+    // Inviamo usando il metodo generico dell'EmailService che chiama il GmailProvider
     const result = await mailService.sendGenericEmail(
       recipient,
       subject,
       html,
+      "GCProf Academy Test",
     );
 
-    if (!result?.id) {
-      throw new Error("Invio email fallito: nessun messageId restituito");
+    if (!result.success) {
+      throw new Error(result.error || "Invio email fallito tramite Gmail SMTP");
     }
 
     // 6. SUCCESS RESPONSE (TYPE SAFE)
     return {
       success: true,
-      messageId: result.id,
+      messageId: result.messageId,
     };
   } catch (error: any) {
     console.error("❌ sendTestMailAction error:", error);
 
     return {
       success: false,
-      error: error?.message ?? "Errore sconosciuto",
+      error: error?.message ?? "Errore sconosciuto durante l'invio del test",
     };
   }
 }

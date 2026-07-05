@@ -11,47 +11,56 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 
-// Sincronizzazione con l'architettura v2 (Server Actions e Context)
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { loginAction } from "@/features/auth/actions/loginAction";
+import { requestPasswordResetAction } from "@/features/auth/actions/requestPasswordResetAction"; // 🎯 NUOVO
 
 export default function LoginDialog() {
-  const { login } = useAuth(); // 🎯 Estraiamo solo 'login'
+  const { login } = useAuth(); 
   const [isPending, startTransition] = useTransition();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [open, setOpen] = useState(false);
+  const [isResetMode, setIsResetMode] = useState(false); // 🎯 Controllo interno per il reset password
 
-  function handleLogin(e: React.FormEvent) {
+  function handleAction(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setSuccessMessage("");
 
     const formData = new FormData();
     formData.append("email", email);
-    formData.append("password", password);
 
     startTransition(async () => {
       try {
-        const result = await loginAction(null, formData);
-
-        if (result && result.success && result.user) {
-          // 🎯 STEP 1: Passiamo l'utente già validato dallo stato della Server Action direttamente al contesto React
-          login(result.user);
-
-          // 🎯 STEP 2: Rimosso 'await refreshSession()'. Evita il crash da doppia chiamata concorrente.
-          // Il cookie è già sul browser, l'app è sbloccata.
-
-          // Reset e chiusura del modal
-          setEmail("");
-          setPassword("");
-          setOpen(false);
+        if (isResetMode) {
+          // --- FLUSSO DI RESET PASSWORD ---
+          const result = await requestPasswordResetAction(null, formData);
+          if (result && result.success) {
+            setSuccessMessage(result.message || "Controlla la tua posta.");
+            setEmail("");
+          } else {
+            setError(result?.error || "Si è verificato un errore.");
+          }
         } else {
-          setError(result?.error || "Credenziali non valide. Riprova.");
+          // --- FLUSSO LOGIN ---
+          formData.append("password", password);
+          const result = await loginAction(null, formData);
+
+          if (result && result.success && result.user) {
+            login(result.user);
+            setEmail("");
+            setPassword("");
+            setOpen(false);
+          } else {
+            setError(result?.error || "Credenziali non valide. Riprova.");
+          }
         }
       } catch (err) {
         setError("Si è verificato un errore di rete. Riprova più tardi.");
@@ -60,7 +69,14 @@ export default function LoginDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => {
+      setOpen(v);
+      if(!v) { 
+        setIsResetMode(false); 
+        setError(""); 
+        setSuccessMessage("");
+      }
+    }}>
       <DialogTrigger asChild>
         <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">
           Accedi
@@ -69,26 +85,41 @@ export default function LoginDialog() {
 
       <DialogContent className="sm:max-w-md bg-white border border-gray-100 shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-gray-900">
-            Accedi alla piattaforma
+          <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            {isResetMode && (
+              <button 
+                type="button" 
+                onClick={() => { setIsResetMode(false); setError(""); setSuccessMessage(""); }}
+                className="p-1 hover:bg-gray-100 rounded-full text-gray-500"
+              >
+                <ArrowLeft size={16} />
+              </button>
+            )}
+            {isResetMode ? "Ripristina la password" : "Accedi alla piattaforma"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleLogin} className="space-y-4 py-4">
+        <form onSubmit={handleAction} className="space-y-4 py-2">
           {error && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 font-medium border border-red-200">
               {error}
             </div>
           )}
 
+          {successMessage && (
+            <div className="rounded-md bg-green-50 p-3 text-sm text-green-600 font-medium border border-green-200">
+              {successMessage}
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-gray-700 font-medium">
+            <Label htmlFor="dialog-email" className="text-gray-700 font-medium">
               Email
             </Label>
             <Input
-              id="email"
+              id="dialog-email"
               type="email"
-              placeholder="es: admin@gcprofaiacademy.vercel.app"
+              placeholder="es: studente@gcprof-academy.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isPending}
@@ -97,38 +128,58 @@ export default function LoginDialog() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-gray-700 font-medium">
-              Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isPending}
-                required
-                className="border-gray-200 focus-visible:ring-blue-500 pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+          {!isResetMode && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="dialog-password" className="text-gray-700 font-medium">
+                  Password
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsResetMode(true);
+                    setError("");
+                    setSuccessMessage("");
+                  }}
+                  className="text-xs text-blue-600 hover:underline"
+                  disabled={isPending}
+                >
+                  Dimenticata?
+                </button>
+              </div>
+              <div className="relative">
+                <Input
+                  id="dialog-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isPending}
+                  required={!isResetMode}
+                  className="border-gray-200 focus-visible:ring-blue-500 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <Button
             type="submit"
             disabled={isPending}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all disabled:opacity-50"
           >
-            {isPending ? "Connessione in corso..." : "Entra"}
+            {isPending 
+              ? "Elaborazione in corso..." 
+              : isResetMode 
+                ? "Invia istruzioni di reset" 
+                : "Entra"}
           </Button>
 
           <p className="text-center text-[11px] text-gray-400 pt-2 font-mono uppercase tracking-wider">

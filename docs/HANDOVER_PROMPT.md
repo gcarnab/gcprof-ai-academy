@@ -162,8 +162,15 @@ GCPROF-AI-ACADEMY
 |   |   |   |       MailTemplateList.tsx
 |   |   |   |       MailTestSender.tsx
 |   |   |   |       
+|   |   |   +---providers
+|   |   |   |       EmailProvider.ts
+|   |   |   |       GmailProvider.ts
+|   |   |   |       ResendProvider.ts
+|   |   |   |       
 |   |   |   +---services
+|   |   |   |       EmailService.ts
 |   |   |   |       MailSettingsService.ts
+|   |   |   |       MailTemplateEngine.ts
 |   |   |   |       MailTemplateService.ts
 |   |   |   |       
 |   |   |   \---types
@@ -206,9 +213,11 @@ GCPROF-AI-ACADEMY
 |   |   |       loginAction.ts
 |   |   |       logoutAction.ts
 |   |   |       registerAction.ts
+|   |   |       requestPasswordResetAction.ts
 |   |   |       
 |   |   +---components
 |   |   |       LoginDialog.tsx
+|   |   |       LoginDialog.tsx_old
 |   |   |       ProtectedRoute.tsx
 |   |   |       
 |   |   +---constants
@@ -298,7 +307,7 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|         
+|                    
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -351,8 +360,6 @@ GCPROF-AI-ACADEMY
 \---types
         database.types.ts
         
-
-
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 Il database gestisce ID flessibili (che possono essere stringhe/UUID o interi autoincrementanti). Le relazioni pivot collegano i corsi alle classi abilitate.

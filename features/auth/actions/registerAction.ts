@@ -2,13 +2,30 @@
 
 import { getUserRepository } from "@/features/auth/infrastructure/RepositoryFactory";
 import { BcryptPasswordService } from "@/features/auth/infrastructure/BcryptPasswordService";
-import { ResendEmailService } from "@/features/auth/infrastructure/ResendEmailService";
+import { EmailService } from "@/features/admin/mail/services/EmailService";
+import { MailTemplateService } from "@/features/admin/mail/services/MailTemplateService";
+import { MailTemplateEngine } from "@/features/admin/mail/services/MailTemplateEngine";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+/**
+ * Converte mail_settings in mappa variabili globali
+ */
+function mapMailSettingsToVariables(
+  settings: { id: string; value: string }[],
+): Record<string, string> {
+  return settings.reduce(
+    (acc, item) => {
+      acc[item.id] = item.value;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
+}
 
 export async function registerAction(prevState: any, formData: FormData) {
   const firstName = formData.get("firstName") as string;
@@ -50,8 +67,8 @@ export async function registerAction(prevState: any, formData: FormData) {
         `⚠️ Modalità Test: Bypass controllo unicità per l'email ${email}`,
       );
     }
-   
-    // 🎯 FISSATO: Selezioniamo sia 'name' che 'slug' per risolvere il disallineamento
+
+    // Recuperiamo le informazioni della classe selezionata
     const { data: classData, error: classErr } = await supabaseAdmin
       .from("academy_classes")
       .select("name, slug")
@@ -66,41 +83,22 @@ export async function registerAction(prevState: any, formData: FormData) {
     const passwordHash = await passwordService.hash(password);
 
     const displayName = `${firstName} ${lastName}`;
-    
-    // 🎯 FISSATO: Salviamo classData.name nell'array classes (es. "PRIMA") coerentemente con getLiveCourses()
-    // 💡 NOTA TEST: Se vuoi l'accesso immediato senza approvazione admin, cambia status in "active"
+
+    // Il repository effettua l'inserimento direttamente sulla tabella 'profiles'
     const newUser = await repo.create({
       email,
       passwordHash,
       role: "student",
-      status: "pending", 
+      status: "pending",
       displayName,
       firstName,
       lastName,
-      classes: [classData.name], 
+      classes: [classData.name],
       enrolledCourses: [],
       emailVerified: false,
     } as any);
 
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .insert({
-        id: newUser.id,
-        first_name: firstName,
-        last_name: lastName,
-        display_name: displayName,
-        role: "student",
-        status: "pending", // Deve matchare lo status dell'oggetto utente superiore
-        created_at: new Date().toISOString(),
-      });
-
-    if (profileError) {
-      console.error(
-        "Nota/Errore inserimento profili diretti:",
-        profileError.message,
-      );
-    }
-
+    // Associazione della classe all'interno della tabella pivot corrente
     const { error: profilePivotError } = await supabaseAdmin
       .from("profile_classes")
       .insert({ profile_id: newUser.id, class_id: classId });
@@ -112,19 +110,16 @@ export async function registerAction(prevState: any, formData: FormData) {
       );
     }
 
-    const { error: oldPivotError } = await supabaseAdmin
-      .from("user_classes_pivot")
-      .insert({ user_id: newUser.id, class_id: classId });
-
-    if (oldPivotError) {
-      console.error(
-        "Nota/Errore tabella pivot obsoleta user_classes_pivot:",
-        oldPivotError.message,
-      );
-    }
-
-    const emailService = new ResendEmailService();
-    startEmailDispatches(emailService, email, displayName, classData.slug);
+    // 🎯 FIX CRITICO VERCEL: Aggiunto l'await esplicito per bloccare la chiusura dell'istanza serverless
+    // In questo modo costringiamo il server ad attendere l'invio SMTP prima di rispondere al client
+    await startEmailDispatches({
+      firstName,
+      lastName,
+      displayName,
+      studentEmail: email,
+      className: classData.name,
+      classSlug: classData.slug,
+    });
 
     return {
       success: true,
@@ -140,14 +135,111 @@ export async function registerAction(prevState: any, formData: FormData) {
   }
 }
 
-function startEmailDispatches(
-  service: ResendEmailService,
-  studentEmail: string,
-  studentName: string,
-  classSlug: string,
-) {
-  Promise.all([
-    service.sendStudentPendingEmail(studentEmail, studentName),
-    service.sendAdminNotificationEmail(studentName, studentEmail, classSlug),
-  ]).catch((err) => console.error("Errore invio email in background:", err));
+/**
+ * Gestisce il caricamento dei template ed il dispatching delle email attendendo il completamento
+ */
+async function startEmailDispatches(params: {
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  studentEmail: string;
+  className: string;
+  classSlug: string;
+}) {
+  try {
+    const templateService = new MailTemplateService();
+    const emailService = new EmailService();
+
+    // 1. Carica le impostazioni globali delle variabili
+    const { data: settingsData } = await supabaseAdmin
+      .from("mail_settings")
+      .select("*");
+    const globalVariables = mapMailSettingsToVariables(settingsData ?? []);
+
+    // 2. Unisce le variabili globali con i dati dinamici dello studente corrente
+    const contextVariables = {
+      ...globalVariables,
+
+      // Variabili utente
+      first_name: params.firstName,
+      last_name: params.lastName,
+      display_name: params.displayName,
+
+      email: params.studentEmail,
+
+      // Variabili classe
+      class_name: params.className,
+      class_slug: params.classSlug,
+
+      // Alias retrocompatibili
+      studentName: params.displayName,
+      studentEmail: params.studentEmail,
+    };
+
+    const engine = new MailTemplateEngine(contextVariables);
+
+    // --- INVIO EMAIL ALLO STUDENTE (PENDING) ---
+    const studentTemplate = await templateService.getTemplate("WELCOME");
+    if (studentTemplate && studentTemplate.enabled) {
+      const subject = engine.render(
+        studentTemplate.subject ?? "Registrazione Ricevuta",
+      );
+      const title = engine.render(
+        studentTemplate.title_override ?? studentTemplate.subject ?? "",
+      );
+      const body = engine.render(studentTemplate.body_text_override ?? "");
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+          <h2 style="color: #2563eb; margin-bottom: 16px;">${title}</h2>
+          <div style="color: #334155; line-height: 1.6;">${body}</div>
+          <hr style="margin: 24px 0; border: 0; border-top: 1px solid #e2e8f0;" />
+          <p style="font-size: 12px; color: #64748b;">Email generata automaticamente da gcprof-academy.com</p>
+        </div>
+      `;
+      const result = await emailService.sendGenericEmail(
+        params.studentEmail,
+        subject,
+        html,
+      );
+
+      if (!result.success) {
+        console.error("❌ Invio email di benvenuto fallito:", result.error);
+      } else {
+        console.log("✅ Email di benvenuto inviata:", result.messageId);
+      }
+    }
+
+    // --- INVIO NOTIFICA ALL'ADMIN ---
+    /*
+    const adminTemplate =
+      await templateService.getTemplate("admin_notification");
+    if (adminTemplate && adminTemplate.enabled) {
+      const subject = engine.render(
+        adminTemplate.subject ?? "Nuovo Studente Registrato",
+      );
+      const title = engine.render(
+        adminTemplate.title_override ?? adminTemplate.subject ?? "",
+      );
+      const body = engine.render(adminTemplate.body_text_override ?? "");
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
+          <h2 style="color: #7c3aed; margin-bottom: 16px;">${title}</h2>
+          <div style="color: #334155; line-height: 1.6;">${body}</div>
+          <hr style="margin: 24px 0; border: 0; border-top: 1px solid #e2e8f0;" />
+          <p style="font-size: 12px; color: #64748b;">GCPROF AI Academy Backoffice</p>
+        </div>
+      `;
+      const adminRecipient =
+        process.env.GMAIL_SMTP_USER || "gcarnab74@gmail.com";
+      await emailService.sendGenericEmail(adminRecipient, subject, html);
+    }
+      */
+  } catch (err) {
+    console.error(
+      "❌ Errore durante l'elaborazione dei template email dinamici:",
+      err,
+    );
+  }
 }
