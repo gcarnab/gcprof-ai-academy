@@ -31,20 +31,27 @@ export default function Hero() {
       {/* <div className="mx-auto flex max-w-7xl flex-col items-center px-6 py-24 text-center"> */}
 
       <PageContainer className="flex flex-col items-center py-24 text-center">
-
         {/* Titolo */}
         <h1 className="max-w-4xl text-5xl font-bold tracking-tight text-gray-900 md:text-6xl">
-          Costruisci il tuo futuro digitale
-          <span className="block text-blue-600">in modo moderno.</span>
+          Disegna il tuo futuro digitale.{" "}
+          <span className="block text-blue-600 md:inline">
+            Un bit alla volta.
+          </span>
         </h1>
 
         {/* Sottotitolo */}
         <p className="mt-6 max-w-2xl text-lg leading-8 text-gray-600">
-          La piattaforma del <span className="block text-blue-600">Prof. Giuseppe Carnabuci</span> progettata per gli studenti delle scuole superiori,
-          con contenuti e strumenti AI per imparare
-          l'informatica in modo semplice ed efficace.
+          La piattaforma del{" "}
+          <span className="font-semibold text-blue-600">
+            Prof. Giuseppe Carnabuci
+          </span>{" "}
+          pensata per gli studenti delle superiori. Scopri l'informatica in modo
+          semplice e impara a dominare l'
+          <strong className="text-gray-900 font-bold">
+            Intelligenza Artificiale
+          </strong>{" "}
+          con strumenti interattivi e su misura per te.
         </p>
-
         {/* Pulsanti */}
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <Link

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, notFound } from "next/navigation";
+import { useParams, notFound, useRouter } from "next/navigation";
 import {
   getYouTubeEmbedUrl,
   getGoogleDriveEmbedUrl,
@@ -16,8 +16,25 @@ import LoginDialog from "@/features/auth/components/LoginDialog";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
 
+// 🎯 HELPER: Converte un URL di Google Colab standard nel formato ottimizzato per Iframe Embed
+function getGoogleColabEmbedUrl(url: string): string {
+  if (!url) return "";
+  let cleanUrl = url.trim();
+
+  // Se l'URL contiene la struttura classica di condivisione /drive/, la convertiamo in /notebooks/
+  // Questo previene le restrizioni di X-Frame-Options imposte da Google sui link standard
+  if (cleanUrl.includes("colab.research.google.com/drive/")) {
+    return cleanUrl.replace(
+      "colab.research.google.com/drive/",
+      "colab.research.google.com/notebooks/",
+    );
+  }
+  return cleanUrl;
+}
+
 export default function CourseDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const { user } = useAuth();
   const slug = params?.slug as string;
 
@@ -118,12 +135,23 @@ export default function CourseDetailPage() {
               </Button>
             </div>
 
-            {activeLesson.contentType === "video" &&
-              activeLesson.youtubeUrl && (
+            {/* 🎥 RENDERING VIDEO YOUTUBE */}
+            {((activeLesson.contentType as string) === "video" ||
+              (activeLesson as any).content_type === "video") &&
+              (activeLesson.youtubeUrl ||
+                (activeLesson as any).video_url ||
+                (activeLesson as any).external_url) && (
                 <div className="aspect-video w-full overflow-hidden rounded-lg bg-black shadow-inner">
                   <iframe
                     className="h-full w-full"
-                    src={getYouTubeEmbedUrl(activeLesson.youtubeUrl) || ""}
+                    src={
+                      getYouTubeEmbedUrl(
+                        activeLesson.youtubeUrl ||
+                          (activeLesson as any).video_url ||
+                          (activeLesson as any).external_url ||
+                          "",
+                      ) || ""
+                    }
                     title={activeLesson.title}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
@@ -131,16 +159,47 @@ export default function CourseDetailPage() {
                 </div>
               )}
 
-            {activeLesson.contentType === "document" &&
-              activeLesson.googleDriveUrl && (
+            {/* 📄 RENDERING DOCUMENTO GOOGLE DRIVE */}
+            {((activeLesson.contentType as string) === "document" ||
+              (activeLesson as any).content_type === "document") &&
+              (activeLesson.googleDriveUrl ||
+                (activeLesson as any).external_url) && (
                 <div className="w-full h-[650px] border overflow-hidden rounded-lg bg-gray-100 shadow-inner relative">
                   <iframe
                     className="absolute top-0 left-0 h-full w-full border-0"
                     src={
-                      getGoogleDriveEmbedUrl(activeLesson.googleDriveUrl) || ""
+                      getGoogleDriveEmbedUrl(
+                        activeLesson.googleDriveUrl ||
+                          (activeLesson as any).external_url ||
+                          "",
+                      ) || ""
                     }
                     title={activeLesson.title}
                     allow="autoplay"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+
+            {/* 🚀 RENDERING GOOGLE COLAB EMBEDDER */}
+            {((activeLesson.contentType as string) === "colab" ||
+              (activeLesson as any).content_type === "colab") &&
+              ((activeLesson as any).externalUrl ||
+                (activeLesson as any).external_url ||
+                (activeLesson as any).googleDriveUrl) && (
+                <div className="w-full h-[700px] border overflow-hidden rounded-lg bg-gray-50 shadow-inner relative">
+                  <iframe
+                    className="absolute top-0 left-0 h-full w-full border-0 bg-white"
+                    src={
+                      getGoogleColabEmbedUrl(
+                        (activeLesson as any).external_url ||
+                          (activeLesson as any).externalUrl ||
+                          (activeLesson as any).googleDriveUrl ||
+                          "",
+                      ) || ""
+                    }
+                    title={activeLesson.title}
+                    allow="clipboard-write; encrypted-media"
                     loading="lazy"
                   />
                 </div>
@@ -203,31 +262,47 @@ export default function CourseDetailPage() {
                       </h3>
                       <ul className="mt-3 space-y-2 pl-2">
                         {module.lessons && module.lessons.length > 0 ? (
-                          module.lessons.map((lesson: Lesson) => (
-                            <li
-                              key={lesson.id}
-                              className={`flex justify-between items-center text-sm p-2 rounded border border-transparent transition-colors ${
-                                activeLesson?.id === lesson.id
-                                  ? "bg-blue-50 border-blue-200"
-                                  : "hover:bg-gray-50 hover:border-gray-100"
-                              }`}
-                            >
-                              <button
-                                onClick={() => setActiveLesson(lesson)}
-                                className="text-blue-600 hover:underline font-medium text-left flex items-center gap-2"
+                          module.lessons.map((lesson: any) => {
+                            // 🎯 Sostituito Lesson con any per evitare errori sulle proprietà esterne
+                            const currentType =
+                              lesson.contentType || lesson.content_type;
+                            return (
+                              <li
+                                key={lesson.id}
+                                className={`flex justify-between items-center text-sm p-2 rounded border border-transparent transition-colors ${
+                                  activeLesson?.id === lesson.id
+                                    ? "bg-blue-50 border-blue-200"
+                                    : "hover:bg-gray-50 hover:border-gray-100"
+                                }`}
                               >
-                                <span>
-                                  {lesson.contentType === "video" ? "📺" : "📄"}
+                                <button
+                                  //onClick={() => setActiveLesson(lesson)}
+                                  onClick={() =>
+                                    router.push(
+                                      `/courses/${slug}/modules/${module.id}/lessons/${lesson.id}`,
+                                    )
+                                  }
+                                  className="text-blue-600 hover:underline font-medium text-left flex items-center gap-2"
+                                >
+                                  <span>
+                                    {currentType === "video"
+                                      ? "📺"
+                                      : currentType === "colab"
+                                        ? "🚀"
+                                        : "📄"}
+                                  </span>
+                                  <span>{lesson.title}</span>
+                                </button>
+                                <span className="text-xs text-gray-400 font-mono">
+                                  {currentType === "video"
+                                    ? "Video YouTube"
+                                    : currentType === "colab"
+                                      ? "Google Colab"
+                                      : "Google Drive"}
                                 </span>
-                                <span>{lesson.title}</span>
-                              </button>
-                              <span className="text-xs text-gray-400 font-mono">
-                                {lesson.contentType === "video"
-                                  ? "Video YouTube"
-                                  : "Google Drive"}
-                              </span>
-                            </li>
-                          ))
+                              </li>
+                            );
+                          })
                         ) : (
                           <li className="text-xs italic text-gray-400 pl-6">
                             Nessuna lezione presente.

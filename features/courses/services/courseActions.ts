@@ -17,7 +17,7 @@ function generateSlug(text: string): string {
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-") // Sostituisce spazi e caratteri speciali con un trattino
-    .replace(/(^-|-$)/g, "");    // Pulisce eventuali trattini all'inizio o alla fine
+    .replace(/(^-|-$)/g, ""); // Pulisce eventuali trattini all'inizio o alla fine
 }
 
 /* ============================================================================
@@ -45,13 +45,16 @@ export async function getLiveCourses(): Promise<Course[]> {
           title, 
           order_index,
           course_lessons (
-            id, 
-            title, 
-            content_type, 
-            external_url, 
-            order_index, 
+            id,
+            title,
+            content_type,
+            external_url,
+            video_url,
+            content,
+            order_index,
             duration
           )
+
         )
       `);
 
@@ -101,11 +104,22 @@ export async function getLiveCourses(): Promise<Course[]> {
               id: les.id,
               title: les.title,
               duration: les.duration || 15,
+
+              // Manteniamo la logica attuale
               contentType: les.content_type,
+
               youtubeUrl:
-                les.content_type === "video" ? les.external_url : undefined,
+                les.content_type === "video"
+                  ? les.external_url || les.video_url
+                  : undefined,
+
               googleDriveUrl:
                 les.content_type === "document" ? les.external_url : undefined,
+
+              // ✅ Nuovi campi necessari ai nuovi renderer
+              external_url: les.external_url || "",
+              video_url: les.video_url || "",
+              content: les.content || "",
             })),
           };
         }),
@@ -124,7 +138,8 @@ export async function getLiveCourses(): Promise<Course[]> {
 export async function upsertCourse(course: Partial<Course>) {
   const payload: Record<string, any> = {
     title: course.title,
-    slug: course.slug || (course.title ? generateSlug(course.title) : undefined),
+    slug:
+      course.slug || (course.title ? generateSlug(course.title) : undefined),
     description: course.description,
     category: course.category,
     difficulty: course.difficulty,
@@ -151,7 +166,10 @@ export async function upsertCourse(course: Partial<Course>) {
   // Se vengono passate delle classi specifiche nell'azione, aggiorna la tabella pivot
   if (course.allowedClasses && data?.id) {
     // 1. Svuota le vecchie relazioni per il corso
-    await supabaseAdmin.from("course_classes").delete().eq("course_id", data.id);
+    await supabaseAdmin
+      .from("course_classes")
+      .delete()
+      .eq("course_id", data.id);
 
     if (course.allowedClasses.length > 0) {
       // 2. Prendi gli ID reali delle classi dai nomi passati

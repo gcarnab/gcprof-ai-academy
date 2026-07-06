@@ -8,7 +8,9 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// 🆕 NUOVA AZIONE: Recupera la struttura bypassando i blocchi RLS
+// Definizione centralizzata dei tipi di contenuto supportati dalla piattaforma
+export type ExtendedLessonContentType = "video" | "document" | "colab" | "markdown" | "sandbox";
+
 export async function getCourseStructureAction(courseId: string) {
   try {
     const { data, error } = await supabaseAdmin
@@ -18,7 +20,7 @@ export async function getCourseStructureAction(courseId: string) {
         course_modules (
           id, title, order_index,
           course_lessons (
-            id, title, content_type, external_url, order_index
+            id, title, content_type, external_url, video_url, content, order_index
           )
         )
       `)
@@ -27,7 +29,6 @@ export async function getCourseStructureAction(courseId: string) {
 
     if (error) return { success: false, error: error.message, data: null };
 
-    // Ordinamento sicuro lato server
     const sortedModules = (data.course_modules || []).sort((a: any, b: any) => a.order_index - b.order_index);
     sortedModules.forEach((mod: any) => {
       mod.course_lessons = (mod.course_lessons || []).sort((a: any, b: any) => a.order_index - b.order_index);
@@ -51,23 +52,41 @@ export async function addModule(courseId: string, title: string, orderIndex: num
 
 export async function addLesson(
   moduleId: string, 
-  data: { title: string, content_type: "video" | "document", external_url: string, order_index: number }
+  data: { 
+    title: string; 
+    content_type: ExtendedLessonContentType; 
+    external_url: string; 
+    content?: string; // Sbloccato il campo facoltativo per il testo/markdown
+    order_index: number; 
+  }
 ) {
-  const slug = data.title.toLowerCase().trim().replace(/[\s_]+/g, "-").replace(/[^\w-]+/g, "");
+  try {
+    const slug = data.title.toLowerCase().trim().replace(/[\s_]+/g, "-").replace(/[^\w-]+/g, "");
 
-  const { error } = await supabaseAdmin
-    .from("course_lessons")
-    .insert({
+    const insertData = {
       module_id: moduleId,
       title: data.title,
       slug: slug,
       content_type: data.content_type,
       external_url: data.external_url,
-      order_index: data.order_index,
-      content: ""
-    });
+      video_url: data.content_type === "video" ? data.external_url : null,
+      content: data.content || "", // Salva il testo reale se presente, altrimenti stringa vuota di fallback
+      order_index: data.order_index
+    };
 
-  if (error) return { success: false, error: error.message };
-  revalidatePath("/admin/dashboard");
-  return { success: true };
+    const { error } = await supabaseAdmin
+      .from("course_lessons")
+      .insert(insertData);
+
+    if (error) {
+      console.error("Supabase Insert Error:", error);
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Server Action Exception:", err);
+    return { success: false, error: err.message };
+  }
 }
