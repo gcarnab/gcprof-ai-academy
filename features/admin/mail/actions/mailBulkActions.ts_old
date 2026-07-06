@@ -1,0 +1,93 @@
+"use server";
+
+import { createClient } from "@supabase/supabase-js";
+import { MailTemplateService } from "../services/MailTemplateService";
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabaseAdmin = createClient(supabaseUrl!, serviceRoleKey!);
+const templateService = new MailTemplateService();
+
+interface BulkMailResult {
+  success: boolean;
+  processedCount: number;
+  error?: string;
+}
+
+export async function sendBulkMailAction(
+  templateKey: string,
+  targetClass: string,
+): Promise<BulkMailResult> {
+  try {
+    // 1. Recupera la configurazione del template per estrarre Oggetto e Body originali
+    const template = await templateService.getTemplate(templateKey);
+    if (!template) {
+      return {
+        success: false,
+        processedCount: 0,
+        error: "Template non trovato.",
+      };
+    }
+
+    // 2. Query relazionale per estrarre tutti gli utenti della classe target con le loro email
+    const { data: records, error: dbError } = await supabaseAdmin
+      .from("profiles")
+      .select(
+        `
+        email,
+        display_name,
+        profile_classes!inner(academy_classes!inner(name))
+      `,
+      )
+      .eq("profile_classes.academy_classes.name", targetClass)
+      .eq("status", "active"); // Invia solo ad utenti attivi
+
+    if (dbError)
+      throw new Error(`Errore estrazione destinatari: ${dbError.message}`);
+    if (!records || records.length === 0) {
+      return {
+        success: true,
+        processedCount: 0,
+        error: `Nessun utente attivo trovato nella classe '${targetClass}'.`,
+      };
+    }
+
+    // 3. Elaborazione della coda di messaggi (Compilazione Dinamica con Fallback sui Campi)
+    for (const user of records) {
+      const displayName = user.display_name || "Studente";
+
+      // Estraiamo in modo flessibile il corpo dell'email (mappando le varianti più comuni: body, content, html)
+      const rawBody =
+        (template as any).body ||
+        (template as any).content ||
+        (template as any).html ||
+        "";
+      const rawSubject =
+        (template as any).subject || (template as any).title || "";
+
+      // Sostituzione dinamica dei placeholder
+      const compiledBody = rawBody.replace(/{{display_name}}/g, displayName);
+      const compiledSubject = rawSubject.replace(
+        /{{display_name}}/g,
+        displayName,
+      );
+
+      // --- INTEGRAZIONE MAIL PROVIDER (RESEND / SMTP / SUPABASE EDGE FUNCTION) ---
+      console.log(
+        `[BULK MAIL LOG] Sending to: ${user.email} | Subject: ${compiledSubject}`,
+      );
+    }
+
+    return {
+      success: true,
+      processedCount: records.length,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      processedCount: 0,
+      error: err.message || "Errore sconosciuto nel broadcast.",
+    };
+  }
+}

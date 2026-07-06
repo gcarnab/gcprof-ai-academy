@@ -1,0 +1,107 @@
+"use server";
+
+import { createClient } from "@supabase/supabase-js";
+import { MailTemplateService } from "../services/MailTemplateService";
+import { Resend } from "resend";
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Recuperiamo la chiave in modo speculare a quanto già fai nel modulo contacts
+const apiKey = process.env.RESEND_API_KEY || "";
+const resend = new Resend(apiKey);
+
+const supabaseAdmin = createClient(supabaseUrl!, serviceRoleKey!);
+const templateService = new MailTemplateService();
+
+interface BulkMailResult {
+  success: boolean;
+  processedCount: number;
+  error?: string;
+}
+
+export async function sendBulkMailAction(
+  templateKey: string,
+  targetClass: string
+): Promise<BulkMailResult> {
+  try {
+    if (!apiKey) {
+      return { 
+        success: false, 
+        processedCount: 0, 
+        error: "RESEND_API_KEY non configurata nel file .env.local." 
+      };
+    }
+
+    // 1. Recupera il template
+    const template = await templateService.getTemplate(templateKey);
+    if (!template) {
+      return { success: false, processedCount: 0, error: "Template non trovato." };
+    }
+
+    // 2. Estrai gli utenti associati alla classe selezionata
+    const { data: records, error: dbError } = await supabaseAdmin
+      .from("profiles")
+      .select(`
+        email,
+        display_name,
+        profile_classes!inner(academy_classes!inner(name))
+      `)
+      .eq("profile_classes.academy_classes.name", targetClass)
+      .eq("status", "active");
+
+    if (dbError) throw new Error(`Errore estrazione destinatari: ${dbError.message}`);
+    if (!records || records.length === 0) {
+      return { 
+        success: true, 
+        processedCount: 0, 
+        error: `Nessun utente attivo trovato nella classe '${targetClass}'.` 
+      };
+    }
+
+    let sentCounter = 0;
+
+    // 3. Ciclo di invio reale controllato per Sandbox
+    for (const user of records) {
+      const displayName = user.display_name || "Studente";
+      
+      const rawBody = (template as any).body || (template as any).content || (template as any).html || "";
+      const rawSubject = (template as any).subject || (template as any).title || "Comunicazione Academy";
+
+      // Sostituzione dei tag personalizzati
+      const compiledBody = rawBody.replace(/{{display_name}}/g, displayName);
+      const compiledSubject = rawSubject.replace(/{{display_name}}/g, displayName);
+
+      // 🛡️ ACCORGIMENTO SANDBOX:
+      // Se l'email dell'utente è reale e testata (es. una tua seconda email verificata), usa quella,
+      // altrimenti reindirizziamo alla tua Gmail principale per superare i blocchi di Resend in modalità test.
+      const destinationEmail = user.email.includes("@gcprof-test.com") 
+        ? "gcarnab74@gmail.com" 
+        : user.email;
+
+      const { error: sendError } = await resend.emails.send({
+        from: "GCPROF-ACADEMY.COM <noreply@gcprof-academy.com>",
+        to: destinationEmail,
+        subject: `[Bulk Test -> ${user.email}] ${compiledSubject}`, // Ti mostra l'utente originario nell'oggetto
+        html: compiledBody.replace(/\n/g, "<br/>"),
+      });
+
+      if (sendError) {
+        console.error(`[Resend Error] Fallito invio per ${user.email}:`, sendError);
+      } else {
+        sentCounter++;
+      }
+    }
+
+    return {
+      success: true,
+      processedCount: sentCounter,
+    };
+
+  } catch (err: any) {
+    return {
+      success: false,
+      processedCount: 0,
+      error: err.message || "Errore imprevisto nel server durante il broadcast.",
+    };
+  }
+}

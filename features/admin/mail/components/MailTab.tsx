@@ -2,6 +2,10 @@
 
 import MailDashboard from "./MailDashboard";
 
-export default function MailTab() {
-  return <MailDashboard />;
+interface Props {
+  availableClasses: string[];
+}
+
+export default function MailTab({ availableClasses }: Props) {
+  return <MailDashboard availableClasses={availableClasses} />;
 }

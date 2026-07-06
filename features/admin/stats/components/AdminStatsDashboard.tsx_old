@@ -4,7 +4,7 @@ import PieChartCard from "./charts/PieChartCard";
 import BarChartCard from "./charts/BarChartCard";
 import DonutChartCard from "./charts/DonutChartCard";
 import StatsKpiCards from "./charts/StatsKpiCards";
-import HorizontalBarChartCard from "./charts/HorizontalBarChartCard"; 
+import HorizontalBarChartCard from "./charts/HorizontalBarChartCard"; // 🎯 NUOVO
 
 type Props = {
   stats: any;
@@ -14,15 +14,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
   const avgLessonsPerModule = stats.totals.modules > 0 
     ? (stats.totals.lessons / stats.totals.modules).toFixed(1) 
     : "0";
-
-  // 🆕 Ottimizzazione preventiva dei dati di engagement degli studenti
-  // Se nel servizio PostgreSQL/Supabase hai estratto le classi aggregate (es. '5A-INF' o 'Nessuna'),
-  // le mappiamo direttamente per il grafico, altrimenti impostiamo un fallback sicuro.
-  const refinedStudentEngagement = (stats.charts.studentEngagement || []).map((student: any) => ({
-    name: student.name,
-    hours: student.hours,
-    classes: student.classes || student.class_name || undefined // 👈 Aggancia automaticamente la colonna del DB
-  }));
 
   return (
     <div className="space-y-10 p-6">
@@ -57,12 +48,12 @@ export default function AdminStatsDashboard({ stats }: Props) {
           <PieChartCard title="Studenti per Classe" data={stats.charts.studentsByClass} />
         </div>
 
-        {/* 🎯 RIGRAFO AGGIORNATO: Tempo di Attività Studenti con supporto Classi */}
+        {/* 🎯 NUOVO RIGRAFO: Tempo di Attività Studenti */}
         <div className="pt-2">
           <HorizontalBarChartCard
             title="Tempo di Attività Studenti"
             subtitle="Classifica del tempo totale cumulato dagli studenti all'interno dei corsi"
-            data={refinedStudentEngagement} // 👈 Passiamo i dati raffinati con il supporto classi
+            data={stats.charts.studentEngagement || []}
           />
         </div>
       </div>

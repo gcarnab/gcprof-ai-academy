@@ -25,7 +25,6 @@ GCPROF-AI-ACADEMY
 |   |   |   
 |   |   \---dashboard
 |   |           page.tsx
-|   |           page.tsx_old_single
 |   |           
 |   +---api
 |   |   +---auth
@@ -46,6 +45,11 @@ GCPROF-AI-ACADEMY
 |   |   |           
 |   |   \---seed-admin
 |   |           route.ts
+|   |           
+|   +---auth
+|   |   \---reset-password
+|   |           page.tsx
+|   |           ResetPasswordClient.tsx
 |   |           
 |   +---contacts
 |   |       actions.ts
@@ -72,7 +76,6 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---login
 |   |       page.tsx
-|   |       page.tsx_old
 |   |       
 |   +---profile
 |   |       page.tsx
@@ -178,6 +181,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |   \---charts
 |   |   |   |           BarChartCard.tsx
 |   |   |   |           DonutChartCard.tsx
+|   |   |   |           HorizontalBarChartCard.tsx
 |   |   |   |           PieChartCard.tsx
 |   |   |   |           StatsKpiCards.tsx
 |   |   |   |           StudentsByClassChart.tsx
@@ -187,9 +191,11 @@ GCPROF-AI-ACADEMY
 |   |   |           
 |   |   \---users
 |   |       +---actions
+|   |       |       activityActions.ts
 |   |       |       bulkActivateUsersAction.ts
 |   |       |       
 |   |       +---components
+|   |       |       ActivityTracker.tsx
 |   |       |       AdminUsersClassesEditor.tsx
 |   |       |       AdminUsersHeader.tsx
 |   |       |       AdminUsersRow.tsx
@@ -202,12 +208,14 @@ GCPROF-AI-ACADEMY
 |   |               
 |   +---auth
 |   |   +---actions
+|   |   |       confirmPasswordResetAction.ts
 |   |   |       getClassesAction.ts
 |   |   |       getSessionAction.ts
 |   |   |       loginAction.ts
 |   |   |       logoutAction.ts
 |   |   |       registerAction.ts
 |   |   |       requestPasswordResetAction.ts
+|   |   |       validateResetTokenAction.ts
 |   |   |       
 |   |   +---components
 |   |   |       LoginDialog.tsx
@@ -253,6 +261,7 @@ GCPROF-AI-ACADEMY
 |   |   |       
 |   |   +---services
 |   |   |       AuthService.ts
+|   |   |       PasswordResetService.ts
 |   |   |       
 |   |   \---validators
 |   |           AuthValidators.ts
@@ -301,8 +310,7 @@ GCPROF-AI-ACADEMY
 +---lib
 |       supabase.ts
 |       utils.ts
-|       
-|               
+|                   
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png

@@ -93,13 +93,13 @@ export default function AdminDashboard({ stats }: Props) {
           )}
 
           {/* ================= MAIL ================= */}
-
-          {currentTab === "mail" && <MailTab />}
+          {currentTab === "mail" && (
+            <MailTab availableClasses={availableClassesNames} />
+          )}
 
           {/* ================= STATS ================= */}
 
           {currentTab === "stats" && <StatsTab stats={stats} />}
-          
         </div>
       </div>
     </>

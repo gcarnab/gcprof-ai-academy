@@ -54,22 +54,18 @@ export async function getAdminDashboardStats() {
     return acc;
   }, {});
 
-  // ============================================================================
-  // 🎯 AGGIORNATO: CALCOLO ENGAGEMENT E MAPPATURA CLASSI REALI PER IL GRAFICO
-  // ============================================================================
+  // 🎯 NUOVO: CALCOLO ENGAGEMENT TEMPO DI ATTIVITÀ STUDENTI
   const studentEngagement = users
     .filter((u: any) => u.role === "student")
     .map((u: any) => {
-      // Estraiamo l'array delle classi e lo formattiamo come stringa separata da virgole
-      const userClassesArray = u.classes || [];
-      const classLabel = userClassesArray.length > 0 
-        ? userClassesArray.join(", ") 
-        : "Nessuna classe";
-
+      // 🛠️ Generazione deterministica temporanea (Simulazione ore di studio stabili)
+      // Verrà sostituita da u.total_hours_active una volta inserita la colonna nel DB
+      const pseudoHours = ((u.display_name?.length || 5) * 3 + (u.created_at ? 14 : 5)) % 65;
+      
       return {
         name: u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email || "Studente",
+        //hours: pseudoHours,
         hours: u.total_minutes_active ?? 0,
-        classes: classLabel, // 👈 Questa proprietà viene ora inviata correttamente alla UI e letta da Recharts!
       };
     })
     .sort((a, b) => b.hours - a.hours)
@@ -149,7 +145,7 @@ export async function getAdminDashboardStats() {
       usersByRole,
       usersByStatus,
       studentsByClass,
-      studentEngagement, 
+      studentEngagement, // 🎯 Esposto per la UI
       coursesByCategory,
       publishedCourses,
       modulesPerCourse,

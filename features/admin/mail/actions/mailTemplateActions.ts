@@ -15,12 +15,20 @@ export async function getMailTemplateAction(templateKey: string) {
 
 export async function updateMailTemplateAction(
   templateKey: string,
-
   payload: UpdateMailTemplateDto,
 ) {
-  return await service.updateTemplate(
-    templateKey,
+  return await service.updateTemplate(templateKey, payload);
+}
 
-    payload,
-  );
+// 🆕 Azione per inserire un nuovo template
+export async function createMailTemplateAction(payload: {
+  template_key: string;
+  name: string;
+  description: string;
+  subject: string;
+  title_override: string | null;
+  body_text_override: string | null;
+  enabled: boolean;
+}) {
+  return await service.createTemplate(payload);
 }

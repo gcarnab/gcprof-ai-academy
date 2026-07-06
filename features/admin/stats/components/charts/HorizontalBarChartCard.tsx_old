@@ -13,8 +13,7 @@ import {
 type Props = {
   title: string;
   subtitle?: string;
-  // 🆕 Estendiamo l'oggetto aggiungendo 'classes' come stringa opzionale
-  data: Array<{ name: string; hours: number; classes?: string }>;
+  data: Array<{ name: string; hours: number }>;
 };
 
 export default function HorizontalBarChartCard({
@@ -22,12 +21,10 @@ export default function HorizontalBarChartCard({
   subtitle,
   data,
 }: Props) {
-  // Mappatura compatibile con lo standard Recharts che si porta dietro la classe
+  // Mappatura compatibile con lo standard Recharts
   const chartData = data.map((item) => ({
     name: item.name,
-    displayName: item.classes ? `${item.name} [${item.classes}]` : item.name, // 🆕 Etichetta asse Y con classe
     value: item.hours,
-    classes: item.classes || "Nessuna classe", // 🆕 Salvato per l'uso dentro il tooltip
   }));
 
   return (
@@ -61,33 +58,22 @@ export default function HorizontalBarChartCard({
               domain={[0, "dataMax + 5"]}
             />
             <YAxis
-              dataKey="displayName" // 🆕 Usiamo il nome esteso con la classe per l'etichetta dell'asse
+              dataKey="name"
               type="category"
               stroke="#4b5563"
-              fontSize={10} // Abbassato leggermente per far spazio al testo più lungo della classe
-              width={140}   // 🆕 Aumentato da 110 a 140 per evitare che il nome della classe venga tagliato
+              fontSize={11}
+              width={110}
               tickLine={false}
             />
             <Tooltip
-              // 🆕 Customizziamo il rendering del Tooltip per stampare anche la classe dentro il quadratino
-              content={({ active, payload }) => {
-                if (active && payload && payload.length) {
-                  const dataObj = payload[0].payload;
-                  return (
-                    <div className="rounded-lg border bg-white p-3 shadow-md border-gray-200 text-xs space-y-1">
-                      <p className="font-bold text-gray-800">{dataObj.name}</p>
-                      <p className="text-indigo-600 font-medium">
-                        Classe: <span className="text-gray-600 font-normal">{dataObj.classes}</span>
-                      </p>
-                      <p className="text-gray-500 font-medium">
-                        Tempo di studio: <span className="text-gray-900 font-bold">{dataObj.value} min</span>
-                      </p>
-                    </div>
-                  );
-                }
-                return null;
+              formatter={(value: any) => [`${value} min`, "Tempo di studio"]}
+              contentStyle={{
+                backgroundColor: "#fff",
+                borderRadius: "8px",
+                border: "1px solid #e5e7eb",
               }}
             />
+            {/* Usiamo una tonalità viola/indigo per differenziarlo dai grafici dei corsi */}
             <Bar
               dataKey="value"
               fill="#6366f1"
