@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
 import { MarkdownPreview } from "@/features/courses/components/MarkdownPreview";
 
+
 export default function LessonPage() {
   const params = useParams();
 

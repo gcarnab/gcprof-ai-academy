@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import type { Course, Module, Lesson } from "../types/course";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -409,4 +410,59 @@ export async function getClassDetails(className: string) {
 
   if (error) return { description: "" };
   return { description: data?.description || "" };
+}
+
+/**
+ * Dissocia un corso da una classe eliminando il record dalla tabella course_classes
+ */
+export async function dissociateCourseFromClass(
+  courseId: string,
+  classId: string,
+) {
+  try {
+    const { error } = await supabaseAdmin
+      .from("course_classes")
+      .delete()
+      .eq("course_id", courseId)
+      .eq("class_id", classId);
+
+    if (error) {
+      console.error("Errore Supabase:", error);
+      throw error;
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/dashboard");
+    revalidatePath("/courses");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Errore durante la dissociazione corso-classe:", error);
+
+    return {
+      success: false,
+      error: "Impossibile rimuovere l'associazione.",
+    };
+  }
+}
+
+/**
+ * Recupera tutte le associazioni attive tra corsi e classi
+ */
+export async function getCourseClasses() {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data, error } = await supabaseAdmin
+    .from("course_classes")
+    .select("course_id, class_id");
+
+  console.log("=== COURSE_CLASSES ADMIN ===");
+  console.log(data);
+
+  if (error) {
+    console.error("Errore getCourseClasses:", error);
+    return [];
+  }
+
+  return data || [];
 }

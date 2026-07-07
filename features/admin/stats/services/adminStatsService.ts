@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getAdminUsersList } from "../../users/services/adminService";
 import { getAvailableClassesForCourses } from "../../courses/services/adminCourseService";
 import { getAllCoursesList } from "../../courses/services/adminStructureService";
+import { getCourseClasses } from "@/features/courses/services/courseActions";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -12,15 +13,25 @@ const supabaseAdmin = createClient(
  * SERVICE CENTRALE STATISTICHE ADMIN DASHBOARD
  */
 export async function getAdminDashboardStats() {
-  const [users, classes, courses] = await Promise.all([
+  const [users, classes, courses, courseClasses] = await Promise.all([
     getAdminUsersList(),
     getAvailableClassesForCourses(),
     getAllCoursesList(),
+    getCourseClasses(),
   ]);
 
+  //console.log("=== DEBUG courseClasses ===");
+  //console.log(courseClasses);
+
   // 🌐 CONFIGURAZIONE DINAMICA CONFIGURATA DA .ENV
-  const statsLimit = parseInt(process.env.NEXT_PUBLIC_ADMIN_STATS_LIMIT || "5", 10);
-  const engagementLimit = parseInt(process.env.NEXT_PUBLIC_ADMIN_STATS_ENGAGEMENT_LIMIT || "8", 10);
+  const statsLimit = parseInt(
+    process.env.NEXT_PUBLIC_ADMIN_STATS_LIMIT || "5",
+    10,
+  );
+  const engagementLimit = parseInt(
+    process.env.NEXT_PUBLIC_ADMIN_STATS_ENGAGEMENT_LIMIT || "8",
+    10,
+  );
 
   // =========================
   // KPI BASE
@@ -62,12 +73,17 @@ export async function getAdminDashboardStats() {
     .map((u: any) => {
       // Estraiamo l'array delle classi e lo formattiamo come stringa separata da virgole
       const userClassesArray = u.classes || [];
-      const classLabel = userClassesArray.length > 0 
-        ? userClassesArray.join(", ") 
-        : "Nessuna classe";
+      const classLabel =
+        userClassesArray.length > 0
+          ? userClassesArray.join(", ")
+          : "Nessuna classe";
 
       return {
-        name: u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email || "Studente",
+        name:
+          u.display_name ||
+          `${u.first_name || ""} ${u.last_name || ""}`.trim() ||
+          u.email ||
+          "Studente",
         hours: u.total_minutes_active ?? 0,
         classes: classLabel, // 👈 Questa proprietà viene ora inviata correttamente alla UI e letta da Recharts!
       };
@@ -79,7 +95,11 @@ export async function getAdminDashboardStats() {
   // COURSES CHARTS
   // =========================
   const coursesByCategory = courses.reduce((acc: any, c: any) => {
-    const category = c.category || c.categories?.name || c.course_categories?.name || "Senza categoria";
+    const category =
+      c.category ||
+      c.categories?.name ||
+      c.course_categories?.name ||
+      "Senza categoria";
     acc[category] = (acc[category] || 0) + 1;
     return acc;
   }, {});
@@ -118,7 +138,11 @@ export async function getAdminDashboardStats() {
 
   const lessonsPerCourse = courses
     .map((c: any) => {
-      const lessons = c.course_modules?.reduce((acc: number, m: any) => acc + (m.course_lessons?.length ?? 0), 0) ?? 0;
+      const lessons =
+        c.course_modules?.reduce(
+          (acc: number, m: any) => acc + (m.course_lessons?.length ?? 0),
+          0,
+        ) ?? 0;
       return { title: c.title, lessons };
     })
     .sort((a, b) => b.lessons - a.lessons)
@@ -149,13 +173,13 @@ export async function getAdminDashboardStats() {
       usersByRole,
       usersByStatus,
       studentsByClass,
-      studentEngagement, 
+      studentEngagement,
       coursesByCategory,
       publishedCourses,
       modulesPerCourse,
       lessonsPerCourse,
       courseComplexity,
     },
-    raw: { users, classes, courses },
+    raw: { users, classes, courses, course_classes: courseClasses },
   };
 }
