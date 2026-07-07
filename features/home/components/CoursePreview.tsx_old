@@ -10,36 +10,44 @@ export default function CoursePreview() {
   const { courses, isLoading } = useCourses();
 
   return (
-    <section className="bg-muted py-16 transition-colors duration-300">
+    <section className="bg-muted py-20 transition-colors duration-300">
       <PageContainer>
+
         <SectionTitle
           title="Corsi in evidenza"
           subtitle={`Una selezione dei corsi disponibili su ${siteConfig.siteName}.`}
         />
 
+
         {isLoading ? (
+
           <div className="flex justify-center items-center py-12">
             <p className="text-muted-foreground text-sm animate-pulse">
               Caricamento corsi in evidenza...
             </p>
           </div>
+
         ) : courses.length === 0 ? (
+
           <div className="text-center py-12">
             <p className="text-muted-foreground text-sm italic">
               Nessun corso disponibile al momento.
             </p>
           </div>
+
         ) : (
-          /* 🎯 FIX: Griglia ottimizzata a 4 colonne (lg:grid-cols-4) con gap ridotto per card più compatte */
-          <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 animate-in fade-in duration-300">
-            {courses.map((course) => (
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {courses.slice(0, 3).map((course) => (
               <CourseCard 
                 key={course.id} 
                 course={course} 
               />
             ))}
           </div>
+
         )}
+
       </PageContainer>
     </section>
   );

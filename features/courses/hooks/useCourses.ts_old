@@ -50,30 +50,24 @@ export function useCourses() {
   }, [user]);
 
   /**
-   * 🛡️ STRATO DI SICUREZZA AGGIORNATO PER CORSI PUBBLICI E PRIVATI
+   * 🛡️ STRATO DI SICUREZZA RIGIDO APPLICATO AI DATI DEL DB
    */
   const allowedCourses = useMemo(() => {
     const currentUser = legacySessionUser as any;
 
-    // 1. Se è Admin, vede tutto il catalogo
     if (currentUser?.role === "admin") {
       return dbCourses;
     }
 
-    // 🎯 FIX: Se l'utente NON è loggato, mostriamo tutti i corsi in evidenza sulla Home pubblica
-    if (!currentUser) {
-      return dbCourses;
-    }
-
-    // 2. Se l'utente è registrato ma bloccato o in attesa, non mostriamo i corsi interni
     if (
+      !currentUser ||
       currentUser.status === "pending" ||
       currentUser.status === "blocked"
     ) {
       return [];
     }
 
-    // 3. Lo studente autenticato vede i corsi solo se appartengono esplicitamente alla sua classe
+    // 🎯 MODIFICATO: Lo studente vede i corsi solo se appartengono esplicitamente alla sua classe
     const userClasses = currentUser.classes || [];
     return dbCourses.filter((course) => {
       return course.allowedClasses.some((allowedClass: string) =>

@@ -1,36 +1,93 @@
 # Credits & Tecnologie 🚀
 
-Benvenuto nella pagina dei Credits di **gcprof-ai-academy**, la piattaforma LSM avanzata per la gestione e la fruizione di corsi di formazione sviluppata con l'ausilio dell'Intelligenza Artificiale.
+Benvenuto nella pagina Credits di **gcprof-ai-academy**, la piattaforma digitale dedicata alla formazione informatica e tecnologica per studenti e docenti.
+
+Un ambiente moderno progettato per integrare apprendimento, contenuti multimediali e strumenti innovativi con il supporto dell'Intelligenza Artificiale.
 
 ---
 
-## 🎯 Lo Scopo dell'Applicazione
+## 🎯 La Mission della Piattaforma
 
-**gcprof-ai-academy** nasce con l'obiettivo di rivoluzionare l'esperienza formativa sia per gli amministratori (docenti/tutor) che per gli studenti. 
+**gcprof-ai-academy** nasce con l'obiettivo di rendere l'apprendimento dell'informatica più semplice, coinvolgente e accessibile.
 
-- **Per gli Amministratori:** Offre una dashboard completa con pieno controllo CRUD (Create, Read, Update, Delete) in tempo reale su Corsi, Moduli, Lezioni, Classi Accademiche e Categorie Merceologiche.
-- **Per gli Studenti:** Fornisce un ambiente fluido, asincrono e reattivo per accedere a lezioni video, dispense e tracciare i propri progressi in modo intelligente.
+La piattaforma permette di:
+
+- creare e organizzare percorsi formativi strutturati;
+- distribuire lezioni, materiali e risorse digitali;
+- gestire classi, corsi e contenuti in modo centralizzato;
+- offrire agli studenti un ambiente intuitivo per imparare nuove competenze digitali.
 
 ---
 
-## 🛠️ Il Stack Tecnologico (Architettura Moderna)
+## 👨‍🏫 Per Docenti e Amministratori
 
-L'applicazione è stata sviluppata sfruttando le tecnologie più moderne, performanti e scalabili disponibili oggi sul mercato:
+La piattaforma offre strumenti dedicati alla gestione della didattica:
 
-### 1. Frontend & Framework: Next.js (App Router)
-- **React 19 & Next.js:** Utilizzo dell'architettura Server/Client Components combinata con le **Server Actions** e `useTransition` per garantire transizioni di stato immediate senza ricaricare la pagina.
-- **Turbopack:** Motore di build ultra-rapido per un'esperienza di sviluppo e compilazione efficiente.
+- gestione completa di corsi, moduli e lezioni;
+- organizzazione degli studenti attraverso classi e gruppi;
+- controllo dei contenuti formativi;
+- amministrazione sicura dei dati tramite un'area riservata.
 
-### 2. Database & Backend: Supabase
-- **PostgreSQL Dinamico:** Database relazionale robusto con vincoli di integrità e aggiornamenti istantanei.
-- **Client Amministrativo Protetto:** Operazioni di scrittura e gestione (Upsert/Delete) centralizzate lato server tramite `supabaseAdmin` per garantire la massima sicurezza e superare le restrizioni di TypeScript.
+---
 
-### 3. Interfaccia Utente: Tailwind CSS & Shadcn UI
-- **Tailwind CSS:** Per uno styling snello, responsive e altamente personalizzabile.
-- **Componenti UI (`@/components/ui`):** Pulsanti, form e layout consistenti basati su standard professionali.
+## 🎓 Per gli Studenti
+
+Gli studenti possono accedere a un ambiente digitale pensato per:
+
+- consultare corsi e lezioni;
+- utilizzare materiali multimediali;
+- apprendere attraverso contenuti progressivi;
+- sviluppare competenze informatiche, digitali e di Intelligenza Artificiale.
+
+---
+
+# 🛠️ Tecnologie Utilizzate
+
+## Framework e Frontend
+
+- **Next.js + React**  
+  Architettura moderna basata su componenti server e client, ottimizzata per velocità, sicurezza e scalabilità.
+
+- **TypeScript**  
+  Linguaggio utilizzato per migliorare affidabilità e qualità del codice.
+
+- **Tailwind CSS + Shadcn UI**  
+  Sistema di progettazione moderno per creare un'interfaccia responsive con supporto ai temi Light/Dark.
+
+---
+
+## Backend e Database
+
+- **Supabase + PostgreSQL**  
+  Infrastruttura database relazionale per la gestione sicura di utenti, corsi, classi e contenuti.
+
+- **Server Actions Next.js**  
+  Gestione delle operazioni sensibili direttamente lato server per aumentare sicurezza e controllo.
+
+---
+
+## Hosting e Infrastruttura
+
+- **Vercel**  
+  Piattaforma cloud utilizzata per il deployment continuo e la distribuzione globale dell'applicazione.
+
+- **Cloudflare**  
+  Gestione del dominio e servizi DNS per garantire affidabilità e sicurezza.
+
+---
+
+## 🤖 Intelligenza Artificiale
+
+L'Intelligenza Artificiale viene utilizzata come supporto alla progettazione, allo sviluppo e all'evoluzione della piattaforma, con l'obiettivo di creare strumenti didattici sempre più efficaci e innovativi.
 
 ---
 
 ## 💎 Ringraziamenti
 
-Un ringraziamento speciale va a tutto il team di sviluppo e a chi, con dedizione, testa e migliora costantemente questa piattaforma per renderla un punto di riferimento nell'e-learning del futuro! ✨
+Un ringraziamento a tutti coloro che contribuiscono alla crescita di **gcprof-ai-academy**:
+
+- studenti che utilizzano la piattaforma ogni giorno;
+- docenti che sperimentano nuove modalità di insegnamento;
+- sviluppatori e strumenti tecnologici che rendono possibile questo progetto.
+
+**Imparare. Creare. Innovare. Un bit alla volta.** 🚀
