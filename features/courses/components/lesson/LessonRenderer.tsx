@@ -55,7 +55,7 @@ export default function LessonRenderer({ contents }: Props) {
             }
 
             return (
-              <div key={index} className="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-black">
+              <div key={index} className="rounded-xl overflow-hidden border border-border shadow-sm bg-background">
                 <iframe
                   className="aspect-video w-full"
                   src={embedUrl}
@@ -64,8 +64,8 @@ export default function LessonRenderer({ contents }: Props) {
                   allowFullScreen
                 />
                 {title && (
-                  <div className="p-3 bg-white border-t border-gray-100">
-                    <h4 className="text-sm font-semibold text-gray-800">{title}</h4>
+                  <div className="p-3 bg-background border-t border-border">
+                    <h4 className="text-sm font-semibold text-foreground">{title}</h4>
                   </div>
                 )}
               </div>
@@ -103,9 +103,9 @@ export default function LessonRenderer({ contents }: Props) {
 
             return (
               <div key={index} className="space-y-2">
-                {title && <h3 className="text-lg font-bold text-gray-800">{title}</h3>}
+                {title && <h3 className="text-lg font-bold text-foreground">{title}</h3>}
                 {isGoogleResource ? (
-                  <div className="rounded-xl overflow-hidden border border-gray-200 shadow-inner h-[700px] bg-gray-50">
+                  <div className="rounded-xl overflow-hidden border border-border shadow-inner h-[700px] bg-muted">
                     <iframe
                       src={previewUrl}
                       className="w-full h-full border-0"
@@ -114,10 +114,10 @@ export default function LessonRenderer({ contents }: Props) {
                     />
                   </div>
                 ) : (
-                  <div className="rounded-xl border bg-white p-4 flex items-center justify-between shadow-sm">
+                  <div className="rounded-xl border bg-background p-4 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">📄</span>
-                      <span className="font-medium text-gray-700">{title || "Visualizza Documento Risorsa"}</span>
+                      <span className="font-medium text-muted-foreground">{title || "Visualizza Documento Risorsa"}</span>
                     </div>
                     <a
                       href={url}
@@ -145,8 +145,8 @@ export default function LessonRenderer({ contents }: Props) {
                     <span className="text-xl">🚀</span>
                     <span className="text-xs uppercase tracking-wider font-bold text-blue-600">Google Colab Notebook</span>
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">{title || "Notebook di Esercitazione"}</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="text-lg font-bold text-foreground">{title || "Notebook di Esercitazione"}</h3>
+                  <p className="text-sm text-muted-foreground">
                     Questo modulo contiene un ambiente interattivo di programmazione. Clicca sul pulsante a destra per aprire il foglio di lavoro protetto direttamente nel tuo account Google Drive ed eseguire il codice Python.
                   </p>
                 </div>
@@ -172,8 +172,8 @@ export default function LessonRenderer({ contents }: Props) {
 
             return (
               <div key={index} className="space-y-4">
-                {title && <h3 className="text-xl font-bold text-gray-900 border-b pb-2">{title}</h3>}
-                <div className="prose prose-blue max-w-none text-gray-800 leading-relaxed space-y-4">
+                {title && <h3 className="text-xl font-bold text-foreground border-b pb-2">{title}</h3>}
+                <div className="prose prose-blue max-w-none text-foreground leading-relaxed space-y-4">
                   <MarkdownComponent text={rawText} />
                 </div>
               </div>
@@ -187,7 +187,7 @@ export default function LessonRenderer({ contents }: Props) {
             if (!url) return null;
             return (
               <div key={index} className="space-y-2">
-                {title && <h3 className="text-lg font-bold text-gray-800">{title}</h3>}
+                {title && <h3 className="text-lg font-bold text-foreground">{title}</h3>}
                 <div className="rounded-xl overflow-hidden border border-purple-200 shadow-sm h-[500px] bg-gray-900">
                   <iframe
                     src={url}
@@ -233,20 +233,20 @@ function MarkdownComponent({ text }: { text: string }) {
               if (!trimmed) return <div key={lIdx} className="h-2" />;
               
               if (trimmed.startsWith("### ")) {
-                return <h4 key={lIdx} className="text-md font-bold text-gray-800 mt-4 mb-1">{trimmed.replace("### ", "")}</h4>;
+                return <h4 key={lIdx} className="text-md font-bold text-foreground mt-4 mb-1">{trimmed.replace("### ", "")}</h4>;
               }
               if (trimmed.startsWith("## ")) {
-                return <h3 key={lIdx} className="text-lg font-bold text-gray-900 mt-5 mb-2">{trimmed.replace("## ", "")}</h3>;
+                return <h3 key={lIdx} className="text-lg font-bold text-foreground mt-5 mb-2">{trimmed.replace("## ", "")}</h3>;
               }
               if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
                 return (
                   <ul key={lIdx} className="list-disc pl-5 my-1 space-y-0.5">
-                    <li className="text-gray-700">{parseInlineStyles(trimmed.substring(2))}</li>
+                    <li className="text-muted-foreground">{parseInlineStyles(trimmed.substring(2))}</li>
                   </ul>
                 );
               }
 
-              return <p key={lIdx} className="text-gray-700 my-1">{parseInlineStyles(line)}</p>;
+              return <p key={lIdx} className="text-muted-foreground my-1">{parseInlineStyles(line)}</p>;
             })}
           </div>
         );
@@ -268,12 +268,12 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
   };
 
   return (
-    <div className="relative my-4 group rounded-xl overflow-hidden shadow-sm border border-gray-800">
-      <div className="flex items-center justify-between px-4 py-1.5 bg-gray-900 text-gray-400 font-mono text-xs border-b border-gray-800 select-none">
+    <div className="relative my-4 group rounded-xl overflow-hidden shadow-sm border border-border">
+      <div className="flex items-center justify-between px-4 py-1.5 bg-gray-900 text-muted-foreground font-mono text-xs border-b border-border select-none">
         <span>{language.toUpperCase()}</span>
         <button
           onClick={handleCopy}
-          className="px-2 py-0.5 text-[11px] bg-gray-800 text-gray-300 hover:text-white rounded border border-gray-700 transition-colors focus:outline-none"
+          className="px-2 py-0.5 text-[11px] bg-gray-800 text-gray-300 hover:text-white rounded border border-border transition-colors focus:outline-none"
         >
           {copied ? "Copiato! ✓" : "Copia"}
         </button>
@@ -289,7 +289,7 @@ function parseInlineStyles(line: string): React.ReactNode[] {
   const parts = line.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={index} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>;
+      return <strong key={index} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>;
     }
     return part;
   });

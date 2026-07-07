@@ -98,10 +98,10 @@ export default function LessonPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-gray-50">
+      <div className="flex min-h-screen flex-col bg-muted">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
-          <div className="text-gray-500 text-sm animate-pulse">
+          <div className="text-muted-foreground text-sm animate-pulse">
             Caricamento risorsa didattica (Diagnostica Attiva)...
           </div>
         </main>
@@ -152,7 +152,7 @@ export default function LessonPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex min-h-screen flex-col bg-gray-50">
+      <div className="flex min-h-screen flex-col bg-muted">
         
         {/* 🎯 PASSO 1: Passiamo gli identificativi reali del corso e della lezione al tracker */}
         <ActivityTracker
@@ -164,14 +164,14 @@ export default function LessonPage() {
 
         <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
           {/* 🎯 BREADCRUMB INTERATTIVA PER LA NAVIGAZIONE DI RITORNO */}
-          <nav className="text-sm text-gray-500 flex flex-wrap items-center gap-2 select-none">
+          <nav className="text-sm text-muted-foreground flex flex-wrap items-center gap-2 select-none">
             <Link
               href="/courses"
               className="hover:text-blue-600 hover:underline transition-colors"
             >
               Corsi
             </Link>
-            <span className="text-gray-400">/</span>
+            <span className="text-muted-foreground">/</span>
             <Link
               href={`/courses/${slug}`}
               className="hover:text-blue-600 hover:underline transition-colors max-w-[200px] truncate"
@@ -179,23 +179,23 @@ export default function LessonPage() {
             >
               {course.title}
             </Link>
-            <span className="text-gray-400">/</span>
+            <span className="text-muted-foreground">/</span>
             <span
-              className="text-gray-700 font-medium max-w-[250px] truncate"
+              className="text-muted-foreground font-medium max-w-[250px] truncate"
               title={module.title}
             >
               {module.title}
             </span>
           </nav>
 
-          <h1 className="mt-4 text-4xl font-bold text-gray-900">
+          <h1 className="mt-4 text-4xl font-bold text-foreground">
             {lesson.title}
           </h1>
 
           <div className="mt-8">
             {/* 🎯 INTERCETTAZIONE E RENDERING DEL CONTENUTO MARKDOWN SANITIZZATO */}
             {normalizedType === "markdown" ? (
-              <div className="p-6 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-100">
+              <div className="p-6 bg-background dark:bg-card rounded-lg shadow-sm border border-border">
                 <MarkdownPreview content={normalizedContent} />
               </div>
             ) : (

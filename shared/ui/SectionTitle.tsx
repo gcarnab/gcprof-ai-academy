@@ -25,12 +25,12 @@ export default function SectionTitle({
 }: SectionTitleProps) {
   return (
     <div className="mb-12 text-center">
-      <h2 className="text-3xl font-bold text-gray-900">
+      <h2 className="text-3xl font-bold text-foreground">
         {title}
       </h2>
 
       {subtitle && (
-        <p className="mt-3 text-gray-600">
+        <p className="mt-3 text-muted-foreground">
           {subtitle}
         </p>
       )}

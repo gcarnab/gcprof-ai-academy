@@ -103,7 +103,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
       {/* HEADER DINAMICO IN BASE ALLO STATO DI AUTENTICAZIONE */}
       <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900">Document Workspace</h1>
+          <h1 className="text-3xl font-black text-foreground">Document Workspace</h1>
           <p className="text-sm text-slate-500">Hub centralizzato multimediale della piattaforma.</p>
         </div>
         
@@ -120,7 +120,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
 
       {/* PANNELLO DI MODIFICA DEI PERCORSI: COMPARIRE SOLO SE LOGGATO COME ADMIN */}
       {isAdmin && (
-        <div className="p-6 bg-slate-900 text-white rounded-2xl space-y-4 shadow-lg border border-slate-800">
+        <div className="p-6 bg-card text-white rounded-2xl space-y-4 shadow-lg border border-slate-800">
           <div className="flex justify-between items-center border-b border-slate-800 pb-2">
             <h3 className="font-bold text-xs uppercase tracking-widest text-purple-400">Pannello Gestione Canali Dashboard</h3>
             {saveSuccess && <span className="text-xs text-emerald-400 font-bold">✓ Modifiche salvate nel Database!</span>}
@@ -129,18 +129,18 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             {tabs.map((tab) => (
-              <div key={tab.id} className="p-3 bg-slate-800/50 rounded-xl border border-slate-800 space-y-1.5">
+              <div key={tab.id} className="p-3 bg-muted/50 rounded-xl border border-slate-800 space-y-1.5">
                 <span className="font-bold text-slate-400 capitalize">{tab.label}</span>
                 <div className="flex gap-2">
                   <input 
                     type="text" 
                     value={editingConfig[tab.id] || ""} 
                     onChange={(e) => setEditingConfig(prev => ({ ...prev, [tab.id]: e.target.value }))}
-                    className="flex-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 font-mono text-[11px]"
+                    className="flex-1 p-2 bg-card border border-slate-700 rounded-lg text-slate-200 font-mono text-[11px]"
                     disabled={isPending}
                   />
                   {(tab.id === "pdf" || tab.id === "html") && (
-                    <label className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg cursor-pointer flex items-center font-bold">
+                    <label className="bg-secondary hover:bg-slate-600 px-3 py-2 rounded-lg cursor-pointer flex items-center font-bold">
                       Sfoglia
                       <input type="file" accept={tab.id === "pdf" ? ".pdf" : ".txt,.html"} onChange={(e) => handleFileBrowse(e, tab.id)} className="hidden" disabled={isPending} />
                     </label>
@@ -160,8 +160,8 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
       )}
 
       {/* VISUALIZZATORE UNIFICATO IN SOLA LETTURA (Sempre Visibile a Tutti) */}
-      <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
-        <div className="bg-slate-900 p-4 flex flex-wrap gap-2 justify-end border-b border-slate-800">
+      <div className="bg-background rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
+        <div className="bg-card p-4 flex flex-wrap gap-2 justify-end border-b border-slate-800">
           {!tabs.some(t => t.id === "markdown") && (
             <button
               onClick={() => setActiveTabId("markdown")}
@@ -184,7 +184,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
 
         <div className="relative w-full aspect-video bg-slate-100 min-h-[550px]">
           {activeTabId === "markdown" && (
-            <div className="absolute inset-0 w-full h-full p-8 md:p-12 overflow-y-auto bg-white prose text-slate-800">
+            <div className="absolute inset-0 w-full h-full p-8 md:p-12 overflow-y-auto bg-background prose text-card-foreground">
               {markdownContent.split("\n").map((line, i) => {
                 const trimmed = line.trim();
                 if (trimmed.startsWith("# ")) return <h1 key={i} className="text-3xl font-black border-b pb-2 mb-4">{trimmed.replace("# ", "")}</h1>;

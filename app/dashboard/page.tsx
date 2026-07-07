@@ -210,7 +210,7 @@ export default async function StudentDashboardPage() {
                   <span>Avanzamento</span>
                   <span className="font-bold text-slate-200">{course.percentage}%</span>
                 </div>
-                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
                   <div 
                     className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-500" 
                     style={{ width: `${course.percentage}%` }}
@@ -222,7 +222,7 @@ export default async function StudentDashboardPage() {
                 
                 <Link
                   href={`/courses/${course.course_slug}`}
-                  className="w-full mt-4 inline-flex items-center justify-center bg-slate-800 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-xs transition-all tracking-wide uppercase"
+                  className="w-full mt-4 inline-flex items-center justify-center bg-muted hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-xs transition-all tracking-wide uppercase"
                 >
                   Entra nel Corso ⚡
                 </Link>

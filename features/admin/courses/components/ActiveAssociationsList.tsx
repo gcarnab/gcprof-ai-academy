@@ -35,25 +35,25 @@ export function ActiveAssociationsList({ associations, onRefresh }: ActiveAssoci
   };
 
   if (associations.length === 0) {
-    return <p className="text-sm text-gray-500 italic">Nessun corso attualmente associato alle classi.</p>;
+    return <p className="text-sm text-muted-foreground italic">Nessun corso attualmente associato alle classi.</p>;
   }
 
   return (
-    <div className="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div className="mt-6 overflow-hidden rounded-lg border border-border bg-background shadow-sm">
       <table className="min-w-full divide-y divide-gray-200 text-sm text-left">
-        <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-700">
+        <thead className="bg-muted text-xs uppercase font-semibold text-muted-foreground">
           <tr>
             <th className="px-6 py-3">Classe</th>
             <th className="px-6 py-3">Corso Assegnato</th>
             <th className="px-6 py-3 text-right">Azione</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 text-gray-600">
+        <tbody className="divide-y divide-gray-200 text-muted-foreground">
           {associations.map((assoc) => {
             const currentKey = `${assoc.course_id}-${assoc.class_id}`;
             return (
-              <tr key={currentKey} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 font-medium text-gray-900">{assoc.class_name}</td>
+              <tr key={currentKey} className="hover:bg-muted transition-colors">
+                <td className="px-6 py-4 font-medium text-foreground">{assoc.class_name}</td>
                 <td className="px-6 py-4">{assoc.course_title}</td>
                 <td className="px-6 py-4 text-right">
                   <button

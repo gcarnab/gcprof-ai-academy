@@ -39,7 +39,7 @@ export default function MailTestSender() {
   }
 
   return (
-    <div className="rounded-xl border bg-white p-6 shadow space-y-4">
+    <div className="rounded-xl border bg-background p-6 shadow space-y-4">
       <h2 className="text-lg font-semibold">Invio Email di Test</h2>
 
       <input
@@ -65,13 +65,13 @@ export default function MailTestSender() {
       <button
         onClick={handleSend}
         disabled={loading || !email || !selectedTemplate}
-        className="bg-black text-white px-4 py-2 rounded"
+        className="bg-background text-white px-4 py-2 rounded"
       >
         {loading ? "Invio..." : "Invia email test"}
       </button>
 
       {result && (
-        <p className="text-sm text-gray-600 pt-2">{result}</p>
+        <p className="text-sm text-muted-foreground pt-2">{result}</p>
       )}
     </div>
   );

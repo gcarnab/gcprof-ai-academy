@@ -13,7 +13,7 @@ export default function UsersTab({
   availableClasses,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-white shadow">
+    <div className="overflow-hidden rounded-xl border bg-background shadow">
 
       <AdminUsersTable
         initialUsers={users}

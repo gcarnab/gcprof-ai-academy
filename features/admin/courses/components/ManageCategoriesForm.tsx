@@ -49,8 +49,8 @@ export default function ManageCategoriesForm() {
   return (
     <div className="p-6 space-y-4">
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">Anagrafica Categorie Corsi</h2>
-        <p className="text-sm text-gray-500">Aggiungi o rimuovi le categorie merceologiche del DB.</p>
+        <h2 className="text-xl font-bold text-foreground mb-1">Anagrafica Categorie Corsi</h2>
+        <p className="text-sm text-muted-foreground">Aggiungi o rimuovi le categorie merceologiche del DB.</p>
       </div>
 
       <div className="flex gap-2">
@@ -59,19 +59,19 @@ export default function ManageCategoriesForm() {
           placeholder="Nuova Categoria (es: Cyber Security)"
           value={newCatName}
           onChange={(e) => setNewCatName(e.target.value)}
-          className="flex-1 rounded-md border border-gray-300 p-2 text-sm bg-white text-gray-900 focus:outline-none focus:border-blue-500"
+          className="flex-1 rounded-md border border-border p-2 text-sm bg-background text-foreground focus:outline-none focus:border-blue-500"
         />
         <Button onClick={handleCreate} disabled={isPending} className="bg-emerald-600 hover:bg-emerald-700 text-white">
           + Aggiungi
         </Button>
       </div>
 
-      <div className="border rounded-lg divide-y bg-gray-50 max-h-60 overflow-y-auto">
+      <div className="border rounded-lg divide-y bg-muted max-h-60 overflow-y-auto">
         {categories.length === 0 ? (
-          <p className="p-3 text-xs text-gray-400 italic text-center">Nessuna categoria personalizzata nel DB.</p>
+          <p className="p-3 text-xs text-muted-foreground italic text-center">Nessuna categoria personalizzata nel DB.</p>
         ) : (
           categories.map((cat) => (
-            <div key={cat} className="p-2.5 flex justify-between items-center bg-white text-sm text-gray-700">
+            <div key={cat} className="p-2.5 flex justify-between items-center bg-background text-sm text-muted-foreground">
               <span className="font-medium">{cat}</span>
               <button 
                 onClick={() => handleDelete(cat)} 

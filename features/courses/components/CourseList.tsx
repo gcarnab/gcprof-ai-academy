@@ -50,7 +50,7 @@ interface CourseListProps {
  */
 export default function CourseList({ courses }: CourseListProps) {
   return (
-    <section className="bg-gray-50 py-20">
+    <section className="bg-muted py-20">
       <PageContainer>
 
         <SectionTitle

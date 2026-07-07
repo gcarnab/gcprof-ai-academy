@@ -77,10 +77,10 @@ export default function CourseSearch({ onSearch }: CourseSearchProps) {
           w-full
           rounded-lg
           border
-          border-gray-300
+          border-border
           px-4
           py-3
-          text-gray-700
+          text-muted-foreground
           outline-none
           transition
           focus:border-blue-500

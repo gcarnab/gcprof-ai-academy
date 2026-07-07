@@ -39,7 +39,7 @@ export default function StatsKpiCards({
       {cards.map((card) => (
         <div
           key={card.title}
-          className="rounded-xl border bg-white p-5 shadow-sm"
+          className="rounded-xl border bg-background p-5 shadow-sm"
         >
           <div className="flex items-center justify-between">
             <span className="text-3xl">{card.icon}</span>
@@ -48,7 +48,7 @@ export default function StatsKpiCards({
             </span>
           </div>
 
-          <p className="mt-3 text-sm text-gray-500">{card.title}</p>
+          <p className="mt-3 text-sm text-muted-foreground">{card.title}</p>
         </div>
       ))}
     </div>

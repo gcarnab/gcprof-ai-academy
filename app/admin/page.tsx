@@ -294,15 +294,15 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-muted">
       <Navbar />
       <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">
-        <div className="flex flex-col justify-between gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-4 border-b border-border pb-5 sm:flex-row sm:items-center">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
               Pannello Amministrazione (CRUD)
             </h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Gestisci i corsi, modifica la struttura delle lezioni ed esporta i
               dati completi in tempo reale su Supabase.
             </p>
@@ -325,12 +325,12 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Tabella Principale dei Corsi */}
-        <div className="mt-8 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="mt-8 overflow-hidden rounded-lg border border-border bg-background shadow-sm">
           {isLoading ? (
-            <div className="p-6 text-center text-gray-500">Caricamento corsi in corso...</div>
+            <div className="p-6 text-center text-muted-foreground">Caricamento corsi in corso...</div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
-              <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500 tracking-wider">
+              <thead className="bg-muted text-xs font-semibold uppercase text-muted-foreground tracking-wider">
                 <tr>
                   <th className="px-6 py-3.5">Logo</th>
                   <th className="px-6 py-3.5">Corso / Slug</th>
@@ -339,14 +339,14 @@ export default function AdminDashboardPage() {
                   <th className="px-6 py-3.5 text-right">Azioni</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white text-gray-700">
+              <tbody className="divide-y divide-gray-200 bg-background text-muted-foreground">
                 {courses.map((course) => (
                   <tr
                     key={course.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-muted transition-colors"
                   >
                     <td className="px-6 py-4 w-16">
-                      <div className="h-10 w-10 overflow-hidden rounded-md border bg-white flex items-center justify-center text-2xl shadow-sm">
+                      <div className="h-10 w-10 overflow-hidden rounded-md border bg-background flex items-center justify-center text-2xl shadow-sm">
                         {course.coverImage ? (
                           course.coverImage.startsWith("http") ||
                           course.coverImage.startsWith("/") ? (
@@ -364,10 +364,10 @@ export default function AdminDashboardPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900">
+                      <div className="font-semibold text-foreground">
                         {course.title}
                       </div>
-                      <div className="text-xs text-gray-400 font-mono">
+                      <div className="text-xs text-muted-foreground font-mono">
                         /courses/{course.slug}
                       </div>
                     </td>
@@ -377,7 +377,7 @@ export default function AdminDashboardPage() {
                           {course.allowedClasses.map((cls) => (
                             <span
                               key={cls}
-                              className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-bold border"
+                              className="rounded bg-muted px-1.5 py-0.5 text-xs font-bold border"
                             >
                               {cls}
                             </span>
@@ -389,7 +389,7 @@ export default function AdminDashboardPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 font-medium text-gray-500">
+                    <td className="px-6 py-4 font-medium text-muted-foreground">
                       {course.modules?.length || 0} Moduli (
                       {course.modules?.reduce(
                         (acc, m) => acc + (m.lessons?.length || 0),
@@ -418,7 +418,7 @@ export default function AdminDashboardPage() {
                 ))}
                 {courses.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 italic">
+                    <td colSpan={5} className="px-6 py-10 text-center text-muted-foreground italic">
                       Nessun corso trovato nel database.
                     </td>
                   </tr>
@@ -519,8 +519,8 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* SECTION: COSTRUZIONE AVANZATA STRUTTURA ALBERO COMPONENTI */}
-              <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4">
-                <h3 className="font-bold text-gray-900 border-b pb-2">
+              <div className="mt-6 rounded-lg border border-border bg-muted p-4 space-y-4">
+                <h3 className="font-bold text-foreground border-b pb-2">
                   📚 Struttura Moduli e Lezioni
                 </h3>
 
@@ -541,10 +541,10 @@ export default function AdminDashboardPage() {
                   {modules.map((mod) => (
                     <div
                       key={mod.id}
-                      className="bg-white p-4 rounded-md border border-gray-200 shadow-sm space-y-3"
+                      className="bg-background p-4 rounded-md border border-border shadow-sm space-y-3"
                     >
                       {/* INTESTAZIONE MODULO CON EDIT IN LINEA */}
-                      <div className="flex items-center justify-between border-b pb-1.5 bg-gray-50/50 -m-4 mb-2 p-3 rounded-t-md">
+                      <div className="flex items-center justify-between border-b pb-1.5 bg-muted/50 -m-4 mb-2 p-3 rounded-t-md">
                         {editingModuleId === mod.id ? (
                           <div className="flex items-center gap-2 w-full max-w-md">
                             <Input
@@ -575,7 +575,7 @@ export default function AdminDashboardPage() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-sm text-gray-800">
+                            <h4 className="font-bold text-sm text-foreground">
                               📂 {mod.title}
                             </h4>
                             <button
@@ -601,7 +601,7 @@ export default function AdminDashboardPage() {
                         {mod.lessons?.map((l) => (
                           <div
                             key={l.id}
-                            className="p-2 border rounded-md bg-gray-50/50 flex flex-col gap-2"
+                            className="p-2 border rounded-md bg-muted/50 flex flex-col gap-2"
                           >
                             {editingLessonId === l.id ? (
                               <div className="space-y-2 p-1 text-xs">
@@ -623,7 +623,7 @@ export default function AdminDashboardPage() {
                                       Tipo Risorsa
                                     </Label>
                                     <select
-                                      className="w-full h-7 rounded-md border text-xs px-2 bg-white"
+                                      className="w-full h-7 rounded-md border text-xs px-2 bg-background"
                                       value={editingLessonType}
                                       onChange={(e) =>
                                         setEditingLessonType(
@@ -692,10 +692,10 @@ export default function AdminDashboardPage() {
                                   <span>
                                     {l.contentType === "video" ? "📺" : "📄"}
                                   </span>
-                                  <span className="font-semibold text-gray-700">
+                                  <span className="font-semibold text-muted-foreground">
                                     {l.title}
                                   </span>
-                                  <span className="text-[10px] text-gray-400 italic">
+                                  <span className="text-[10px] text-muted-foreground italic">
                                     (
                                     {l.contentType === "video"
                                       ? "YouTube"
@@ -726,7 +726,7 @@ export default function AdminDashboardPage() {
                       </div>
 
                       {/* FORM DI AGGIUNTA RAPIDA NUOVA LEZIONE */}
-                      <div className="mt-3 p-2 bg-gray-50 rounded border space-y-2 text-xs">
+                      <div className="mt-3 p-2 bg-muted rounded border space-y-2 text-xs">
                         <div className="grid grid-cols-2 gap-2">
                           <Input
                             className="h-8 text-xs"
@@ -735,7 +735,7 @@ export default function AdminDashboardPage() {
                             onChange={(e) => setNewLessonTitle(e.target.value)}
                           />
                           <select
-                            className="h-8 rounded-md border text-xs px-2 bg-white"
+                            className="h-8 rounded-md border text-xs px-2 bg-background"
                             value={newLessonType}
                             onChange={(e) =>
                               setNewLessonType(e.target.value as any)

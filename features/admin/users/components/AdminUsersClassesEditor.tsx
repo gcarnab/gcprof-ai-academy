@@ -18,8 +18,8 @@ export default function AdminUsersClassesEditor({
   onSave,
 }: AdminUsersClassesEditorProps) {
   return (
-    <div className="max-w-xs space-y-2 rounded-lg border bg-gray-50 p-2">
-      <div className="text-xs font-bold text-gray-700">
+    <div className="max-w-xs space-y-2 rounded-lg border bg-muted p-2">
+      <div className="text-xs font-bold text-muted-foreground">
         Seleziona Classi:
       </div>
 
@@ -27,7 +27,7 @@ export default function AdminUsersClassesEditor({
         {availableClasses.map((cls) => (
           <label
             key={cls}
-            className="flex cursor-pointer items-center gap-2 rounded p-1 text-xs text-gray-600 hover:bg-gray-200"
+            className="flex cursor-pointer items-center gap-2 rounded p-1 text-xs text-muted-foreground hover:bg-muted"
           >
             <input
               type="checkbox"

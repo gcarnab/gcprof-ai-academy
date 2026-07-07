@@ -50,20 +50,20 @@ export default function MailBulkSender({ availableClasses }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+    <div className="rounded-xl border border-border bg-background p-6 shadow-sm space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-gray-900">📧 Broadcast Email di Massa</h2>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Invia comunicazioni massive a intere classi compilando automaticamente i tag <code className="bg-gray-100 px-1 rounded text-red-600">{"{{display_name}}"}</code>.
+        <h2 className="text-lg font-bold text-foreground">📧 Broadcast Email di Massa</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Invia comunicazioni massive a intere classi compilando automaticamente i tag <code className="bg-muted px-1 rounded text-red-600">{"{{display_name}}"}</code>.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Selezione Classe */}
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-gray-600">Classe Destinataria</label>
+          <label className="text-xs font-semibold text-muted-foreground">Classe Destinataria</label>
           <select
-            className="w-full border p-2 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border p-2 rounded-lg bg-muted text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
           >
@@ -78,9 +78,9 @@ export default function MailBulkSender({ availableClasses }: Props) {
 
         {/* Selezione Template */}
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-gray-600">Template da Inviare</label>
+          <label className="text-xs font-semibold text-muted-foreground">Template da Inviare</label>
           <select
-            className="w-full border p-2 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border p-2 rounded-lg bg-muted text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={selectedTemplate}
             onChange={(e) => setSelectedTemplate(e.target.value)}
           >
@@ -104,7 +104,7 @@ export default function MailBulkSender({ availableClasses }: Props) {
         </button>
 
         {statusMessage && (
-          <p className="text-sm font-medium text-gray-700 animate-fade-in">{statusMessage}</p>
+          <p className="text-sm font-medium text-muted-foreground animate-fade-in">{statusMessage}</p>
         )}
       </div>
     </div>

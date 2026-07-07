@@ -84,10 +84,10 @@ export default function CreateCourseForm({ classes }: { classes: any[] }) {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">
+        <h2 className="text-xl font-bold text-foreground mb-1">
           {courseId ? "📝 Modifica Corso" : "✨ Crea Nuovo Corso"}
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {courseId
             ? "Stai modificando un corso esistente nel database."
             : "Inserisci un nuovo corso formativo nell'Academy."}
@@ -96,14 +96,14 @@ export default function CreateCourseForm({ classes }: { classes: any[] }) {
 
       <form onSubmit={handleSubmit} className="space-y-4 text-sm">
         <div>
-          <label className="block font-medium text-gray-700 mb-1">
+          <label className="block font-medium text-muted-foreground mb-1">
             Titolo Corso
           </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-md border border-gray-300 p-2 text-gray-900 bg-white"
+            className="w-full rounded-md border border-border p-2 text-foreground bg-background"
             placeholder="Es: Corso Avanzato Python"
             required
           />
@@ -111,13 +111,13 @@ export default function CreateCourseForm({ classes }: { classes: any[] }) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block font-medium text-gray-700 mb-1">
+            <label className="block font-medium text-muted-foreground mb-1">
               Categoria
             </label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-md border border-gray-300 p-2 text-gray-900 bg-white"
+              className="w-full rounded-md border border-border p-2 text-foreground bg-background"
               required
             >
               <option value="">-- Seleziona --</option>
@@ -130,13 +130,13 @@ export default function CreateCourseForm({ classes }: { classes: any[] }) {
           </div>
 
           <div>
-            <label className="block font-medium text-gray-700 mb-1">
+            <label className="block font-medium text-muted-foreground mb-1">
               Difficoltà
             </label>
             <select
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value)}
-              className="w-full rounded-md border border-gray-300 p-2 text-gray-900 bg-white"
+              className="w-full rounded-md border border-border p-2 text-foreground bg-background"
             >
               <option value="Facile">Facile</option>
               <option value="Intermedio">Intermedio</option>
@@ -146,14 +146,14 @@ export default function CreateCourseForm({ classes }: { classes: any[] }) {
         </div>
 
         <div>
-          <label className="block font-medium text-gray-700 mb-1">
+          <label className="block font-medium text-muted-foreground mb-1">
             Descrizione Breve
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="w-full rounded-md border border-gray-300 p-2 text-gray-900 bg-white"
+            className="w-full rounded-md border border-border p-2 text-foreground bg-background"
             placeholder="Descrizione sintetica del corso..."
           />
         </div>
@@ -176,11 +176,11 @@ export default function CreateCourseForm({ classes }: { classes: any[] }) {
 
       {/* Elenco Corsi per attivare la Modifica 
       <div className="border-t pt-4">
-        <label className="block font-medium text-gray-700 mb-2 text-sm">Seleziona un corso da modificare:</label>
-        <div className="border rounded-lg divide-y bg-gray-50 max-h-40 overflow-y-auto">
+        <label className="block font-medium text-muted-foreground mb-2 text-sm">Seleziona un corso da modificare:</label>
+        <div className="border rounded-lg divide-y bg-muted max-h-40 overflow-y-auto">
           {coursesList.map((c) => (
-            <div key={c.id} className="p-2 flex justify-between items-center bg-white text-xs text-gray-700">
-              <span className="font-medium truncate max-w-[250px]">{c.title} <span className="text-gray-400">({c.category})</span></span>
+            <div key={c.id} className="p-2 flex justify-between items-center bg-background text-xs text-muted-foreground">
+              <span className="font-medium truncate max-w-[250px]">{c.title} <span className="text-muted-foreground">({c.category})</span></span>
               <button
                 onClick={() => handleEditSelect(c)}
                 className="text-blue-600 hover:underline font-semibold"
@@ -194,17 +194,17 @@ export default function CreateCourseForm({ classes }: { classes: any[] }) {
 */}
       {/* Elenco Corsi per attivare la Modifica o l'Eliminazione */}
       <div className="border-t pt-4">
-        <label className="block font-medium text-gray-700 mb-2 text-sm">
+        <label className="block font-medium text-muted-foreground mb-2 text-sm">
           Corsi censiti nel DB:
         </label>
-        <div className="border rounded-lg divide-y bg-gray-50 max-h-40 overflow-y-auto">
+        <div className="border rounded-lg divide-y bg-muted max-h-40 overflow-y-auto">
           {coursesList.map((c) => (
             <div
               key={c.id}
-              className="p-2 flex justify-between items-center bg-white text-xs text-gray-700"
+              className="p-2 flex justify-between items-center bg-background text-xs text-muted-foreground"
             >
               <span className="font-medium truncate max-w-[200px] md:max-w-[250px]">
-                {c.title} <span className="text-gray-400">({c.category})</span>
+                {c.title} <span className="text-muted-foreground">({c.category})</span>
               </span>
               <div className="flex items-center gap-3 shrink-0">
                 <button

@@ -51,7 +51,7 @@ export default function AdminUsersToolbar({
   onBulkActivate,
 }: AdminUsersToolbarProps) {
   return (
-    <div className="border-b bg-gray-50 px-6 py-5 space-y-6">
+    <div className="border-b bg-muted px-6 py-5 space-y-6">
 
       {/* ================= FILTERS ================= */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
@@ -106,16 +106,16 @@ export default function AdminUsersToolbar({
 
         {/* Stats */}
         <div className="flex flex-col justify-end">
-          <div className="rounded-lg border bg-white px-4 py-3">
-            <div className="text-xs uppercase text-gray-500">
+          <div className="rounded-lg border bg-background px-4 py-3">
+            <div className="text-xs uppercase text-muted-foreground">
               Visualizzati
             </div>
-            <div className="text-lg font-semibold text-gray-900">
+            <div className="text-lg font-semibold text-foreground">
               {displayedUsers} / {totalUsers}
             </div>
 
             {isPending && (
-              <div className="text-xs text-gray-500 animate-pulse mt-2">
+              <div className="text-xs text-muted-foreground animate-pulse mt-2">
                 Aggiornamento in corso...
               </div>
             )}
@@ -127,7 +127,7 @@ export default function AdminUsersToolbar({
       <div className="border-t pt-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 
         <div className="space-y-2">
-          <div className="text-xs font-semibold text-gray-700">
+          <div className="text-xs font-semibold text-muted-foreground">
             Azioni rapide
           </div>
 

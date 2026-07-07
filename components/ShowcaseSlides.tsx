@@ -63,7 +63,7 @@ export default function ShowcaseSlides() {
           <button
             disabled={currentSlide === 0}
             onClick={() => setCurrentSlide(prev => prev - 1)}
-            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded text-xs font-bold transition-all"
+            className="px-3 py-1 bg-muted hover:bg-secondary disabled:opacity-30 rounded text-xs font-bold transition-all"
           >
             ◀ Indietro
           </button>

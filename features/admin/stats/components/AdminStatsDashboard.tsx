@@ -34,7 +34,7 @@ export default function AdminStatsDashboard({ stats }: Props) {
           totalModules={stats.totals.modules}
           totalLessons={stats.totals.lessons}
         />
-        <div className="absolute top-2 right-2 hidden md:block text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+        <div className="absolute top-2 right-2 hidden md:block text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded border border-border">
           📚 Densità contenuti: <span className="font-semibold text-blue-600">{avgLessonsPerModule}</span> lezioni/modulo avg
         </div>
       </div>
@@ -43,11 +43,11 @@ export default function AdminStatsDashboard({ stats }: Props) {
           👥 SEZIONE 1: ANALYTICS COMMUNITY & STUDENTI
           ========================================== */}
       <div className="space-y-4">
-        <div className="border-b border-gray-200 pb-2">
-          <h2 className="text-lg font-bold text-gray-800 tracking-tight">
+        <div className="border-b border-border pb-2">
+          <h2 className="text-lg font-bold text-foreground tracking-tight">
             Community & Engagement Studenti
           </h2>
-          <p className="text-xs text-gray-500">Distribuzione degli iscritti e monitoraggio del tempo speso in piattaforma.</p>
+          <p className="text-xs text-muted-foreground">Distribuzione degli iscritti e monitoraggio del tempo speso in piattaforma.</p>
         </div>
         
         {/* Layout principale utenti */}
@@ -71,11 +71,11 @@ export default function AdminStatsDashboard({ stats }: Props) {
           🎓 SEZIONE 2: ANALYTICS CATALOGO & STRUTTURA LMS
           ========================================== */}
       <div className="space-y-4 pt-4">
-        <div className="border-b border-gray-200 pb-2">
-          <h2 className="text-lg font-bold text-gray-800 tracking-tight">
+        <div className="border-b border-border pb-2">
+          <h2 className="text-lg font-bold text-foreground tracking-tight">
             Struttura Didattica & Corsi
           </h2>
-          <p className="text-xs text-gray-500">Analisi della complessità del catalogo, categorie e volumi interni.</p>
+          <p className="text-xs text-muted-foreground">Analisi della complessità del catalogo, categorie e volumi interni.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

@@ -95,18 +95,18 @@ export default function MailTemplateEditor({
   }
 
   return (
-    <div className="space-y-6 rounded-xl border bg-white p-6 shadow">
+    <div className="space-y-6 rounded-xl border bg-background p-6 shadow">
       <div>
-        <h3 className="text-md font-bold text-gray-900 border-b pb-2">
+        <h3 className="text-md font-bold text-foreground border-b pb-2">
           {isCreating ? "📝 Crea Nuovo Modello Email" : `⚙️ Modifica Modello: ${template.name}`}
         </h3>
       </div>
 
       {/* Campi visibili solo in modalità Creazione */}
       {isCreating && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-dashed">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted p-4 rounded-xl border border-dashed">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-gray-600">Chiave Unica (ID in maiuscolo)</label>
+            <label className="text-xs font-bold uppercase text-muted-foreground">Chiave Unica (ID in maiuscolo)</label>
             <Input
               value={templateKey}
               onChange={(e) => setTemplateKey(e.target.value.replace(/\s+/g, "_"))}
@@ -114,7 +114,7 @@ export default function MailTemplateEditor({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-gray-600">Nome del Template</label>
+            <label className="text-xs font-bold uppercase text-muted-foreground">Nome del Template</label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -122,7 +122,7 @@ export default function MailTemplateEditor({
             />
           </div>
           <div className="md:col-span-2 space-y-2">
-            <label className="text-xs font-bold uppercase text-gray-600">Descrizione interna</label>
+            <label className="text-xs font-bold uppercase text-muted-foreground">Descrizione interna</label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -135,8 +135,8 @@ export default function MailTemplateEditor({
       {/* Campi Comuni ad entrambe le modalità */}
       <div className="space-y-4">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Oggetto dell'email <span className="text-xs text-gray-400">(Supporta {"{{first_name}}"}, {"{{academy_name}}"})</span>
+          <label className="mb-2 block text-sm font-medium text-muted-foreground">
+            Oggetto dell'email <span className="text-xs text-muted-foreground">(Supporta {"{{first_name}}"}, {"{{academy_name}}"})</span>
           </label>
           <Input
             value={subject}
@@ -146,8 +146,8 @@ export default function MailTemplateEditor({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Titolo del messaggio <span className="text-xs text-gray-400">(Opzionale)</span>
+          <label className="mb-2 block text-sm font-medium text-muted-foreground">
+            Titolo del messaggio <span className="text-xs text-muted-foreground">(Opzionale)</span>
           </label>
           <Input
             value={title}
@@ -157,7 +157,7 @@ export default function MailTemplateEditor({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label className="mb-2 block text-sm font-medium text-muted-foreground">
             Corpo del messaggio
           </label>
           <Textarea
@@ -171,7 +171,7 @@ export default function MailTemplateEditor({
       </div>
 
       <div className="flex items-center justify-between border-t pt-4">
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-muted-foreground">
           {isCreating ? (
             <span className="text-emerald-600 font-medium">✨ Nuovo Record</span>
           ) : (

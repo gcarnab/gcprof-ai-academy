@@ -17,10 +17,10 @@ export default function MailTemplateList({
   onSelect,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-white shadow">
+    <div className="overflow-hidden rounded-xl border bg-background shadow">
       {/* Intestazione con pulsante di Creazione */}
-      <div className="border-b p-4 flex items-center justify-between gap-2 bg-gray-50">
-        <h2 className="font-semibold text-gray-900">Template</h2>
+      <div className="border-b p-4 flex items-center justify-between gap-2 bg-muted">
+        <h2 className="font-semibold text-foreground">Template</h2>
         <Button 
           variant="outline" 
           size="sm" 
@@ -32,11 +32,11 @@ export default function MailTemplateList({
       </div>
 
       {loading && (
-        <div className="p-4 text-sm text-gray-500">Caricamento...</div>
+        <div className="p-4 text-sm text-muted-foreground">Caricamento...</div>
       )}
 
       {!loading && templates.length === 0 && (
-        <div className="p-4 text-sm text-gray-400 italic text-center">Nessun template presente.</div>
+        <div className="p-4 text-sm text-muted-foreground italic text-center">Nessun template presente.</div>
       )}
 
       {!loading &&
@@ -48,12 +48,12 @@ export default function MailTemplateList({
               ${
                 selectedTemplate?.id === template.id
                   ? "bg-blue-50 font-semibold text-blue-700 border-l-4 border-l-blue-600"
-                  : "hover:bg-gray-50"
+                  : "hover:bg-muted"
               }
             `}
           >
             <div className="text-sm font-medium">{template.name}</div>
-            <div className="text-xs text-gray-500 font-mono mt-0.5">{template.template_key}</div>
+            <div className="text-xs text-muted-foreground font-mono mt-0.5">{template.template_key}</div>
           </button>
         ))}
     </div>

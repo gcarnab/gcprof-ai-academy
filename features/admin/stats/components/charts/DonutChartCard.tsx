@@ -25,7 +25,7 @@ export default function DonutChartCard({ title, data }: Props) {
   const COLORS = ["#10b981", "#f59e0b"];
 
   return (
-    <div className="rounded-xl border bg-white p-6 shadow-sm">
+    <div className="rounded-xl border bg-background p-6 shadow-sm">
       <h3 className="mb-4 text-lg font-semibold">{title}</h3>
 
       <div className="h-72">

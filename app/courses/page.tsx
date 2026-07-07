@@ -28,7 +28,7 @@ export default function CoursesPage() {
     user && user.status === "pending" && user.role !== "admin";
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-muted">
       {/* 🎯 IL SENSORE ATTIVO IN BACKGROUND */}
       <ActivityTracker />
       

@@ -37,14 +37,14 @@ export default function AdminUsersRow({
   onStatusChange,
 }: AdminUsersRowProps) {
   return (
-    <tr className="transition-colors hover:bg-gray-50">
+    <tr className="transition-colors hover:bg-muted">
       {/* Nome */}
-      <td className="px-6 py-4 font-medium text-gray-900">
+      <td className="px-6 py-4 font-medium text-foreground">
         <div className="font-semibold">
           {user.display_name || "Utente Senza Nome"}
         </div>
 
-        <div className="mt-0.5 font-mono text-xs text-gray-400">{user.id}</div>
+        <div className="mt-0.5 font-mono text-xs text-muted-foreground">{user.id}</div>
       </td>
 
       {/* Ruolo */}
@@ -53,7 +53,7 @@ export default function AdminUsersRow({
           className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
             user.role === "admin"
               ? "border border-purple-200 bg-purple-50 text-purple-700"
-              : "bg-gray-100 text-gray-600"
+              : "bg-muted text-muted-foreground"
           }`}
         >
           {user.role === "admin" ? "👨‍🏫 Admin" : "🎓 Studente"}
@@ -99,7 +99,7 @@ export default function AdminUsersRow({
                 </span>
               ))
             ) : (
-              <span className="text-xs italic text-gray-400">
+              <span className="text-xs italic text-muted-foreground">
                 Nessuna classe
               </span>
             )}

@@ -44,11 +44,11 @@ export default function CoursesTab({ stats }: Props) {
     <div className="space-y-8">
       {/* SEZIONE 1: Gestione Corsi ed Editor dei Contenuti */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div className="overflow-hidden rounded-xl border bg-white shadow p-6">
+        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
           <CreateCourseForm classes={stats.raw.classes} />
         </div>
 
-        <div className="overflow-hidden rounded-xl border bg-white shadow p-6">
+        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
           <CourseContentEditor courses={stats.raw.courses} />
         </div>
       </div>
@@ -56,12 +56,12 @@ export default function CoursesTab({ stats }: Props) {
       {/* SEZIONE 2: Form di Configurazione e Anagrafiche (Griglia Bilanciata 1+1+1) */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Colonna 1: Creazione Nuova Classe */}
-        <div className="overflow-hidden rounded-xl border bg-white shadow p-6">
+        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
           <CreateClassForm />
         </div>
 
         {/* Colonna 2: Assegnazione Corso a Classe */}
-        <div className="overflow-hidden rounded-xl border bg-white shadow p-6">
+        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
           <AssignCourseClassForm
             courses={stats.raw.courses}
             classes={stats.raw.classes}
@@ -69,17 +69,17 @@ export default function CoursesTab({ stats }: Props) {
         </div>
 
         {/* Colonna 3: Gestione Categorie (Spostata qui per riempire il layout) */}
-        <div className="overflow-hidden rounded-xl border bg-white shadow p-6">
+        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
           <ManageCategoriesForm />
         </div>
       </div>
 
       {/* SEZIONE 3: Gestione Associazioni (A tutta larghezza per evitare tagli di testo) */}
-      <div className="overflow-hidden rounded-xl border bg-white shadow p-6 w-full">
-        <h2 className="text-xl font-bold text-gray-900 mb-1">
+      <div className="overflow-hidden rounded-xl border bg-background shadow p-6 w-full">
+        <h2 className="text-xl font-bold text-foreground mb-1">
           Gestione Associazioni
         </h2>
-        <p className="text-xs text-gray-500 mb-4">
+        <p className="text-xs text-muted-foreground mb-4">
           Visualizza ed elimina i collegamenti attivi tra classi e corsi.
         </p>
 

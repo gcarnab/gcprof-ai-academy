@@ -83,14 +83,14 @@ export default function LoginDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md bg-white border border-gray-100 shadow-2xl">
+      <DialogContent className="sm:max-w-md bg-background border border-border shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
             {isResetMode && (
               <button 
                 type="button" 
                 onClick={() => { setIsResetMode(false); setError(""); setSuccessMessage(""); }}
-                className="p-1 hover:bg-gray-100 rounded-full text-gray-500"
+                className="p-1 hover:bg-muted rounded-full text-muted-foreground"
               >
                 <ArrowLeft size={16} />
               </button>
@@ -113,7 +113,7 @@ export default function LoginDialog() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="dialog-email" className="text-gray-700 font-medium">
+            <Label htmlFor="dialog-email" className="text-muted-foreground font-medium">
               Email
             </Label>
             <Input
@@ -124,14 +124,14 @@ export default function LoginDialog() {
               onChange={(e) => setEmail(e.target.value)}
               disabled={isPending}
               required
-              className="border-gray-200 focus-visible:ring-blue-500"
+              className="border-border focus-visible:ring-blue-500"
             />
           </div>
 
           {!isResetMode && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="dialog-password" className="text-gray-700 font-medium">
+                <Label htmlFor="dialog-password" className="text-muted-foreground font-medium">
                   Password
                 </Label>
                 <button
@@ -156,12 +156,12 @@ export default function LoginDialog() {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isPending}
                   required={!isResetMode}
-                  className="border-gray-200 focus-visible:ring-blue-500 pr-10"
+                  className="border-border focus-visible:ring-blue-500 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -182,7 +182,7 @@ export default function LoginDialog() {
                 : "Entra"}
           </Button>
 
-          <p className="text-center text-[11px] text-gray-400 pt-2 font-mono uppercase tracking-wider">
+          <p className="text-center text-[11px] text-muted-foreground pt-2 font-mono uppercase tracking-wider">
             Enterprise Decoupled Architecture v2
           </p>
         </form>

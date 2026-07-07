@@ -76,10 +76,10 @@ export default function CreateClassForm() {
     <div className="p-6 space-y-4">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">
+          <h2 className="text-xl font-bold text-foreground mb-1">
             {editingClassName ? "📝 Modifica Classe" : "Configura Nuova Classe"}
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {editingClassName 
               ? `Stai modificando la classe accademica "${editingClassName}".` 
               : "Aggiungi una coorte di studenti (es. \"Sistemi 3°\") a cui assegnare corsi e iscritti."}
@@ -95,25 +95,25 @@ export default function CreateClassForm() {
         )}
 
         <div className="space-y-1">
-          <label className="block text-sm font-semibold text-gray-700">Nome Classe</label>
+          <label className="block text-sm font-semibold text-muted-foreground">Nome Classe</label>
           <input
             type="text"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Es: Informatica 3°"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-gray-900"
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-background text-foreground"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-semibold text-gray-700">Descrizione Breve (Opzionale)</label>
+          <label className="block text-sm font-semibold text-muted-foreground">Descrizione Breve (Opzionale)</label>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Es: Classe terza indirizzo informatico"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-gray-900"
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-background text-foreground"
           />
         </div>
 
@@ -140,13 +140,13 @@ export default function CreateClassForm() {
 
       {/* Sezione Visiva delle classi caricate in tempo reale dal database con Delete */}
       <div className="border-t pt-3">
-        <label className="block font-semibold text-gray-700 mb-2 text-xs">Classi attualmente censite nel DB:</label>
-        <div className="border rounded-lg divide-y bg-gray-50 max-h-36 overflow-y-auto">
+        <label className="block font-semibold text-muted-foreground mb-2 text-xs">Classi attualmente censite nel DB:</label>
+        <div className="border rounded-lg divide-y bg-muted max-h-36 overflow-y-auto">
           {classesList.length === 0 ? (
-            <p className="p-2 text-xs text-gray-400 italic text-center">Nessuna classe presente nel database.</p>
+            <p className="p-2 text-xs text-muted-foreground italic text-center">Nessuna classe presente nel database.</p>
           ) : (
             classesList.map((className) => (
-              <div key={className} className="p-2 flex justify-between items-center bg-white text-xs text-gray-700">
+              <div key={className} className="p-2 flex justify-between items-center bg-background text-xs text-muted-foreground">
                 <span className="font-bold text-purple-700">{className}</span>
                 <div className="flex items-center gap-3">
                   <button

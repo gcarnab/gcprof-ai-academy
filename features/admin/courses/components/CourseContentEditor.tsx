@@ -201,16 +201,16 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
     <div className="p-6 space-y-6">
       {/* Intestazione */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">
+        <h2 className="text-xl font-bold text-foreground mb-1">
           Costruttore Struttura Corsi
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Gestisci, rinomina ed elimina moduli e lezioni.
         </p>
       </div>
 
       <div
-        className={`p-2.5 text-xs rounded-lg border ${dbStatus.status === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-gray-50 text-gray-500"}`}
+        className={`p-2.5 text-xs rounded-lg border ${dbStatus.status === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-muted text-muted-foreground"}`}
       >
         <strong>Stato Connessione:</strong> {dbStatus.msg}
       </div>
@@ -218,7 +218,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
       <select
         value={selectedCourseId}
         onChange={(e) => setSelectedCourseId(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 p-2 text-sm bg-white text-gray-900"
+        className="w-full rounded-lg border border-border p-2 text-sm bg-background text-foreground"
       >
         <option value="">-- Seleziona un corso dal DB --</option>
         {courses.map((c) => (
@@ -236,7 +236,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
               placeholder="Nome nuovo modulo (es: Modulo 1)..."
               value={newModuleTitle}
               onChange={(e) => setNewModuleTitle(e.target.value)}
-              className="flex-1 rounded-md border border-gray-300 p-2 text-sm bg-white text-gray-900"
+              className="flex-1 rounded-md border border-border p-2 text-sm bg-background text-foreground"
             />
             <Button
               onClick={handleAddModule}
@@ -251,7 +251,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
             {courseStructure.course_modules?.map((mod: any, mIdx: number) => (
               <div
                 key={mod.id}
-                className="bg-white border rounded-xl p-4 shadow-sm space-y-3"
+                className="bg-background border rounded-xl p-4 shadow-sm space-y-3"
               >
                 <div className="flex justify-between items-center border-b pb-2 gap-4">
                   {editingModuleId === mod.id ? (
@@ -260,7 +260,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                         type="text"
                         value={editingModuleTitle}
                         onChange={(e) => setEditingModuleTitle(e.target.value)}
-                        className="border rounded p-1 text-sm flex-1 text-gray-900 bg-white"
+                        className="border rounded p-1 text-sm flex-1 text-foreground bg-background"
                       />
                       <button
                         onClick={() =>
@@ -275,14 +275,14 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                       </button>
                       <button
                         onClick={() => setEditingModuleId(null)}
-                        className="text-xs text-gray-400"
+                        className="text-xs text-muted-foreground"
                       >
                         Annulla
                       </button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-800">
+                      <span className="font-semibold text-foreground">
                         {mod.title}
                       </span>
                       <button
@@ -290,7 +290,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                           setEditingModuleId(mod.id);
                           setEditingModuleTitle(mod.title);
                         }}
-                        className="text-xs text-gray-400 hover:text-gray-600"
+                        className="text-xs text-muted-foreground hover:text-muted-foreground"
                       >
                         ✏️
                       </button>
@@ -324,17 +324,17 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                 </div>
 
                 {activeModuleIdForLesson === mod.id && (
-                  <div className="bg-gray-50 p-3 rounded-lg border space-y-2 text-sm">
+                  <div className="bg-muted p-3 rounded-lg border space-y-2 text-sm">
                     <input
                       type="text"
                       placeholder="Titolo Lezione"
                       value={lessonTitle}
                       onChange={(e) => setLessonTitle(e.target.value)}
-                      className="w-full rounded border p-1.5 bg-white text-gray-900"
+                      className="w-full rounded border p-1.5 bg-background text-foreground"
                     />
 
                     {/* Radio Buttons estesi con Markdown e Sandbox */}
-                    <div className="flex gap-4 my-2 text-gray-700 flex-wrap">
+                    <div className="flex gap-4 my-2 text-muted-foreground flex-wrap">
                       <label className="flex items-center gap-1.5 cursor-pointer">
                         <input
                           type="radio"
@@ -388,7 +388,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                         value={lessonContent}
                         onChange={(e) => setLessonContent(e.target.value)}
                         rows={5}
-                        className="w-full rounded border p-1.5 bg-white text-gray-900 font-mono text-xs focus:ring-1 focus:ring-emerald-500 outline-none"
+                        className="w-full rounded border p-1.5 bg-background text-foreground font-mono text-xs focus:ring-1 focus:ring-emerald-500 outline-none"
                       />
                     ) : (
                       <input
@@ -396,7 +396,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                         placeholder={getUrlPlaceholder(contentType)}
                         value={externalUrl}
                         onChange={(e) => setExternalUrl(e.target.value)}
-                        className="w-full rounded border p-1.5 bg-white text-gray-900 focus:ring-1 focus:ring-blue-500 outline-none"
+                        className="w-full rounded border p-1.5 bg-background text-foreground focus:ring-1 focus:ring-blue-500 outline-none"
                       />
                     )}
 
@@ -416,41 +416,41 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                   {mod.course_lessons?.map((les: any) => (
                     <li
                       key={les.id}
-                      className="text-sm text-gray-600 flex flex-col bg-gray-50 p-2 rounded border border-gray-100"
+                      className="text-sm text-muted-foreground flex flex-col bg-muted p-2 rounded border border-border"
                     >
                       {editingLessonId === les.id ? (
-                        <div className="flex flex-col gap-2 w-full bg-white p-2 rounded border border-gray-200">
+                        <div className="flex flex-col gap-2 w-full bg-background p-2 rounded border border-border">
                           {/* Modifica Titolo */}
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-gray-500 shrink-0">Titolo:</span>
+                            <span className="text-xs font-semibold text-muted-foreground shrink-0">Titolo:</span>
                             <input
                               type="text"
                               value={editingLessonTitle}
                               onChange={(e) => setEditingLessonTitle(e.target.value)}
-                              className="border rounded p-1 text-xs flex-1 text-gray-900 bg-white"
+                              className="border rounded p-1 text-xs flex-1 text-foreground bg-background"
                             />
                           </div>
 
                           {/* Modifica Contenuto Condizionale (Markdown o URL) */}
                           {les.content_type === "markdown" ? (
                             <div className="flex flex-col gap-1">
-                              <span className="text-xs font-semibold text-gray-500">Contenuto Markdown:</span>
+                              <span className="text-xs font-semibold text-muted-foreground">Contenuto Markdown:</span>
                               <textarea
                                 value={editingLessonContent}
                                 onChange={(e) => setEditingLessonContent(e.target.value)}
                                 rows={6}
-                                className="w-full rounded border p-1.5 bg-white text-gray-900 font-mono text-xs focus:ring-1 focus:ring-emerald-500 outline-none"
+                                className="w-full rounded border p-1.5 bg-background text-foreground font-mono text-xs focus:ring-1 focus:ring-emerald-500 outline-none"
                               />
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-gray-500 shrink-0">URL:</span>
+                              <span className="text-xs font-semibold text-muted-foreground shrink-0">URL:</span>
                               <input
                                 type="text"
                                 placeholder={getUrlPlaceholder(les.content_type)}
                                 value={editingLessonExternalUrl}
                                 onChange={(e) => setEditingLessonExternalUrl(e.target.value)}
-                                className="border rounded p-1 text-xs flex-1 text-gray-900 bg-white font-mono"
+                                className="border rounded p-1 text-xs flex-1 text-foreground bg-background font-mono"
                               />
                             </div>
                           )}
@@ -465,7 +465,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                             </button>
                             <button
                               onClick={() => setEditingLessonId(null)}
-                              className="text-gray-400 hover:underline"
+                              className="text-muted-foreground hover:underline"
                             >
                               Annulla
                             </button>
@@ -481,7 +481,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                               {les.content_type === "markdown" && "📝"}
                               {les.content_type === "sandbox" && "💻"}
                             </span>
-                            <span className="font-medium text-gray-800 truncate">
+                            <span className="font-medium text-foreground truncate">
                               {les.title}
                             </span>
                             <button
@@ -491,7 +491,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                                 setEditingLessonContent(les.content || ""); // Pre-popola il markdown esistente
                                 setEditingLessonExternalUrl(les.external_url || ""); // Pre-popola l'URL esistente
                               }}
-                              className="text-[11px] text-gray-400 hover:text-gray-600"
+                              className="text-[11px] text-muted-foreground hover:text-muted-foreground"
                             >
                               ✏️
                             </button>

@@ -83,13 +83,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-gray-50/50">
-      <Card className="w-full max-w-md bg-white border border-gray-100 shadow-2xl">
+    <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-muted/50">
+      <Card className="w-full max-w-md bg-background border border-border shadow-2xl">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-xl font-bold text-gray-900 text-center">
+          <CardTitle className="text-xl font-bold text-foreground text-center">
             Crea un account
           </CardTitle>
-          <CardDescription className="text-center text-sm text-gray-500">
+          <CardDescription className="text-center text-sm text-muted-foreground">
             Scegli la tua classe e registrati nell'Academy
           </CardDescription>
         </CardHeader>
@@ -114,7 +114,7 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-gray-700 font-medium">Nome</Label>
+                <Label htmlFor="firstName" className="text-muted-foreground font-medium">Nome</Label>
                 <Input
                   id="firstName"
                   type="text"
@@ -123,11 +123,11 @@ export default function RegisterPage() {
                   onChange={(e) => setFirstName(e.target.value)}
                   required
                   disabled={isPending || !!successMessage}
-                  className="border-gray-200 focus-visible:ring-blue-500"
+                  className="border-border focus-visible:ring-blue-500"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-gray-700 font-medium">Cognome</Label>
+                <Label htmlFor="lastName" className="text-muted-foreground font-medium">Cognome</Label>
                 <Input
                   id="lastName"
                   type="text"
@@ -136,13 +136,13 @@ export default function RegisterPage() {
                   onChange={(e) => setLastName(e.target.value)}
                   required
                   disabled={isPending || !!successMessage}
-                  className="border-gray-200 focus-visible:ring-blue-500"
+                  className="border-border focus-visible:ring-blue-500"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700 font-medium">Email</Label>
+              <Label htmlFor="email" className="text-muted-foreground font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -151,21 +151,21 @@ export default function RegisterPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isPending || !!successMessage}
-                className="border-gray-200 focus-visible:ring-blue-500"
+                className="border-border focus-visible:ring-blue-500"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="classId" className="text-gray-700 font-medium">Classe dell'Academy</Label>
+              <Label htmlFor="classId" className="text-muted-foreground font-medium">Classe dell'Academy</Label>
               <select
                 id="classId"
-                className="flex h-10 w-full rounded-md border border-gray-200 bg-background px-3 py-2 text-sm text-gray-700 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                 value={classId}
                 onChange={(e) => setClassId(e.target.value)}
                 required
                 disabled={isPending || !!successMessage}
               >
-                <option value="" className="text-gray-400">-- Seleziona la tua classe --</option>
+                <option value="" className="text-muted-foreground">-- Seleziona la tua classe --</option>
                 {classes.map((cls) => (
                   <option key={cls.id} value={cls.id}>
                     {cls.name}
@@ -176,7 +176,7 @@ export default function RegisterPage() {
 
             {/* Campo Password con Occhietto Allineato */}
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-700 font-medium">Password</Label>
+              <Label htmlFor="password" className="text-muted-foreground font-medium">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -185,13 +185,13 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="border-gray-200 focus-visible:ring-blue-500 pr-10"
+                  className="border-border focus-visible:ring-blue-500 pr-10"
                   disabled={isPending || !!successMessage}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground transition-colors"
                   disabled={isPending || !!successMessage}
                   tabIndex={-1}
                 >
@@ -202,7 +202,7 @@ export default function RegisterPage() {
 
             {/* Campo Conferma Password con Occhietto Allineato */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-gray-700 font-medium">Conferma Password</Label>
+              <Label htmlFor="confirmPassword" className="text-muted-foreground font-medium">Conferma Password</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -211,13 +211,13 @@ export default function RegisterPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="border-gray-200 focus-visible:ring-blue-500 pr-10"
+                  className="border-border focus-visible:ring-blue-500 pr-10"
                   disabled={isPending || !!successMessage}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground transition-colors"
                   disabled={isPending || !!successMessage}
                   tabIndex={-1}
                 >
@@ -234,14 +234,14 @@ export default function RegisterPage() {
               {isPending ? "Registrazione in corso..." : "Registrati"}
             </Button>
 
-            <div className="text-center text-sm text-gray-500 pt-2">
+            <div className="text-center text-sm text-muted-foreground pt-2">
               Hai già un account?{" "}
               <Link href="/login" className="underline text-blue-600 hover:text-blue-700 font-medium transition-colors">
                 Accedi
               </Link>
             </div>
 
-            <p className="text-center text-[11px] text-gray-400 pt-4 font-mono uppercase tracking-wider">
+            <p className="text-center text-[11px] text-muted-foreground pt-4 font-mono uppercase tracking-wider">
               Enterprise Decoupled Architecture v2
             </p>
           </form>

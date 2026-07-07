@@ -43,22 +43,22 @@ export default function AssignCourseClassForm({ courses, classes }: Props) {
   return (
     <div className="p-6">
       <div className="mb-4">
-        <h2 className="text-xl font-bold text-gray-800">Assegna Corso a Classe</h2>
-        <p className="text-sm text-gray-500">
+        <h2 className="text-xl font-bold text-foreground">Assegna Corso a Classe</h2>
+        <p className="text-sm text-muted-foreground">
           Associa un corso esistente a una classe. Gli studenti abilitati verranno iscritti automaticamente.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="course_id" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="course_id" className="block text-sm font-medium text-muted-foreground mb-1">
             Seleziona Corso
           </label>
           <select
             name="course_id"
             id="course_id"
             required
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+            className="w-full rounded-md border border-border px-3 py-2 text-foreground focus:border-blue-500 focus:ring-blue-500"
           >
             <option value="">-- Scegli un corso --</option>
             {courses.map((course) => (
@@ -70,14 +70,14 @@ export default function AssignCourseClassForm({ courses, classes }: Props) {
         </div>
 
         <div>
-          <label htmlFor="class_id" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="class_id" className="block text-sm font-medium text-muted-foreground mb-1">
             Seleziona Classe
           </label>
           <select
             name="class_id"
             id="class_id"
             required
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+            className="w-full rounded-md border border-border px-3 py-2 text-foreground focus:border-blue-500 focus:ring-blue-500"
           >
             <option value="">-- Scegli una classe --</option>
             {classes.map((cls) => (

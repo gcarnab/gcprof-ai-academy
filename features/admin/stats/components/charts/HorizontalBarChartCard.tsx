@@ -31,13 +31,13 @@ export default function HorizontalBarChartCard({
   }));
 
   return (
-    <div className="rounded-xl border bg-white p-6 shadow-sm flex flex-col justify-between">
+    <div className="rounded-xl border bg-background p-6 shadow-sm flex flex-col justify-between">
       <div>
-        <h3 className="text-lg font-semibold text-gray-800 leading-tight">
+        <h3 className="text-lg font-semibold text-foreground leading-tight">
           {title}
         </h3>
         {subtitle && (
-          <p className="text-xs text-gray-400 mt-0.5 mb-4">{subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-4">{subtitle}</p>
         )}
       </div>
 
@@ -74,13 +74,13 @@ export default function HorizontalBarChartCard({
                 if (active && payload && payload.length) {
                   const dataObj = payload[0].payload;
                   return (
-                    <div className="rounded-lg border bg-white p-3 shadow-md border-gray-200 text-xs space-y-1">
-                      <p className="font-bold text-gray-800">{dataObj.name}</p>
+                    <div className="rounded-lg border bg-background p-3 shadow-md border-border text-xs space-y-1">
+                      <p className="font-bold text-foreground">{dataObj.name}</p>
                       <p className="text-indigo-600 font-medium">
-                        Classe: <span className="text-gray-600 font-normal">{dataObj.classes}</span>
+                        Classe: <span className="text-muted-foreground font-normal">{dataObj.classes}</span>
                       </p>
-                      <p className="text-gray-500 font-medium">
-                        Tempo di studio: <span className="text-gray-900 font-bold">{dataObj.value} min</span>
+                      <p className="text-muted-foreground font-medium">
+                        Tempo di studio: <span className="text-foreground font-bold">{dataObj.value} min</span>
                       </p>
                     </div>
                   );

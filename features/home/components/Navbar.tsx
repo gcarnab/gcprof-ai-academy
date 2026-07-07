@@ -24,7 +24,7 @@ export default function Navbar() {
 
   const linkClass = (path: string): string =>
     `transition-colors duration-200 text-primary ${
-      isActive(path) ? "font-semibold text-blue-600" : "text-gray-700"
+      isActive(path) ? "font-semibold text-blue-600" : "text-muted-foreground"
     }`;
 
   // 👤 HELPER: Calcolo intelligente delle iniziali per il fallback dell'avatar
@@ -119,7 +119,7 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           {isLoading ? (
-            <div className="text-xs text-gray-400 animate-pulse">
+            <div className="text-xs text-muted-foreground animate-pulse">
               Verifica sessione...
             </div>
           ) : user ? (
@@ -129,7 +129,7 @@ export default function Navbar() {
                 <p className="text-sm font-semibold text-foreground">
                   {user.displayName}
                 </p>
-                <div className="text-xs text-gray-500 uppercase flex flex-col items-end gap-0.5">
+                <div className="text-xs text-muted-foreground uppercase flex flex-col items-end gap-0.5">
                   {user.role === "admin" ? (
                     <span className="font-medium text-purple-600">
                       👨‍🏫 Admin
@@ -172,7 +172,7 @@ export default function Navbar() {
               {/* Pulsante di Logout */}
               <button
                 onClick={logout}
-                className="rounded-md border border-gray-300 bg-background px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-accent transition-all ml-1"
+                className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm hover:bg-accent transition-all ml-1"
               >
                 Logout
               </button>
@@ -186,7 +186,7 @@ export default function Navbar() {
               >
                 Registrati
               </Link>
-              <div className="h-4 w-[1px] bg-gray-200" />
+              <div className="h-4 w-[1px] bg-muted" />
               <LoginDialog />
             </div>
           )}

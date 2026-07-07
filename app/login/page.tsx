@@ -146,7 +146,7 @@ export default function LoginPage() {
                   setError("");
                   setSuccessMessage("");
                 }}
-                className="text-sm text-gray-500 hover:text-black transition-colors"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 disabled={isPending}
               >
                 {isResetMode ? "Torna al modulo di login" : "Hai bisogno di assistenza?"}

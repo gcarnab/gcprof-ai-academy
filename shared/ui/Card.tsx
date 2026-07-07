@@ -23,8 +23,8 @@ export default function Card({
       className={`
         rounded-2xl
         border
-        border-gray-200
-        bg-white
+        border-border
+        bg-background
         p-6
         shadow-sm
         transition-all

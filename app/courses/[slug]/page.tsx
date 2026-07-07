@@ -42,10 +42,10 @@ export default function CourseDetailPage() {
   // Se stiamo caricando, mostriamo uno stato di attesa elegante
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-gray-50">
+      <div className="flex min-h-screen flex-col bg-muted">
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
-          <div className="text-gray-500 text-sm animate-pulse">
+          <div className="text-muted-foreground text-sm animate-pulse">
             Sincronizzazione contenuti del corso...
           </div>
         </main>
@@ -65,15 +65,15 @@ export default function CourseDetailPage() {
     user && user.status === "pending" && user.role !== "admin";
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-muted">
       {/* 🎯 IL SENSORE ATTIVO IN BACKGROUND */}
       <ActivityTracker />
       <Navbar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-12">
         {/* INTESTAZIONE DEL CORSO */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center border-b border-gray-200 pb-8">
-          <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white p-2 shadow-sm flex items-center justify-center text-4xl">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center border-b border-border pb-8">
+          <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl border border-border bg-background p-2 shadow-sm flex items-center justify-center text-4xl">
             {course.coverImage ? (
               course.coverImage.startsWith("http") ||
               course.coverImage.startsWith("/") ? (
@@ -94,17 +94,17 @@ export default function CourseDetailPage() {
           </div>
 
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900">
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">
               {course.title}
             </h1>
-            <p className="mt-2 text-lg text-gray-600">{course.description}</p>
+            <p className="mt-2 text-lg text-muted-foreground">{course.description}</p>
           </div>
         </div>
 
         {/* CORPO INFERIORE */}
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-foreground">
               Moduli del corso
             </h2>
 
@@ -149,9 +149,9 @@ export default function CourseDetailPage() {
                   course.modules.map((module: Module) => (
                     <div
                       key={module.id}
-                      className="rounded-lg border bg-white p-4 shadow-sm"
+                      className="rounded-lg border bg-background p-4 shadow-sm"
                     >
-                      <h3 className="font-bold text-gray-800">
+                      <h3 className="font-bold text-foreground">
                         📂 {module.title}
                       </h3>
                       <ul className="mt-3 space-y-2 pl-2">
@@ -162,7 +162,7 @@ export default function CourseDetailPage() {
                             return (
                               <li
                                 key={lesson.id}
-                                className="flex justify-between items-center text-sm p-2 rounded border border-transparent transition-colors hover:bg-gray-50 hover:border-gray-100"
+                                className="flex justify-between items-center text-sm p-2 rounded border border-transparent transition-colors hover:bg-muted hover:border-border"
                               >
                                 <button
                                   onClick={() =>
@@ -181,7 +181,7 @@ export default function CourseDetailPage() {
                                   </span>
                                   <span>{lesson.title}</span>
                                 </button>
-                                <span className="text-xs text-gray-400 font-mono">
+                                <span className="text-xs text-muted-foreground font-mono">
                                   {currentType === "video"
                                     ? "Video YouTube"
                                     : currentType === "colab"
@@ -192,7 +192,7 @@ export default function CourseDetailPage() {
                             );
                           })
                         ) : (
-                          <li className="text-xs italic text-gray-400 pl-6">
+                          <li className="text-xs italic text-muted-foreground pl-6">
                             Nessuna lezione presente.
                           </li>
                         )}
@@ -200,7 +200,7 @@ export default function CourseDetailPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm italic text-gray-500 p-4">
+                  <p className="text-sm italic text-muted-foreground p-4">
                     Nessun modulo didattico caricato per questo corso.
                   </p>
                 )}
@@ -209,28 +209,28 @@ export default function CourseDetailPage() {
           </div>
 
           {/* COLONNA INFO LATERALE */}
-          <div className="space-y-4 rounded-xl border bg-white p-5 shadow-sm h-fit">
-            <h3 className="font-bold text-gray-900 border-b pb-2">
+          <div className="space-y-4 rounded-xl border bg-background p-5 shadow-sm h-fit">
+            <h3 className="font-bold text-foreground border-b pb-2">
               Informazioni Corso
             </h3>
-            <div className="text-sm space-y-3 text-gray-600">
+            <div className="text-sm space-y-3 text-muted-foreground">
               <div>
                 <strong>Categoria:</strong>{" "}
-                <p className="text-gray-900 mt-0.5">{course.category}</p>
+                <p className="text-foreground mt-0.5">{course.category}</p>
               </div>
               <div>
                 <strong>Difficoltà:</strong>{" "}
-                <p className="text-gray-900 mt-0.5">{course.difficulty}</p>
+                <p className="text-foreground mt-0.5">{course.difficulty}</p>
               </div>
               <div>
                 <strong>Ore stimate:</strong>{" "}
-                <p className="text-gray-900 mt-0.5">
+                <p className="text-foreground mt-0.5">
                   {course.estimatedHours} ore
                 </p>
               </div>
               <div>
                 <strong>Docente:</strong>{" "}
-                <p className="text-gray-900 mt-0.5">{course.teacher}</p>
+                <p className="text-foreground mt-0.5">{course.teacher}</p>
               </div>
             </div>
           </div>

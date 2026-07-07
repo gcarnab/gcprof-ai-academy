@@ -24,14 +24,14 @@ export default function ThemeToggle() {
         justify-center
         rounded-full
         border
-        border-gray-200
-        bg-white
-        text-gray-700
+        border-border
+        bg-background
+        text-muted-foreground
         shadow-sm
         transition-all
         duration-200
-        hover:bg-gray-100
-        dark:border-gray-700
+        hover:bg-muted
+        dark:border-border
         dark:bg-gray-900
         dark:text-yellow-300
         dark:hover:bg-gray-800

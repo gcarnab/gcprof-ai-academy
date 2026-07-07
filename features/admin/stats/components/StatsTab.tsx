@@ -9,7 +9,7 @@ interface Props {
 
 export default function StatsTab({ stats }: Props) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-white shadow">
+    <div className="overflow-hidden rounded-xl border bg-background shadow">
 
       <AdminStatsDashboard stats={stats} />
 

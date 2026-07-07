@@ -35,10 +35,10 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   // 🔄 UI di Caricamento (Mostrata SOLO mentre Next.js verifica il cookie reale)
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-gray-50">
+      <div className="flex h-screen w-full items-center justify-center bg-muted">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-4 font-medium text-gray-600">Verifica dell'identità in corso...</p>
+          <p className="mt-4 font-medium text-muted-foreground">Verifica dell'identità in corso...</p>
         </div>
       </div>
     );

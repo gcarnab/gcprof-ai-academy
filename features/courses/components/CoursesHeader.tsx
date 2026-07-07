@@ -28,7 +28,7 @@ export default function CoursesHeader() {
           TITOLO PRINCIPALE
       ============================================================ */}
       
-      <h1 className="text-3xl font-bold text-gray-900 md:text-4xl">
+      <h1 className="text-3xl font-bold text-foreground md:text-4xl">
         Catalogo Corsi
       </h1>
 
@@ -36,7 +36,7 @@ export default function CoursesHeader() {
           DESCRIZIONE
       ============================================================ */}
 
-      <p className="mx-auto mt-4 max-w-2xl text-gray-600">
+      <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
         Esplora tutti i corsi disponibili e inizia il tuo percorso di
         apprendimento. Scegli una tecnologia e sviluppa le tue competenze
         passo dopo passo.

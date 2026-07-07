@@ -68,7 +68,7 @@ export default function MailDashboard({ availableClasses }: Props) {
 
         <div className="xl:col-span-2">
           {selectedTemplate === undefined ? (
-            <div className="rounded-xl border bg-white p-6 shadow text-gray-500 text-sm">
+            <div className="rounded-xl border bg-background p-6 shadow text-muted-foreground text-sm">
               Caricamento editor...
             </div>
           ) : (

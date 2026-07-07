@@ -21,7 +21,7 @@ export default function BarChartCard({ title, data }: Props) {
   }));
 
   return (
-    <div className="rounded-xl border bg-white p-6 shadow-sm">
+    <div className="rounded-xl border bg-background p-6 shadow-sm">
       <h3 className="mb-4 text-lg font-semibold">{title}</h3>
 
       <div className="h-72">

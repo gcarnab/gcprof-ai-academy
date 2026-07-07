@@ -48,18 +48,18 @@ export default function AdminDashboard({ stats }: Props) {
     <>
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
           Pannello Amministratore
         </h1>
 
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Gestisci la struttura dei corsi, gli utenti e tutte le funzionalità
           amministrative della piattaforma.
         </p>
       </div>
 
       {/* TAB BAR */}
-      <div className="rounded-xl border bg-white shadow">
+      <div className="rounded-xl border bg-background shadow">
         <div className="flex flex-wrap border-b">
           {tabs.map((tab) => (
             <button
@@ -70,7 +70,7 @@ export default function AdminDashboard({ stats }: Props) {
               ${
                 currentTab === tab.id
                   ? "border-b-2 border-blue-600 text-blue-600"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               {tab.label}

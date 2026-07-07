@@ -223,9 +223,9 @@ export default function AdminUsersTable({
       />
 
       {/* TABLE DATA GRID */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white">
-        <table className="w-full text-left text-sm text-gray-500">
-          <thead className="border-b bg-gray-50 text-xs font-semibold uppercase text-gray-700">
+      <div className="overflow-x-auto rounded-xl border border-border shadow-sm bg-background">
+        <table className="w-full text-left text-sm text-muted-foreground">
+          <thead className="border-b bg-muted text-xs font-semibold uppercase text-muted-foreground">
             <tr>
               <th className="px-6 py-4">Studente / Nome Completo</th>
               <th className="px-6 py-4">Ruolo</th>
@@ -235,12 +235,12 @@ export default function AdminUsersTable({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 bg-background">
             {users.length === 0 ? (
               <tr>
                 <td
                   colSpan={5}
-                  className="px-6 py-10 text-center italic text-gray-400"
+                  className="px-6 py-10 text-center italic text-muted-foreground"
                 >
                   Nessun utente trovato corrispondente ai criteri di ricerca.
                 </td>
@@ -267,13 +267,13 @@ export default function AdminUsersTable({
       </div>
 
       {/* DATA PAGINATION FOOTER */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4 text-sm text-gray-600">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <span>Mostra</span>
           <select
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
-            className="rounded-lg border bg-white p-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-lg border bg-background p-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value={10}>10</option>
             <option value={25}>25</option>
@@ -288,17 +288,17 @@ export default function AdminUsersTable({
           <button
             onClick={() => setPage((p) => Math.max(p - 1, 1))}
             disabled={page === 1 || isPending}
-            className="px-3 py-1.5 rounded-lg border bg-white font-medium hover:bg-gray-50 disabled:opacity-40 transition-colors shadow-sm"
+            className="px-3 py-1.5 rounded-lg border bg-background font-medium hover:bg-muted disabled:opacity-40 transition-colors shadow-sm"
           >
             Precedente
           </button>
-          <span className="font-medium text-gray-700">
+          <span className="font-medium text-muted-foreground">
             Pagina {page} di {totalPages}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
             disabled={page === totalPages || isPending}
-            className="px-3 py-1.5 rounded-lg border bg-white font-medium hover:bg-gray-50 disabled:opacity-40 transition-colors shadow-sm"
+            className="px-3 py-1.5 rounded-lg border bg-background font-medium hover:bg-muted disabled:opacity-40 transition-colors shadow-sm"
           >
             Successivo
           </button>
