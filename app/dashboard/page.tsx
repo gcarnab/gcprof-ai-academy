@@ -80,7 +80,7 @@ export default async function StudentDashboardPage() {
   // 🧮 5. LOGICA PROGRESSO %: Incrocio reale tra i corsi abilitati e l'albero delle lezioni completate
   const coursesWithRealMetrics = allowedCourses.map((allowedCourse: any) => {
     const structuralCourse = catalog.find(
-      (c) => String(c.id) === String(allowedCourse.course_id) || String(c.course_id) === String(allowedCourse.course_id) || c.slug === allowedCourse.course_slug
+      (c) => String(c.id) === String(allowedCourse.course_id) || String(c.id) === String(allowedCourse.course_id) || c.slug === allowedCourse.course_slug
     );
 
     let totalLessons = 0;
