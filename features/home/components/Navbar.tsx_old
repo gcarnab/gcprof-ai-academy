@@ -88,14 +88,14 @@ export default function Navbar() {
               </Link>
             </li>
 
-            {/* 🎯 DASHBOARD DINAMICA: Bivio pulito senza regressioni tra Admin e Studente */}
-            {user && (
+            {/* 🎯 DASHBOARD: Sostituisce il vecchio CMS Admin statico con la rotta V2 */}
+            {user?.role === "admin" && (
               <li>
                 <Link
-                  href={user.role === "admin" ? "/admin/dashboard" : "/dashboard"}
-                  className={linkClass(user.role === "admin" ? "/admin/dashboard" : "/dashboard")}
+                  href="/admin/dashboard"
+                  className={linkClass("/admin/dashboard")}
                 >
-                  {user.role === "admin" ? "⚙️ Dashboard" : "⚡ Dashboard"}
+                  ⚙️ Dashboard
                 </Link>
               </li>
             )}
@@ -148,7 +148,7 @@ export default function Navbar() {
                 </div>
               </div>
 
-              {/* MINIATURA AVATAR DINAMICA (Cliccabile verso il profilo) */}
+              {/* 🎯 MINIATURA AVATAR DINAMICA (Cliccabile verso il profilo) */}
               <Link
                 href="/profile"
                 className="relative flex h-9 w-9 shrink-0 overflow-hidden rounded-full border border-gray-200 shadow-sm hover:opacity-85 transition-opacity duration-200"

@@ -5,7 +5,7 @@ import { COOKIE_CONSTANTS } from "./features/auth/constants/CookieConstants";
 import { TOKEN_CONSTANTS } from "./features/auth/constants/TokenConstants";
 
 const PROTECTED_ROUTES = ["/dashboard", "/admin", "/profilo", "/corsi"];
-const AUTH_ROUTES = ["/auth-test/login", "/auth-test/register", "/login"];
+const AUTH_ROUTES = ["/login"];
 
 // 🎯 FIX: La funzione ora si chiama proxy coerentemente con la convenzione di Next.js 16
 export async function proxy(request: NextRequest) {
@@ -45,7 +45,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isProtectedRoute && !isTokenValid) {
-    const loginUrl = new URL("/auth-test/login", request.url);
+    const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     
     const response = NextResponse.redirect(loginUrl);

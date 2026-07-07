@@ -158,7 +158,6 @@ GCPROF-AI-ACADEMY
 |   |   +---mail
 |   |   |   +---actions
 |   |   |   |       mailBulkActions.ts
-|   |   |   |       mailBulkActions.ts_resend
 |   |   |   |       mailSettingsActions.ts
 |   |   |   |       mailTemplateActions.ts
 |   |   |   |       mailTestActions.ts
@@ -328,6 +327,7 @@ GCPROF-AI-ACADEMY
 |       supabase.ts
 |       utils.ts
 |       
+|               
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -380,6 +380,7 @@ GCPROF-AI-ACADEMY
 \---types
         database.types.ts
         
+
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
@@ -576,22 +577,16 @@ GCPROF-AI-ACADEMY
 
 
 
+
 ### PROMPT 
 
 CONTESTO :  
-1.aggiungiamo nuove features all'app gcprof-ai-academy. 
+1.aggiungiamo nuove features all'app custom gcprof-ai-academy. 
 2.ho comprato un dominio su cloudflare gcprof-academy.com già configurato su vercel 
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 ULTIMI BUG RISCONTRATI :
-1. la modifica allo stato attuale è stabile
-2. file coinvolti nella modifica attuale
-- gcprof-ai-academy\features\admin\courses\actions\structureActions.ts
-- gcprof-ai-academy\features\admin\courses\components\CourseContentEditor.tsx
-- gcprof-ai-academy\features\courses\components\lesson\LessonRenderer.tsx
-- gcprof-ai-academy\app\courses\page.tsx
-- gcprof-ai-academy\app\courses\[slug]\modules\[moduleId]\lessons\[lessonId]\page.tsx
-
+1. app stabile
 
 ULTIMI FEATURES INTRODOTTE :
 - statistiche migliorate
@@ -599,9 +594,11 @@ ULTIMI FEATURES INTRODOTTE :
 - gestione utenti migliorata
 - gestione corsi in miglioramento
 
-OBIETTIVO : nella sezione CORSI della admin/dashboard vorrei 
-1. mogliorare la navigazione quando atterro alla pagina di una lezione di un modulo per tornare alla pagina del modulo
-ho bisogno di andare indietro dal browser
+OBIETTIVO : verifica le funzionalità della piattaforma attuale https://gcprof.odoo.com/
+che utilizza la piattaforma con piano gratuito e con solo due applicazioni interne
+Sito web, E-learning
+1. individua quali ulteriori features che possiamo introdurre su gcprof-academy.com ordinandole 
+per semplicità di realizzazione e vantaggi raggiungibili
 
 VINCOLI: 
 1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
@@ -610,4 +607,4 @@ VINCOLI:
 4. intercetta sempre i punti hardcoded che adrebbero spostati nel file .env come variabili
 5. procediamo per gradi senza distruggere il codice integrando le modifiche passo passo 
 e testando che non stiamo regredendo
-6. non fare refactoring e punta a risolvere il problema mantenendo la logica attuale
+6. non fare troppo refactoring e punta a risolvere il problema mantenendo la logica attuale

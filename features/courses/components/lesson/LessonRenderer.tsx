@@ -73,33 +73,44 @@ export default function LessonRenderer({ contents }: Props) {
           }
 
           /**
-           * 2. DOCUMENT PREVIEWER
+           * 2. DOCUMENT PREVIEWER INTERNO (Google Docs, Sheets, Slides & Drive)
            */
           case "document":
           case "file": {
             if (!url) return null;
             let previewUrl = url;
             
-            if (previewUrl.includes("drive.google.com")) {
-              if (previewUrl.includes("/view")) {
-                previewUrl = previewUrl.replace("/view", "/preview");
-              } else if (previewUrl.includes("/edit")) {
-                previewUrl = previewUrl.substring(0, previewUrl.indexOf("/edit")) + "/preview";
+            // 🛡️ RILEVAMENTO ED EMBEDDING SILENZIOSO DI GOOGLE DOCS / DRIVE
+            const isGoogleResource = 
+              previewUrl.includes("drive.google.com") || 
+              previewUrl.includes("docs.google.com");
+
+            if (isGoogleResource) {
+              if (previewUrl.includes("/edit")) {
+                previewUrl = previewUrl.split("/edit")[0] + "/preview";
+              } else if (previewUrl.includes("/view")) {
+                previewUrl = previewUrl.split("/view")[0] + "/preview";
+              } else if (!previewUrl.endsWith("/preview") && !previewUrl.includes("/preview")) {
+                // Rimuove eventuali query parameters residui agganciando correttamente la preview
+                if (previewUrl.includes("?")) {
+                  const base = previewUrl.split("?")[0];
+                  previewUrl = base.endsWith("/") ? `${base}preview` : `${base}/preview`;
+                } else {
+                  previewUrl = previewUrl.endsWith("/") ? `${previewUrl}preview` : `${previewUrl}/preview`;
+                }
               }
             }
-
-            const isGoogleDrive = previewUrl.includes("drive.google.com");
 
             return (
               <div key={index} className="space-y-2">
                 {title && <h3 className="text-lg font-bold text-gray-800">{title}</h3>}
-                {isGoogleDrive ? (
-                  <div className="rounded-xl overflow-hidden border border-gray-200 shadow-inner h-[600px] bg-gray-50">
+                {isGoogleResource ? (
+                  <div className="rounded-xl overflow-hidden border border-gray-200 shadow-inner h-[700px] bg-gray-50">
                     <iframe
                       src={previewUrl}
-                      className="w-full h-full"
+                      className="w-full h-full border-0"
                       allow="autoplay"
-                      sandbox="allow-scripts allow-same-origin allow-popups"
+                      sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                     />
                   </div>
                 ) : (

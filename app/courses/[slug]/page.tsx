@@ -2,35 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useParams, notFound, useRouter } from "next/navigation";
-import {
-  getYouTubeEmbedUrl,
-  getGoogleDriveEmbedUrl,
-  hasCourseAccess,
-} from "@/features/courses/services/courseService";
+import { hasCourseAccess } from "@/features/courses/services/courseService";
 import { getLiveCourses } from "@/features/courses/services/courseActions";
-import type { Course, Lesson, Module } from "@/features/courses/types/course";
-import { Button } from "@/components/ui/button";
+import type { Course, Module } from "@/features/courses/types/course";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 import LoginDialog from "@/features/auth/components/LoginDialog";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
-
-// 🎯 HELPER: Converte un URL di Google Colab standard nel formato ottimizzato per Iframe Embed
-function getGoogleColabEmbedUrl(url: string): string {
-  if (!url) return "";
-  let cleanUrl = url.trim();
-
-  // Se l'URL contiene la struttura classica di condivisione /drive/, la convertiamo in /notebooks/
-  // Questo previene le restrizioni di X-Frame-Options imposte da Google sui link standard
-  if (cleanUrl.includes("colab.research.google.com/drive/")) {
-    return cleanUrl.replace(
-      "colab.research.google.com/drive/",
-      "colab.research.google.com/notebooks/",
-    );
-  }
-  return cleanUrl;
-}
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -39,17 +18,21 @@ export default function CourseDetailPage() {
   const slug = params?.slug as string;
 
   const [course, setCourse] = useState<Course | null>(null);
-  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Caricamento asincrono del corso in base allo slug reale presente sul DB
   useEffect(() => {
     async function loadCourseDetail() {
       setIsLoading(true);
-      const liveCourses = await getLiveCourses();
-      const currentCourse = liveCourses.find((c) => c.slug === slug);
-      setCourse(currentCourse || null);
-      setIsLoading(false);
+      try {
+        const liveCourses = await getLiveCourses();
+        const currentCourse = liveCourses.find((c) => c.slug === slug);
+        setCourse(currentCourse || null);
+      } catch (err) {
+        console.error("Errore nel caricamento del corso:", err);
+      } finally {
+        setIsLoading(false);
+      }
     }
     if (slug) {
       loadCourseDetail();
@@ -76,7 +59,7 @@ export default function CourseDetailPage() {
     notFound();
   }
 
-  // Calcolo delle autorizzazioni di accesso basate sulla logica esistente
+  // Calcolo delle autorizzazioni di acesso basate sulla logica esistente
   const isClassAuthorized = hasCourseAccess(course, user);
   const isPendingUser =
     user && user.status === "pending" && user.role !== "admin";
@@ -117,95 +100,6 @@ export default function CourseDetailPage() {
             <p className="mt-2 text-lg text-gray-600">{course.description}</p>
           </div>
         </div>
-
-        {/* PLAYER INTEGRATO */}
-        {activeLesson && isClassAuthorized && user && !isPendingUser && (
-          <div className="mt-8 rounded-xl border bg-white p-4 shadow-md space-y-4 animate-in fade-in duration-200">
-            <div className="flex justify-between items-center border-b pb-2">
-              <h3 className="text-lg font-bold text-gray-800">
-                📖 In riproduzione:{" "}
-                <span className="text-blue-600">{activeLesson.title}</span>
-              </h3>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setActiveLesson(null)}
-              >
-                Chiudi player ✕
-              </Button>
-            </div>
-
-            {/* 🎥 RENDERING VIDEO YOUTUBE */}
-            {((activeLesson.contentType as string) === "video" ||
-              (activeLesson as any).content_type === "video") &&
-              (activeLesson.youtubeUrl ||
-                (activeLesson as any).video_url ||
-                (activeLesson as any).external_url) && (
-                <div className="aspect-video w-full overflow-hidden rounded-lg bg-black shadow-inner">
-                  <iframe
-                    className="h-full w-full"
-                    src={
-                      getYouTubeEmbedUrl(
-                        activeLesson.youtubeUrl ||
-                          (activeLesson as any).video_url ||
-                          (activeLesson as any).external_url ||
-                          "",
-                      ) || ""
-                    }
-                    title={activeLesson.title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
-                </div>
-              )}
-
-            {/* 📄 RENDERING DOCUMENTO GOOGLE DRIVE */}
-            {((activeLesson.contentType as string) === "document" ||
-              (activeLesson as any).content_type === "document") &&
-              (activeLesson.googleDriveUrl ||
-                (activeLesson as any).external_url) && (
-                <div className="w-full h-[650px] border overflow-hidden rounded-lg bg-gray-100 shadow-inner relative">
-                  <iframe
-                    className="absolute top-0 left-0 h-full w-full border-0"
-                    src={
-                      getGoogleDriveEmbedUrl(
-                        activeLesson.googleDriveUrl ||
-                          (activeLesson as any).external_url ||
-                          "",
-                      ) || ""
-                    }
-                    title={activeLesson.title}
-                    allow="autoplay"
-                    loading="lazy"
-                  />
-                </div>
-              )}
-
-            {/* 🚀 RENDERING GOOGLE COLAB EMBEDDER */}
-            {((activeLesson.contentType as string) === "colab" ||
-              (activeLesson as any).content_type === "colab") &&
-              ((activeLesson as any).externalUrl ||
-                (activeLesson as any).external_url ||
-                (activeLesson as any).googleDriveUrl) && (
-                <div className="w-full h-[700px] border overflow-hidden rounded-lg bg-gray-50 shadow-inner relative">
-                  <iframe
-                    className="absolute top-0 left-0 h-full w-full border-0 bg-white"
-                    src={
-                      getGoogleColabEmbedUrl(
-                        (activeLesson as any).external_url ||
-                          (activeLesson as any).externalUrl ||
-                          (activeLesson as any).googleDriveUrl ||
-                          "",
-                      ) || ""
-                    }
-                    title={activeLesson.title}
-                    allow="clipboard-write; encrypted-media"
-                    loading="lazy"
-                  />
-                </div>
-              )}
-          </div>
-        )}
 
         {/* CORPO INFERIORE */}
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -263,20 +157,14 @@ export default function CourseDetailPage() {
                       <ul className="mt-3 space-y-2 pl-2">
                         {module.lessons && module.lessons.length > 0 ? (
                           module.lessons.map((lesson: any) => {
-                            // 🎯 Sostituito Lesson con any per evitare errori sulle proprietà esterne
                             const currentType =
                               lesson.contentType || lesson.content_type;
                             return (
                               <li
                                 key={lesson.id}
-                                className={`flex justify-between items-center text-sm p-2 rounded border border-transparent transition-colors ${
-                                  activeLesson?.id === lesson.id
-                                    ? "bg-blue-50 border-blue-200"
-                                    : "hover:bg-gray-50 hover:border-gray-100"
-                                }`}
+                                className="flex justify-between items-center text-sm p-2 rounded border border-transparent transition-colors hover:bg-gray-50 hover:border-gray-100"
                               >
                                 <button
-                                  //onClick={() => setActiveLesson(lesson)}
                                   onClick={() =>
                                     router.push(
                                       `/courses/${slug}/modules/${module.id}/lessons/${lesson.id}`,
