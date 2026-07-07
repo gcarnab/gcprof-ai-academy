@@ -54,7 +54,6 @@ export async function getLiveCourses(): Promise<Course[]> {
             order_index,
             duration
           )
-
         )
       `);
 
@@ -248,16 +247,19 @@ export async function deleteModule(moduleId: string | number) {
  * 📺 CRUD: LEZIONI (LESSONS)
  * ========================================================================== */
 
+interface UpsertLessonInput {
+  id?: string | number;
+  title: string;
+  contentType: "video" | "document" | "colab" | "markdown" | "sandbox"; // 🎯 Aggiornato con tutti i tipi
+  externalUrl: string;
+  content?: string; // 📝 Aggiunto per gestire il testo Markdown
+  orderIndex: number;
+  duration?: number;
+}
+
 export async function upsertLesson(
   moduleId: string | number,
-  lesson: {
-    id?: string | number;
-    title: string;
-    contentType: "video" | "document";
-    externalUrl: string;
-    orderIndex: number;
-    duration?: number;
-  },
+  lesson: UpsertLessonInput, // 🎯 Utilizza l'interfaccia aggiornata per eliminare l'errore di build
 ) {
   const payload: Record<string, any> = {
     module_id: moduleId,
@@ -265,6 +267,7 @@ export async function upsertLesson(
     slug: generateSlug(lesson.title),
     content_type: lesson.contentType,
     external_url: lesson.externalUrl,
+    content: lesson.content || "", // 🎯 FONDAMENTALE: Salva il testo Markdown/Dati aggiuntivi sul DB
     order_index: lesson.orderIndex,
     duration: lesson.duration || 15,
   };

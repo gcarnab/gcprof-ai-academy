@@ -11,6 +11,7 @@ import LessonRenderer, {
 } from "@/features/courses/components/lesson/LessonRenderer";
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
+import { MarkdownPreview } from "@/features/courses/components/MarkdownPreview";
 
 export default function LessonPage() {
   const params = useParams();
@@ -132,7 +133,7 @@ export default function LessonPage() {
     lesson.video_url ||
     lesson.youtubeUrl ||
     lesson.googleDriveUrl ||
-    "" ;
+    "";
   const normalizedContent = lesson.content || "";
 
   const formattedContents: LessonContent[] = [
@@ -193,7 +194,14 @@ export default function LessonPage() {
           </h1>
 
           <div className="mt-8">
-            <LessonRenderer contents={formattedContents} />
+            {/* 🎯 INTERCETTAZIONE E RENDERING DEL CONTENUTO MARKDOWN SANITIZZATO */}
+            {normalizedType === "markdown" ? (
+              <div className="p-6 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-100">
+                <MarkdownPreview content={normalizedContent} />
+              </div>
+            ) : (
+              <LessonRenderer contents={formattedContents} />
+            )}
           </div>
         </main>
         <Footer />
