@@ -1,23 +1,3 @@
-/**
- * ============================================================================
- * FILE: PublicLayout.tsx
- * FEATURE: Shared Layout
- * ----------------------------------------------------------------------------
- * SCOPO
- * Layout comune a tutte le pagine pubbliche della piattaforma.
- *
- * RESPONSABILITÀ
- * - Visualizzare la Navbar
- * - Visualizzare il Footer
- * - Ospitare il contenuto centrale
- *
- * FUTURO
- * In seguito verranno aggiunti:
- * - DashboardLayout
- * - AdminLayout
- * ============================================================================
- */
-
 import type { ReactNode } from "react";
 
 import Navbar from "@/features/home/components/Navbar";
@@ -31,7 +11,7 @@ export default function PublicLayout({
   children,
 }: PublicLayoutProps) {
   return (
-    <>
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <Navbar />
 
       <main className="min-h-screen">
@@ -39,6 +19,6 @@ export default function PublicLayout({
       </main>
 
       <Footer />
-    </>
+    </div>
   );
 }

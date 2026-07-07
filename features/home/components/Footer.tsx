@@ -1,27 +1,3 @@
-/**
- * ============================================================================
- * COMPONENTE: Footer
- * ----------------------------------------------------------------------------
- * Footer globale della piattaforma.
- *
- * RUOLO:
- * - Informazioni di base e navigazione secondaria
- *
- * ATTUALMENTE:
- * - Nome piattaforma
- * - Link principali
- * - Copyright dinamico
- *
- * FUTURO:
- * - Link legali (privacy, cookie policy)
- * - Social media
- * - Contatti scuola / docente
- *
- * NOTA:
- * Deve restare minimale e non invasivo.
- * ============================================================================
- */
-
 import PageContainer from "@/shared/ui/PageContainer";
 import Link from "next/link";
 import Image from "next/image";
@@ -33,11 +9,14 @@ export default function Footer() {
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "V 1.0";
 
   return (
-    <footer className="border-t border-gray-200 bg-white">
-      {/* <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-6 py-8 text-sm text-gray-600 md:flex-row">*/}
-      <PageContainer className="flex flex-col items-center justify-between gap-6 py-8 text-sm text-gray-600 md:flex-row">
+    <footer className="border-t border-border bg-background transition-colors duration-300">
+      <PageContainer className="flex flex-col items-center justify-between gap-6 py-8 text-sm text-muted-foreground md:flex-row">
+
         {/* LOGO */}
-        <Link href="/" className="group flex items-center gap-3 transition-all">
+        <Link 
+          href="/" 
+          className="group flex items-center gap-3 transition-all"
+        >
           <Image
             src="/gcprof-ai-academy_logo_small.png"
             alt={`Logo ${appName} ${appSubtitle}`}
@@ -46,21 +25,27 @@ export default function Footer() {
             priority
             className="transition-transform duration-300 group-hover:scale-105"
           />
+
           <div className="flex flex-col leading-none">
-            <span className="text-lg font-extrabold tracking-tight text-gray-900 group-hover:text-blue-600">
+            <span className="text-lg font-extrabold tracking-tight text-foreground group-hover:text-blue-600">
               {appName}
             </span>
+
             <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-blue-600">
               {appSubtitle} ({appVersion})
             </span>
           </div>
         </Link>
 
+
         {/* Menu Footer */}
         <nav>
           <ul className="flex gap-6">
             <li>
-              <Link href="/" className="transition-colors hover:text-blue-600">
+              <Link 
+                href="/" 
+                className="transition-colors hover:text-blue-600"
+              >
                 Home
               </Link>
             </li>
@@ -85,10 +70,13 @@ export default function Footer() {
           </ul>
         </nav>
 
+
         {/* Copyright */}
-        <p>© {currentYear} {appName} {appSubtitle} ({appVersion}) </p>
+        <p>
+          © {currentYear} {appName} {appSubtitle} ({appVersion})
+        </p>
+
       </PageContainer>
-      {/*</div>*/}
     </footer>
   );
 }

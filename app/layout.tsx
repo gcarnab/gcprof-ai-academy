@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/features/auth/context/AuthContext";
 import { siteConfig } from "@/shared/config/site";
+import { ThemeProvider } from "@/features/theme/context/ThemeContext";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -22,8 +23,7 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.siteName}`,
   },
 
-  description:
-    siteConfig.description,
+  description: siteConfig.description,
 
   applicationName: siteConfig.siteName,
 
@@ -76,10 +76,9 @@ export const metadata: Metadata = {
     type: "website",
     locale: "it_IT",
     url: siteConfig.siteUrl,
-    siteName : siteConfig.siteName ,
+    siteName: siteConfig.siteName,
     title: siteConfig.siteName,
-    description:
-      siteConfig.description,
+    description: siteConfig.description,
 
     images: [
       {
@@ -104,12 +103,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="it"
-      className={cn("font-sans", geist.variable)}
-    >
-      <body className="bg-white text-gray-900 antialiased">
-        <AuthProvider>{children}</AuthProvider>
+    <html lang="it" className={cn("font-sans", geist.variable)}>
+      <body className="antialiased">
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
