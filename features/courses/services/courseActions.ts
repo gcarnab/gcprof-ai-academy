@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import type { Course, Module, Lesson } from "../types/course";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -59,10 +60,7 @@ export async function getLiveCourses(): Promise<Course[]> {
       `);
 
     if (error) {
-      console.error(
-        "❌ Errore Supabase nel recupero dei corsi:",
-        error.message,
-      );
+      logger.error("Errore Supabase nel recupero dei corsi:", error.message);
       return [];
     }
 
@@ -85,7 +83,7 @@ export async function getLiveCourses(): Promise<Course[]> {
         description: dbCourse.description || "",
         category: dbCourse.category || "Informatica",
         difficulty: dbCourse.difficulty || "Facile",
-        teacher: dbCourse.teacher || "Prof. G. Carnabuci",
+        teacher: dbCourse.teacher || process.env.NEXT_PUBLIC_DEFAULT_TEACHER || "Prof. G. Carnabuci",
         estimatedHours: dbCourse.estimated_hours || 0,
         coverImage:
           dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_info_01.png",
@@ -126,7 +124,7 @@ export async function getLiveCourses(): Promise<Course[]> {
       };
     });
   } catch (err) {
-    console.error("💥 Eccezione durante il fetch dei corsi dal DB:", err);
+    logger.error("Eccezione durante il fetch dei corsi dal DB:", err);
     return [];
   }
 }
@@ -306,7 +304,7 @@ export async function getLiveCategories(): Promise<string[]> {
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("Errore recupero categorie:", error.message);
+    logger.error("Errore recupero categorie:", error.message);
     return [];
   }
   return ["Tutti", ...data.map((c: any) => c.name)];
@@ -346,7 +344,7 @@ export async function getLiveClasses(): Promise<string[]> {
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("Errore recupero classi:", error.message);
+    logger.error("Errore recupero classi:", error.message);
     return [];
   }
   return data.map((c: any) => c.name);
@@ -427,7 +425,7 @@ export async function dissociateCourseFromClass(
       .eq("class_id", classId);
 
     if (error) {
-      console.error("Errore Supabase:", error);
+      logger.error("Errore Supabase:", error.message);
       throw error;
     }
 
@@ -437,7 +435,10 @@ export async function dissociateCourseFromClass(
 
     return { success: true };
   } catch (error) {
-    console.error("Errore durante la dissociazione corso-classe:", error);
+    logger.error(
+      "Errore Supabase durante la dissociazione corso-classe:",
+      error,
+    );
 
     return {
       success: false,
@@ -456,11 +457,11 @@ export async function getCourseClasses() {
     .from("course_classes")
     .select("course_id, class_id");
 
-  console.log("=== COURSE_CLASSES ADMIN ===");
-  console.log(data);
+  logger.debug("=== COURSE_CLASSES ADMIN ===", data);
 
   if (error) {
-    console.error("Errore getCourseClasses:", error);
+
+    logger.debug("Errore getCourseClasses:", error);
     return [];
   }
 

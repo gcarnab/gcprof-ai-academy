@@ -12,16 +12,14 @@ import LessonRenderer, {
 import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
 import { MarkdownPreview } from "@/features/courses/components/MarkdownPreview";
+import { logger } from "@/lib/logger";
 
 
 export default function LessonPage() {
   const params = useParams();
 
   // 🔴 CHECKPOINT 1: Il componente si sta avviando?
-  console.log(
-    "=== [CHECKPOINT 1] Componente avviato. Params correnti:",
-    params,
-  );
+  logger.error("=== [CHECKPOINT 1] Componente avviato. Params correnti:", params);
 
   const slug = params?.slug as string;
   const moduleId = params?.moduleId as string;
@@ -37,7 +35,7 @@ export default function LessonPage() {
   useEffect(() => {
     async function loadLessonData() {
       // 🔴 CHECKPOINT 2: L'effetto di caricamento parte?
-      console.log("=== [CHECKPOINT 2] Avvio fetch dati per:", {
+      logger.warn("=== [CHECKPOINT 2] Avvio fetch dati per:", {
         slug,
         moduleId,
         lessonId,
@@ -46,7 +44,7 @@ export default function LessonPage() {
       try {
         const liveCourses = await getLiveCourses();
         // 🔴 CHECKPOINT 3: I corsi live sono arrivati?
-        console.log(
+        logger.warn(
           "=== [CHECKPOINT 3] Corsi scaricati dal service. Totale corsi:",
           liveCourses?.length,
         );
@@ -56,26 +54,26 @@ export default function LessonPage() {
         const lesson = module?.lessons?.find((l: any) => l.id === lessonId);
 
         // 🔴 CHECKPOINT 4: Esito della ricerca interna
-        console.log("=== [CHECKPOINT 4] Esito filtri:", {
+        logger.warn("=== [CHECKPOINT 4] Esito filtri:", {
           corsoTrovato: !!course,
           moduloTrovato: !!module,
           lezioneTrovata: !!lesson,
         });
 
         if (course && module && lesson) {
-          console.log(
+          logger.warn(
             "=== [CHECKPOINT 4-OK] Lezione trovata con successo:",
             lesson,
           );
           setData({ course, module, lesson });
         } else {
-          console.warn(
+          logger.warn(
             "=== [CHECKPOINT 4-FAIL] Impossibile trovare la tripletta nei dati!",
           );
           setData(null);
         }
       } catch (err) {
-        console.error("=== [ERRORE GRAVE NEL FETCH]:", err);
+        logger.error("=== [ERRORE GRAVE NEL FETCH]:", err);
       } finally {
         setIsLoading(false);
       }
@@ -84,7 +82,7 @@ export default function LessonPage() {
     if (slug && moduleId && lessonId) {
       loadLessonData();
     } else {
-      console.log("=== [CHECKPOINT PARAMETRI MANCANTI]:", {
+      logger.info("=== [CHECKPOINT PARAMETRI MANCANTI]:", {
         slug,
         moduleId,
         lessonId,
@@ -93,7 +91,7 @@ export default function LessonPage() {
   }, [slug, moduleId, lessonId]);
 
   // 🔴 CHECKPOINT 5: Stato dello switch di rendering
-  console.log("=== [CHECKPOINT 5] Stato render attuale:", {
+  logger.warn("=== [CHECKPOINT 5] Stato render attuale:", {
     isLoading,
     haDati: !!data,
   });
@@ -114,7 +112,7 @@ export default function LessonPage() {
 
   if (!data) {
     // 🔴 CHECKPOINT 6: Deviazione verso il 404
-    console.log(
+    logger.warn(
       "=== [CHECKPOINT 6] Dati assenti. Innesco notFound() di Next.js",
     );
     notFound();
@@ -147,7 +145,7 @@ export default function LessonPage() {
   ];
 
   // 🔴 CHECKPOINT 7: Arrivo al traguardo del rendering del Player
-  console.log(
+  logger.warn(
     "=== [CHECKPOINT 7] Dati pronti per il Player:",
     formattedContents,
   );

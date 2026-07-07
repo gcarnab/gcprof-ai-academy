@@ -6,6 +6,7 @@ import { EmailService } from "@/features/admin/mail/services/EmailService";
 import { MailTemplateService } from "@/features/admin/mail/services/MailTemplateService";
 import { MailTemplateEngine } from "@/features/admin/mail/services/MailTemplateEngine";
 import { createClient } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -63,7 +64,7 @@ export async function registerAction(prevState: any, formData: FormData) {
         return { success: false, error: "Questa email è già registrata." };
       }
     } else {
-      console.log(
+      logger.warn(
         `⚠️ Modalità Test: Bypass controllo unicità per l'email ${email}`,
       );
     }
@@ -206,7 +207,7 @@ async function startEmailDispatches(params: {
       if (!result.success) {
         console.error("❌ Invio email di benvenuto fallito:", result.error);
       } else {
-        console.log("✅ Email di benvenuto inviata:", result.messageId);
+        logger.warn("✅ Email di benvenuto inviata:", result.messageId);
       }
     }
 

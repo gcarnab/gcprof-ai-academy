@@ -3,6 +3,7 @@ import { getAdminUsersList } from "../../users/services/adminService";
 import { getAvailableClassesForCourses } from "../../courses/services/adminCourseService";
 import { getAllCoursesList } from "../../courses/services/adminStructureService";
 import { getCourseClasses } from "@/features/courses/services/courseActions";
+import { logger } from "@/lib/logger";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -20,8 +21,7 @@ export async function getAdminDashboardStats() {
     getCourseClasses(),
   ]);
 
-  //console.log("=== DEBUG courseClasses ===");
-  //console.log(courseClasses);
+  logger.warn("courseClasses", courseClasses);
 
   // 🌐 CONFIGURAZIONE DINAMICA CONFIGURATA DA .ENV
   const statsLimit = parseInt(

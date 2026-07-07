@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { Resend } from "resend";
 
 const apiKey = process.env.RESEND_API_KEY;
@@ -89,7 +90,7 @@ export class ResendEmailService {
     this.validate();
 
     // 🔍 DEBUG SOLO PER MAIL TEST (puoi rimuoverlo in prod)
-    console.log("📨 EMAIL PAYLOAD:", {
+    logger.warn("📨 EMAIL PAYLOAD:", {
       to,
       subject,
       htmlLength: html?.length,
@@ -104,7 +105,7 @@ export class ResendEmailService {
 
     const id = this.assertResult(result);
 
-    console.log("📨 EMAIL SENT SUCCESS:", { id });
+    logger.warn("📨 EMAIL SENT SUCCESS:", { id });
 
     return { success: true, id };
   }

@@ -29,7 +29,7 @@ export default function AdminDashboardPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Informatica");
   const [difficulty, setDifficulty] = useState("Facile");
-  const [teacher, setTeacher] = useState("Prof. G. Carnabuci");
+  const [teacher, setTeacher] = useState(process.env.NEXT_PUBLIC_DEFAULT_TEACHER || "Prof. G. Carnabuci");
   const [estimatedHours, setEstimatedHours] = useState(20);
   const [coverImage, setCoverImage] = useState("📚");
   const [allowedClassesInput, setAllowedClassesInput] = useState("");
@@ -90,7 +90,7 @@ export default function AdminDashboardPage() {
     setDescription("");
     setCategory("Informatica");
     setDifficulty("Facile");
-    setTeacher("Prof. G. Carnabuci");
+    setTeacher(process.env.NEXT_PUBLIC_DEFAULT_TEACHER || "Prof. G. Carnabuci");
     setEstimatedHours(20);
     setCoverImage("📚");
     setAllowedClassesInput("");
