@@ -1,16 +1,15 @@
-/**
- * ============================================================================
- * FILE: page.tsx
- * FEATURE: Home
- * ----------------------------------------------------------------------------
- * Home pubblica alimentata in tempo reale dal Database.
- * ============================================================================
- */
-
 import PublicLayout from "@/shared/layout/PublicLayout";
 import Hero from "@/features/home/components/Hero";
 import CoursePreview from "@/features/home/components/CoursePreview";
-import { getLiveCourses } from "@/features/courses/services/courseActions";
+import type { Metadata } from "next";
+import { siteConfig } from "@/shared/config/site";
+
+export const metadata: Metadata = {
+  title: "Home",
+  description:
+    siteConfig.description,
+};
+
 
 export default function HomePage() {
   // Nota: Essendo un Server Component di Next.js, possiamo chiamare l'azione direttamente qui!

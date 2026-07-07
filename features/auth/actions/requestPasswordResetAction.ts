@@ -88,7 +88,7 @@ export async function requestPasswordResetAction(
 
     // 💡 🌐 GENERAZIONE DINAMICA DELL'URL
     // Legge la variabile d'ambiente ed elimina lo slash finale se presente per evitare URL malformati (es. //auth)
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://gcprof-academy.com").replace(/\/$/, "");
+    const baseUrl = (process.env.NEXT_PUBLIC_LOCAL_URL || "https://gcprof-academy.com").replace(/\/$/, "");
     const resetLink = `${baseUrl}/auth/reset-password?token=${token}`;
 
     // =========================================================

@@ -3,6 +3,13 @@ import path from "path";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 import CreditsClientWrapper from "./CreditsClientWrapper";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Credits",
+  description:
+    "Scopri il progetto GCPROF Academy, le tecnologie utilizzate e i riconoscimenti.",
+};
 
 export const dynamic = "force-dynamic";
 

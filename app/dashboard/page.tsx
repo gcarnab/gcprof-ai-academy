@@ -5,6 +5,17 @@ import { JoseTokenService } from "@/features/auth/infrastructure/JoseTokenServic
 import { getStudentCoursesAction } from "@/features/courses/queries/getStudentCourses";
 import { getLiveCourses } from "@/features/courses/services/courseActions";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Dashboard Studente",
+  description:
+    "Area personale dello studente con corsi iscritti, lezioni e contenuti riservati.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function StudentDashboardPage() {
   const cookieService = new NextCookieService();

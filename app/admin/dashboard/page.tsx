@@ -4,6 +4,18 @@ import Footer from "@/features/home/components/Footer";
 import AdminDashboard from "@/features/admin/dashboard/components/AdminDashboard";
 import { getAdminDashboardStats } from "@/features/admin/stats/services/adminStatsService";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Area Amministrazione",
+  description:
+    "Dashboard amministrativa di GCPROF Academy.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
