@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gcprof-academy.com Showcase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background-color: #111;
+            margin: 0;
+            font-family: 'Urbanist', sans-serif;
+            color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            overflow-x: hidden;
+        }
+        
+        /* Animazioni di base */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide {
+            width: 100%;
+            max-width: 1280px;
+            min-height: 720px;
+            background-color: #0c0c0c;
+            border-radius: 24px;
+            padding: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            margin-bottom: 60px;
+            border: 1px solid #222;
+            overflow: hidden;
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: -15%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(222, 255, 154, 0.05) 0%, transparent 60%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+
+        h1, h2 { color: #f5f5f5; margin: 0; font-weight: 800; letter-spacing: -1px; }
+        h1 span, h2 span { color: #deff9a; }
+        h1 { font-size: 72px; line-height: 1.1; margin-bottom: 20px; }
+        h2 { font-size: 48px; margin-bottom: 40px; }
+        
+        p { color: #94a3b8; font-size: 20px; line-height: 1.6; margin-top: 0; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; width: 100%; }
+        
+        .tile { 
+            background: #161616; 
+            padding: 40px 30px; 
+            border-radius: 20px; 
+            border: 1px solid #333; 
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .tile:hover {
+            transform: translateY(-5px);
+            border-color: #deff9a;
+        }
+        
+        .tile i { 
+            color: #deff9a; 
+            font-size: 36px; 
+            margin-bottom: 20px; 
+            display: inline-block;
+        }
+        
+        .tile h3 { 
+            margin: 0 0 15px 0; 
+            font-size: 24px; 
+            color: #fff; 
+            font-weight: 700;
+        }
+
+        .tile p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+
+        .badge { 
+            background: rgba(222, 255, 154, 0.1); 
+            color: #deff9a; 
+            padding: 8px 16px; 
+            border-radius: 30px; 
+            font-size: 14px; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            display: inline-block; 
+            margin-bottom: 24px; 
+            letter-spacing: 1px;
+            border: 1px solid rgba(222, 255, 154, 0.2);
+        }
+
+        ul.feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        ul.feature-list li {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 15px;
+            color: #cbd5e1;
+            font-size: 18px;
+        }
+
+        ul.feature-list li::before {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            top: 2px;
+            color: #deff9a;
+            font-size: 16px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-3 { grid-template-columns: 1fr; }
+            .grid-2 { grid-template-columns: 1fr; }
+            h1 { font-size: 52px; }
+            .slide { padding: 50px 30px; height: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SLIDE 1: INTRO & VISION -->
+    <div class="slide">
+        <div class="content-wrapper">
+            <span class="badge">Project Showcase</span>
+            <h1>gcprof-academy.com<br><span>L'E-Learning</span> del Futuro</h1>
+            <p style="font-size: 24px; max-width: 800px; margin-top: 20px; color: #cbd5e1;">
+                Ridefinire l'esperienza educativa attraverso un'architettura software ad altissime prestazioni e un'integrazione nativa con ecosistemi avanzati.
+            </p>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: TECH STACK -->
+    <div class="slide">
+        <div class="content-wrapper">
+            <span class="badge">Architettura</span>
+            <h2>Il Nostro <span>Tech Stack</span></h2>
+            <div class="grid-3">
+                <div class="tile">
+                    <i class="fa-solid fa-rocket"></i>
+                    <h3>Next.js 15 & React 19</h3>
+                    <p>Utilizzo intensivo del nuovo App Router, Server Components e Server Actions per spostare il carico computazionale sul server, offrendo una UX fulminea.</p>
+                </div>
+                <div class="tile">
+                    <i class="fa-solid fa-database"></i>
+                    <h3>Supabase & PostgreSQL</h3>
+                    <p>Database relazionale robusto con listener Real-Time, autenticazione sicura e chiamate amministrative protette tramite policy Service-Role.</p>
+                </div>
+                <div class="tile">
+                    <i class="fa-solid fa-palette"></i>
+                    <h3>Tailwind CSS v4</h3>
+                    <p>Styling utility-first combinato a Shadcn UI per interfacce accessibili, ad alto contrasto e con transizioni native perfette tra Light e Dark Mode.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: OBIETTIVI ASIMMETRICI -->
+    <div class="slide">
+        <div class="content-wrapper">
+            <span class="badge">Ecosistema Utenti</span>
+            <h2>Progettazione <span>Asimmetrica</span></h2>
+            <p style="max-width: 800px; margin-bottom: 40px;">Una piattaforma bilanciata per rispondere alle specifiche esigenze operative di docenti e studenti.</p>
+            
+            <div class="grid-2">
+                <div class="tile">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <h3>Amministratori e Docenti</h3>
+                    <ul class="feature-list" style="margin-top: 20px;">
+                        <li>Controllo CRUD completo su corsi, moduli e lezioni.</li>
+                        <li>Sincronizzazione Real-Time per garantire l'integrità assoluta dei dati.</li>
+                        <li>Dashboard protette e immuni ai limiti di tipizzazione rigida.</li>
+                    </ul>
+                </div>
+                <div class="tile">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <h3>Studenti (Reattività)</h3>
+                    <ul class="feature-list" style="margin-top: 20px;">
+                        <li>Ambiente di apprendimento fluido e privo di distrazioni.</li>
+                        <li>Accesso a media in alta definizione con zero latenza.</li>
+                        <li>Protezione rigida dei contenuti tramite classi e coorti.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: FUNZIONALITA' AVANZATE -->
+    <div class="slide">
+        <div class="content-wrapper">
+            <span class="badge">Core Features</span>
+            <h2>Strumenti <span>Avanzati</span></h2>
+            <div class="grid-3">
+                <div class="tile">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <h3>Structure Builder</h3>
+                    <p>Creazione dinamica di moduli e lezioni. Organizzazione fluida con logiche sequenziali immediate direttamente dal pannello Admin.</p>
+                </div>
+                <div class="tile">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <h3>Class Control</h3>
+                    <p>Permessi granulari che consentono di assegnare specifici corsi solo alle coorti e alle classi autorizzate.</p>
+                </div>
+                <div class="tile">
+                    <i class="fa-solid fa-bolt"></i>
+                    <h3>Zero Latenza</h3>
+                    <p>L'uso di <i>useTransition</i> e <i>startTransition</i> mantiene l'interfaccia sempre reattiva durante le operazioni CRUD pesanti sul database.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: APPRENDIMENTO MULTIMEDIALE -->
+    <div class="slide">
+        <div class="content-wrapper">
+            <span class="badge">Integrazioni</span>
+            <h2>Apprendimento <span>Multimediale</span></h2>
+            <div class="grid-2">
+                <div class="tile">
+                    <i class="fa-solid fa-play"></i>
+                    <h3>Player Integrato & Streaming</h3>
+                    <p>Supporto nativo all'incorporamento di lezioni video tramite YouTube, abbinato a un caricamento progressivo delle risorse (Progressive Loading).</p>
+                </div>
+                <div class="tile">
+                    <i class="fa-brands fa-google-drive"></i>
+                    <h3>Google Drive & Colab</h3>
+                    <p>Integrazione diretta tramite iFrame per la visualizzazione inline di PDF, slide e notebook Google Colab per la programmazione interattiva.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

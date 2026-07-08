@@ -12,6 +12,7 @@
 
 # logs
 /logs
+tree.txt
 
 # testing
 /coverage

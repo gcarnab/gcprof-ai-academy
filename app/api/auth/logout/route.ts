@@ -5,11 +5,28 @@
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { JoseTokenService } from "@/features/auth/infrastructure/JoseTokenService";
+import { TrackingService } from "@/features/admin/tracking/services/trackingService";
 
 export async function POST() {
   const cookieStore = await cookies();
-  
-  // Cancella il cookie di sessione impostando la scadenza al passato
+
+  try {
+    const token = cookieStore.get("auth_token")?.value;
+
+    if (token) {
+      const tokenService = new JoseTokenService();
+
+      const payload = await tokenService.verify(token);
+
+      if (payload?.id) {
+        await TrackingService.closeSession(payload.id);
+      }
+    }
+  } catch (error) {
+    console.error("Errore tracking logout:", error);
+  }
+
   cookieStore.set("auth_token", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

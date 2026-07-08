@@ -29,6 +29,8 @@ GCPROF-AI-ACADEMY
 |   |   globals.css
 |   |   layout.tsx
 |   |   page.tsx
+|   |   robots.ts
+|   |   sitemap.ts
 |   |   
 |   +---admin
 |   |   |   layout.tsx
@@ -80,9 +82,11 @@ GCPROF-AI-ACADEMY
 |   |                           
 |   +---credits
 |   |       CreditsClientWrapper.tsx
+|   |       CreditsClientWrapper.tsx_old
 |   |       page.tsx
 |   |       
 |   +---dashboard
+|   |       layout.tsx
 |   |       page.tsx
 |   |       
 |   +---login
@@ -115,8 +119,12 @@ GCPROF-AI-ACADEMY
 |   |   credits.md
 |   |   DB_DUMP.sql
 |   |   HANDOVER_PROMPT.md
+|   |   Python_Practice.md
+|   |   Python_Practice_Full.md
+|   |   Python_Practice_Gem.md
+|   |   Python_Practice_GPT.md
+|   |   Python_Practice_LM.md
 |   |   README-DB.md
-|   |   tree.txt
 |   |   
 |   \---sql
 |           01_mail_center_schema.sql
@@ -135,6 +143,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |       structureActions.ts
 |   |   |   |       
 |   |   |   +---components
+|   |   |   |       ActiveAssociationsList.tsx
 |   |   |   |       AssignCourseClassForm.tsx
 |   |   |   |       CourseContentEditor.tsx
 |   |   |   |       CoursesTab.tsx
@@ -158,6 +167,7 @@ GCPROF-AI-ACADEMY
 |   |   +---mail
 |   |   |   +---actions
 |   |   |   |       mailBulkActions.ts
+|   |   |   |       mailBulkActions.ts_resend
 |   |   |   |       mailSettingsActions.ts
 |   |   |   |       mailTemplateActions.ts
 |   |   |   |       mailTestActions.ts
@@ -291,6 +301,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |   CourseList.tsx
 |   |   |   |   CourseSearch.tsx
 |   |   |   |   CoursesHeader.tsx
+|   |   |   |   MarkdownPreview.tsx
 |   |   |   |   
 |   |   |   \---lesson
 |   |   |           LessonRenderer.tsx
@@ -316,18 +327,28 @@ GCPROF-AI-ACADEMY
 |   |           Hero.tsx
 |   |           Navbar.tsx
 |   |           
-|   \---profile
+|   +---profile
+|   |   +---components
+|   |   |       ProfileForm.tsx
+|   |   |       
+|   |   \---services
+|   |           profileActions.ts
+|   |           
+|   \---theme
 |       +---components
-|       |       ProfileForm.tsx
+|       |       ThemeToggle.tsx
 |       |       
-|       \---services
-|               profileActions.ts
+|       \---context
+|               ThemeContext.tsx
 |               
 +---lib
+|       logger.ts
 |       supabase.ts
 |       utils.ts
 |       
-|               
++---logs
+|       app.log
+|       
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -344,15 +365,16 @@ GCPROF-AI-ACADEMY
 |   |       gcprof-ai-academy_logo_info_04.png
 |   |       
 |   +---docs
-|   |       gcprof-ai-academy-showcase.pdf
-|   |       showcase.txt
+|   |       gcprof-academy-showcase.pdf
 |   |       
 |   \---showcase
-|           index.txt
+|           gcprof-academy-showcase_gemini.pdf
+|           index.html
 |           
 +---shared
 |   +---config
 |   |       navigation.ts
+|   |       site.ts
 |   |       
 |   +---layout
 |   |       PublicLayout.tsx
@@ -380,7 +402,6 @@ GCPROF-AI-ACADEMY
 \---types
         database.types.ts
         
-
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
@@ -575,7 +596,19 @@ GCPROF-AI-ACADEMY
 | `used` | `bool` |  |
 | `created_at` | `timestamp` |  |
 
+## Table `profile_lessons_progress`
 
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `profile_id` | `uuid` | Primary |
+| `lesson_id` | `uuid` | Primary |
+| `course_id` | `uuid` |  Nullable |
+| `is_completed` | `bool` |  |
+| `minutes_watched` | `int4` |  |
+| `last_accessed_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
 
 
 ### PROMPT 
@@ -589,16 +622,19 @@ ULTIMI BUG RISCONTRATI :
 1. app stabile
 
 ULTIMI FEATURES INTRODOTTE :
-- statistiche migliorate
-- funzionalità email migliorata
-- gestione utenti migliorata
-- gestione corsi in miglioramento
+1. feature in fase di sviluppo
 
-OBIETTIVO : verifica le funzionalità della piattaforma attuale https://gcprof.odoo.com/
-che utilizza la piattaforma con piano gratuito e con solo due applicazioni interne
-Sito web, E-learning
-1. individua quali ulteriori features che possiamo introdurre su gcprof-academy.com ordinandole 
-per semplicità di realizzazione e vantaggi raggiungibili
+OBIETTIVO : 
+1. voglio aggiungere alla piattaforma un sistema di tracking accessi completo su DB degli utenti
+- il sistema sarà contenuto nel tab "TRACKING" della admin/dashboard
+2. voglio tracciare per ogni profilo le informazioni più importanti :
+- data ora di login e logout
+- nome, cognome, mail, classe di appartenenza
+- indirizzo IP e location di provenienza
+- sezioni visitate sul sito
+3. voglio creare con i dati ottenuti delle statistiche e grafici ad esempio
+- utente con il tempo di permanenza in piattaforma più alto
+- utenti per location di accesso
 
 VINCOLI: 
 1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
@@ -607,4 +643,6 @@ VINCOLI:
 4. intercetta sempre i punti hardcoded che adrebbero spostati nel file .env come variabili
 5. procediamo per gradi senza distruggere il codice integrando le modifiche passo passo 
 e testando che non stiamo regredendo
-6. non fare troppo refactoring e punta a risolvere il problema mantenendo la logica attuale
+6. ricorda di predisporre i nomi delle classi per la feature già abilitata theme light/dark
+7. usa il logger disponibile nel codice per poterlo utilizzare e risolvere più facilmente i bug
+8. non fare troppo refactoring e punta a risolvere il problema mantenendo la logica attuale

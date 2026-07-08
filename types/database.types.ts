@@ -282,6 +282,148 @@ export type Database = {
         }
         Relationships: []
       }
+      mail_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          provider: string
+          provider_id: string | null
+          recipient: string
+          status: string
+          subject: string
+          template_key: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          provider?: string
+          provider_id?: string | null
+          recipient: string
+          status: string
+          subject: string
+          template_key: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          provider?: string
+          provider_id?: string | null
+          recipient?: string
+          status?: string
+          subject?: string
+          template_key?: string
+        }
+        Relationships: []
+      }
+      mail_settings: {
+        Row: {
+          id: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          id: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          id?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      mail_templates: {
+        Row: {
+          body_text_override: string | null
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          name: string
+          subject: string
+          template_key: string
+          title_override: string | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          body_text_override?: string | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          name: string
+          subject: string
+          template_key: string
+          title_override?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          body_text_override?: string | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          name?: string
+          subject?: string
+          template_key?: string
+          title_override?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_templates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      password_reset_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+          used: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          token: string
+          used?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          used?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "password_reset_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_classes: {
         Row: {
           assigned_at: string
@@ -315,6 +457,105 @@ export type Database = {
           },
         ]
       }
+      profile_courses: {
+        Row: {
+          course_id: string
+          enrolled_at: string
+          profile_id: string
+        }
+        Insert: {
+          course_id: string
+          enrolled_at?: string
+          profile_id: string
+        }
+        Update: {
+          course_id?: string
+          enrolled_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "student_courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "profile_courses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_lessons_progress: {
+        Row: {
+          course_id: string | null
+          is_completed: boolean
+          last_accessed_at: string
+          lesson_id: string
+          minutes_watched: number
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          course_id?: string | null
+          is_completed?: boolean
+          last_accessed_at?: string
+          lesson_id: string
+          minutes_watched?: number
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string | null
+          is_completed?: boolean
+          last_accessed_at?: string
+          lesson_id?: string
+          minutes_watched?: number
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_lessons_progress_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_lessons_progress_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "student_courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "profile_lessons_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_lessons_progress_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -327,6 +568,7 @@ export type Database = {
           password_hash: string | null
           role: string
           status: string
+          total_minutes_active: number
           updated_at: string
         }
         Insert: {
@@ -340,6 +582,7 @@ export type Database = {
           password_hash?: string | null
           role?: string
           status?: string
+          total_minutes_active?: number
           updated_at?: string
         }
         Update: {
@@ -353,9 +596,51 @@ export type Database = {
           password_hash?: string | null
           role?: string
           status?: string
+          total_minutes_active?: number
           updated_at?: string
         }
         Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: string | null
+          login_at: string
+          logout_at: string | null
+          profile_id: string
+          session_duration_seconds: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          login_at?: string
+          logout_at?: string | null
+          profile_id: string
+          session_duration_seconds?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          login_at?: string
+          logout_at?: string | null
+          profile_id?: string
+          session_duration_seconds?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -395,6 +680,10 @@ export type Database = {
       }
     }
     Functions: {
+      increment_profile_minutes: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {

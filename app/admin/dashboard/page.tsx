@@ -8,8 +8,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Area Amministrazione",
-  description:
-    "Dashboard amministrativa di GCPROF Academy.",
+  description: "Dashboard amministrativa di GCPROF Academy.",
   robots: {
     index: false,
     follow: false,
@@ -18,7 +17,17 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboardPage() {
+interface Props {
+  searchParams: Promise<{
+    tab?: string;
+  }>;
+}
+
+export default async function AdminDashboardPage({
+  searchParams,
+}: Props) {
+  const params = await searchParams;
+
   // Recupera tutti i dati necessari con un'unica chiamata
   const stats = await getAdminDashboardStats();
 
@@ -27,7 +36,9 @@ export default async function AdminDashboardPage() {
       <Navbar />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10">
-        <AdminDashboard stats={stats} />
+        <AdminDashboard
+          stats={stats}
+        />
       </main>
 
       <Footer />

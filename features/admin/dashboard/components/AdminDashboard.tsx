@@ -1,7 +1,6 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-
 import CoursesTab from "../../courses/components/CoursesTab";
 import UsersTab from "../../users/components/UsersTab";
 import MailTab from "../../mail/components/MailTab";
@@ -28,22 +27,24 @@ const tabs = [
     id: "stats",
     label: "📊 Stats",
   },
+  {
+    id: "tracking",
+    label: "🛰 Tracking",
+  },
 ];
 
 export default function AdminDashboard({ stats }: Props) {
+  const availableClassesNames = (stats.raw.classes || []).map(
+    (c: any) => c.name,
+  );
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const currentTab = searchParams.get("tab") ?? "courses";
 
-  const availableClassesNames = (stats.raw.classes || []).map(
-    (c: any) => c.name,
-  );
-
   function changeTab(tab: string) {
     router.push(`/admin/dashboard?tab=${tab}`);
   }
-
   return (
     <>
       {/* HEADER */}
@@ -65,9 +66,7 @@ export default function AdminDashboard({ stats }: Props) {
             <button
               key={tab.id}
               onClick={() => changeTab(tab.id)}
-              className={`px-6 py-4 text-sm font-medium transition-colors
-
-              ${
+              className={`px-6 py-4 text-sm font-medium transition-colors ${
                 currentTab === tab.id
                   ? "border-b-2 border-blue-600 text-blue-600"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -79,12 +78,10 @@ export default function AdminDashboard({ stats }: Props) {
         </div>
 
         <div className="p-6">
-          {/* ================= COURSES ================= */}
-
+          {/* COURSES */}
           {currentTab === "courses" && <CoursesTab stats={stats} />}
 
-          {/* ================= USERS ================= */}
-
+          {/* USERS */}
           {currentTab === "users" && (
             <UsersTab
               users={stats.raw.users}
@@ -92,14 +89,24 @@ export default function AdminDashboard({ stats }: Props) {
             />
           )}
 
-          {/* ================= MAIL ================= */}
+          {/* MAIL */}
           {currentTab === "mail" && (
             <MailTab availableClasses={availableClassesNames} />
           )}
 
-          {/* ================= STATS ================= */}
-
+          {/* STATS */}
           {currentTab === "stats" && <StatsTab stats={stats} />}
+
+          {/* TRACKING */}
+          {currentTab === "tracking" && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold">🛰 Tracking Accessi</h2>
+
+              <p className="text-muted-foreground">
+                Sezione tracking in sviluppo.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </>
