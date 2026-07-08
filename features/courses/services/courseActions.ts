@@ -457,11 +457,11 @@ export async function getCourseClasses() {
     .from("course_classes")
     .select("course_id, class_id");
 
-  logger.debug("=== COURSE_CLASSES ADMIN ===", data);
+  //logger.debug("=== COURSE_CLASSES ADMIN ===", data);
 
   if (error) {
 
-    logger.debug("Errore getCourseClasses:", error);
+    logger.error("Errore getCourseClasses:", error);
     return [];
   }
 

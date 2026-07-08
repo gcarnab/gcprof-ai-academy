@@ -55,19 +55,15 @@ export default function CreateCourseForm({ classes }: { classes: any[] }) {
 
     startTransition(async () => {
       try {
-        // 🚀 LOGICA DI SLUGIFY SANIFICATA E OTTIMIZZATA
         const slug = title
           .toLowerCase()
           .trim()
-          .replace(/[^a-z0-9\s-]/g, "") // 1. Rimuove caratteri speciali distruttivi (es. !, ?, @)
-          .replace(/[\s_]+/g, "-")      // 2. Converte spazi multipli o underscore in un singolo trattino
-          .replace(/-+/g, "-")          // 3. Evita trattini doppi o consecutivi
-          .replace(/^-+|-+$/g, "");     // 4. CHIAVE: Taglia via i trattini pendenti a inizio o fine stringa
+          .replace(/[^a-z0-9]+/g, "-");
 
         const numericId = courseId ? Number(courseId) : undefined;
 
         await upsertCourse({
-          id: numericId, 
+          id: numericId, // 👈 Ora è un number | undefined, coerente con lo schema del DB
           title: title.trim(),
           slug,
           category,
@@ -178,6 +174,24 @@ export default function CreateCourseForm({ classes }: { classes: any[] }) {
         </div>
       </form>
 
+      {/* Elenco Corsi per attivare la Modifica 
+      <div className="border-t pt-4">
+        <label className="block font-medium text-muted-foreground mb-2 text-sm">Seleziona un corso da modificare:</label>
+        <div className="border rounded-lg divide-y bg-muted max-h-40 overflow-y-auto">
+          {coursesList.map((c) => (
+            <div key={c.id} className="p-2 flex justify-between items-center bg-background text-xs text-muted-foreground">
+              <span className="font-medium truncate max-w-[250px]">{c.title} <span className="text-muted-foreground">({c.category})</span></span>
+              <button
+                onClick={() => handleEditSelect(c)}
+                className="text-blue-600 hover:underline font-semibold"
+              >
+                ✏️ Modifica
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+*/}
       {/* Elenco Corsi per attivare la Modifica o l'Eliminazione */}
       <div className="border-t pt-4">
         <label className="block font-medium text-muted-foreground mb-2 text-sm">

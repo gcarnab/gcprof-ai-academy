@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/features/auth/context/AuthContext";
 import { siteConfig } from "@/shared/config/site";
 import { ThemeProvider } from "@/features/theme/context/ThemeContext";
+import { PageTracker } from "@/features/admin/tracking/components/PageTracker";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -105,6 +106,8 @@ export default function RootLayout({
   return (
     <html lang="it" className={cn("font-sans", geist.variable)}>
       <body className="antialiased">
+        {/* Componente di ascolto globale dei cambi pagina */}
+        <PageTracker />
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>

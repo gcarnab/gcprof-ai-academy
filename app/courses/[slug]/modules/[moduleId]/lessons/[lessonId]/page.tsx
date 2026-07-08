@@ -19,7 +19,7 @@ export default function LessonPage() {
   const params = useParams();
 
   // 🔴 CHECKPOINT 1: Il componente si sta avviando?
-  logger.error("=== [CHECKPOINT 1] Componente avviato. Params correnti:", params);
+  logger.info("=== [CHECKPOINT 1] Componente avviato. Params correnti:", params);
 
   const slug = params?.slug as string;
   const moduleId = params?.moduleId as string;

@@ -99,6 +99,44 @@ export class TrackingService {
   }
 
   /**
+   * Registra la visualizzazione di una pagina (Clickstream Deep Analytics)
+   */
+  static async trackPageView(profileId: string, path: string) {
+    try {
+      const supabase = getSupabaseAdmin();
+
+      // Estrazione intelligente dei segmenti dall'URL (es: /courses/react-101/lessons/components)
+      const segments = path.split("/").filter(Boolean);
+      let course_slug: string | null = null;
+      let lesson_slug: string | null = null;
+
+      if (segments[0] === "courses" && segments[1]) {
+        course_slug = segments[1];
+        if (segments[2] === "lessons" && segments[3]) {
+          lesson_slug = segments[3];
+        }
+      }
+
+      const { error } = await supabase.from("user_page_views").insert({
+        profile_id: profileId,
+        path,
+        course_slug,
+        lesson_slug,
+        viewed_at: new Date().toISOString()
+      });
+
+      if (error) {
+        Logger.error(`TrackingService.trackPageView DB error: ${error.message}`);
+        return;
+      }
+
+      Logger.info(`Page view tracciata per ${profileId}: ${path}`);
+    } catch (error) {
+      Logger.error(`TrackingService.trackPageView exception: ${String(error)}`);
+    }
+  }
+
+  /**
    * Recupera le ultime sessioni per il pannello admin.
    */
   static async getSessions() {

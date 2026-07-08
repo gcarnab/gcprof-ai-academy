@@ -115,9 +115,7 @@ GCPROF-AI-ACADEMY
 |           textarea.tsx
 |           
 +---docs
-|   |   AUTH_ARCHITECTURE.md
 |   |   credits.md
-|   |   DB_DUMP.sql
 |   |   HANDOVER_PROMPT.md
 |   |   Python_Practice.md
 |   |   Python_Practice_Full.md
@@ -126,12 +124,10 @@ GCPROF-AI-ACADEMY
 |   |   Python_Practice_LM.md
 |   |   README-DB.md
 |   |   
-|   \---sql
-|           01_mail_center_schema.sql
-|           02_seed_mail_settings.sql
-|           03_seed_mail_templates.sql
-|           schema_01.sql
-|           schema_02.sql
+|   \---supabase
+|           data.sql
+|           roles.sql
+|           schema.sql
 |           
 +---features
 |   +---admin
@@ -162,7 +158,6 @@ GCPROF-AI-ACADEMY
 |   |   |   \---components
 |   |   |           AdminDashboard.tsx
 |   |   |           AdminHeader.tsx
-|   |   |           AdminTabs.tsx
 |   |   |           
 |   |   +---mail
 |   |   |   +---actions
@@ -213,6 +208,18 @@ GCPROF-AI-ACADEMY
 |   |   |   |           
 |   |   |   \---services
 |   |   |           adminStatsService.ts
+|   |   |           
+|   |   +---tracking
+|   |   |   +---components
+|   |   |   |       TrackingDashboard.tsx
+|   |   |   |       TrackingTab.tsx
+|   |   |   |       
+|   |   |   +---infrastructure
+|   |   |   |       TrackingRepository.ts
+|   |   |   |       
+|   |   |   \---services
+|   |   |           trackingQueries.ts
+|   |   |           trackingService.ts
 |   |   |           
 |   |   \---users
 |   |       +---actions
@@ -401,6 +408,7 @@ GCPROF-AI-ACADEMY
 |           
 \---types
         database.types.ts
+        
         
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
@@ -610,6 +618,21 @@ GCPROF-AI-ACADEMY
 | `last_accessed_at` | `timestamptz` |  |
 | `updated_at` | `timestamptz` |  |
 
+## Table `user_sessions`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `profile_id` | `uuid` |  |
+| `login_at` | `timestamptz` |  |
+| `logout_at` | `timestamptz` |  Nullable |
+| `session_duration_seconds` | `int4` |  Nullable |
+| `ip_address` | `text` |  Nullable |
+| `user_agent` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  |
+
 
 ### PROMPT 
 
@@ -622,19 +645,10 @@ ULTIMI BUG RISCONTRATI :
 1. app stabile
 
 ULTIMI FEATURES INTRODOTTE :
-1. feature in fase di sviluppo
+1. feature in fase di sviluppo ma stabile
 
 OBIETTIVO : 
-1. voglio aggiungere alla piattaforma un sistema di tracking accessi completo su DB degli utenti
-- il sistema sarà contenuto nel tab "TRACKING" della admin/dashboard
-2. voglio tracciare per ogni profilo le informazioni più importanti :
-- data ora di login e logout
-- nome, cognome, mail, classe di appartenenza
-- indirizzo IP e location di provenienza
-- sezioni visitate sul sito
-3. voglio creare con i dati ottenuti delle statistiche e grafici ad esempio
-- utente con il tempo di permanenza in piattaforma più alto
-- utenti per location di accesso
+1. migliorare il sistema di tracking accessi degli utenti completo su DB
 
 VINCOLI: 
 1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
