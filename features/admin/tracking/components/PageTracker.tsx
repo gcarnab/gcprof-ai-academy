@@ -1,55 +1,100 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 
-// Client Supabase Client-Side (Anon Key)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { logger } from "@/lib/logger";
+import { useAuth } from "@/features/auth/context/AuthContext";
+
+import { trackPageViewAction } from "../actions/trackPageViewAction";
 
 export function PageTracker() {
   const pathname = usePathname();
+  const { user, isLoading } = useAuth();
+
+  const lastTracked = useRef<{
+    path: string;
+    timestamp: number;
+  } | null>(null);
 
   useEffect(() => {
-    const recordPageView = async () => {
+    logger.info("[PageTracker] mounted");
+  }, []);
+
+  useEffect(() => {
+    async function recordPageView() {
       try {
-        // 1. Recuperiamo la sessione dell'utente corrente
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return; // Non tracciamo gli utenti anonimi o non loggati
+        logger.info(`[PageTracker] pathname=${pathname}`);
 
-        const profileId = session.user.id;
-        
-        // 2. Estraiamo in modo intelligente i segmenti dall'URL
-        const segments = pathname.split("/").filter(Boolean);
-        let course_slug: string | null = null;
-        let lesson_slug: string | null = null;
-
-        if (segments[0] === "courses" && segments[1]) {
-          course_slug = segments[1];
-          if (segments[2] === "lessons" && segments[3]) {
-            lesson_slug = segments[3];
-          }
+        if (isLoading) {
+          logger.info("[PageTracker] attendo caricamento sessione...");
+          return;
         }
 
-        // 3. Salviamo direttamente su DB (rispetta la policy RLS creata in precedenza)
-        await supabase.from("user_page_views").insert({
-          profile_id: profileId,
-          path: pathname,
-          course_slug,
-          lesson_slug,
-          viewed_at: new Date().toISOString()
-        });
+        if (!user) {
+          logger.warn("[PageTracker] nessun utente autenticato.");
+          return;
+        }
 
-      } catch (err) {
-        console.error("Errore durante il salvataggio della page view:", err);
+        if (!pathname) {
+          return;
+        }
+
+        const now = Date.now();
+
+        // Evita doppie registrazioni della stessa pagina
+        if (
+          lastTracked.current &&
+          lastTracked.current.path === pathname &&
+          now - lastTracked.current.timestamp < 2000
+        ) {
+          logger.info("[PageTracker] duplicate page ignored.");
+          return;
+        }
+
+        lastTracked.current = {
+          path: pathname,
+          timestamp: now,
+        };
+
+        // L'ID dell'utente proviene dall'AuthContext
+        const profileId = user.id;
+
+        // Parsing intelligente dell'URL (solo a scopo di log)
+        const segments = pathname.split("/").filter(Boolean);
+
+        let courseSlug: string | null = null;
+        let lessonSlug: string | null = null;
+
+        const courseIndex = segments.indexOf("courses");
+        if (courseIndex !== -1) {
+          courseSlug = segments[courseIndex + 1] ?? null;
+        }
+
+        const lessonIndex = segments.indexOf("lessons");
+        if (lessonIndex !== -1) {
+          lessonSlug = segments[lessonIndex + 1] ?? null;
+        }
+
+        logger.info(
+          `[PageTracker] user=${user.email} role=${user.role} profileId=${profileId}`,
+        );
+
+        logger.info(
+          `[PageTracker] path=${pathname} course=${courseSlug ?? "-"} lesson=${lessonSlug ?? "-"}`,
+        );
+
+        // Tutto il salvataggio avviene lato server
+        await trackPageViewAction(profileId, pathname);
+
+        logger.info("[PageTracker] page view inviata al server.");
+      } catch (error) {
+        logger.error(`[PageTracker] exception: ${String(error)}`);
       }
-    };
+    }
 
     recordPageView();
-  }, [pathname]); // Si riattiva automaticamente ogni volta che l'utente cambia rotta/pagina
+  }, [pathname, user, isLoading]);
 
-  return null; // È un componente invisibile (provider di eventi)
+  return null;
 }

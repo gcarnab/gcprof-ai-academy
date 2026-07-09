@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { Logger } from "@/features/auth/infrastructure/Logger";
+import { logger } from "@/lib/logger";
 
 export class TrackingService {
   /**
@@ -15,11 +15,57 @@ export class TrackingService {
       const forwardedFor = headerStore.get("x-forwarded-for");
       const realIp = headerStore.get("x-real-ip");
 
+      const UNKNOWN_VALUE = process.env.TRACKING_UNKNOWN_VALUE ?? "unknown";
+
       const ipAddress =
-        forwardedFor?.split(",")[0]?.trim() ?? realIp ?? "unknown";
+        forwardedFor?.split(",")[0]?.trim() ?? realIp ?? UNKNOWN_VALUE;
 
-      const userAgent = headerStore.get("user-agent") ?? "unknown";
+      const userAgent = headerStore.get("user-agent") ?? UNKNOWN_VALUE;
 
+      const { data: openSessions, error: findError } = await supabase
+        .from("user_sessions")
+        .select("id, login_at")
+        .eq("profile_id", profileId)
+        .is("logout_at", null);
+
+      if (findError) {
+        logger.error(
+          `TrackingService.createSession find error: ${findError.message}`,
+        );
+
+        return;
+      }
+      if (openSessions && openSessions.length > 0) {
+        const now = new Date();
+
+        for (const session of openSessions) {
+          const loginAt = new Date(session.login_at);
+
+          const durationSeconds = Math.floor(
+            (now.getTime() - loginAt.getTime()) / 1000,
+          );
+
+          const { error: updateError } = await supabase
+            .from("user_sessions")
+            .update({
+              logout_at: now.toISOString(),
+              session_duration_seconds: durationSeconds,
+            })
+            .eq("id", session.id);
+
+          if (updateError) {
+            logger.error(
+              `TrackingService.createSession close previous session error: ${updateError.message}`,
+            );
+
+            continue;
+          }
+
+          logger.warn(
+            `TrackingService.createSession chiusa sessione precedente ${session.id} per utente ${profileId}`,
+          );
+        }
+      }
       const { error } = await supabase.from("user_sessions").insert({
         profile_id: profileId,
         login_at: new Date().toISOString(),
@@ -28,15 +74,15 @@ export class TrackingService {
       });
 
       if (error) {
-        Logger.error(
+        logger.error(
           `TrackingService.createSession DB error: ${error.message}`,
         );
         return;
       }
 
-      Logger.info(`Tracking session creata per utente ${profileId}`);
+      logger.info(`Tracking session creata per utente ${profileId}`);
     } catch (error) {
-      Logger.error(`TrackingService.createSession exception: ${String(error)}`);
+      logger.error(`TrackingService.createSession exception: ${String(error)}`);
     }
   }
 
@@ -54,17 +100,16 @@ export class TrackingService {
         .is("logout_at", null)
         .order("login_at", { ascending: false })
         .limit(1)
-        .maybeSingle();
-
+        .single();
       if (findError) {
-        Logger.error(
+        logger.error(
           `TrackingService.closeSession find error: ${findError.message}`,
         );
         return;
       }
 
       if (!session) {
-        Logger.warn(`Nessuna sessione aperta trovata per utente ${profileId}`);
+        logger.warn(`Nessuna sessione aperta trovata per utente ${profileId}`);
         return;
       }
 
@@ -84,17 +129,17 @@ export class TrackingService {
         .eq("id", session.id);
 
       if (updateError) {
-        Logger.error(
+        logger.error(
           `TrackingService.closeSession update error: ${updateError.message}`,
         );
         return;
       }
 
-      Logger.info(
+      logger.info(
         `Tracking session chiusa per utente ${profileId}. Durata: ${durationSeconds}s`,
       );
     } catch (error) {
-      Logger.error(`TrackingService.closeSession exception: ${String(error)}`);
+      logger.error(`TrackingService.closeSession exception: ${String(error)}`);
     }
   }
 
@@ -110,11 +155,16 @@ export class TrackingService {
       let course_slug: string | null = null;
       let lesson_slug: string | null = null;
 
-      if (segments[0] === "courses" && segments[1]) {
-        course_slug = segments[1];
-        if (segments[2] === "lessons" && segments[3]) {
-          lesson_slug = segments[3];
-        }
+      const courseIndex = segments.indexOf("courses");
+
+      if (courseIndex !== -1) {
+        course_slug = segments[courseIndex + 1] ?? null;
+      }
+
+      const lessonIndex = segments.indexOf("lessons");
+
+      if (lessonIndex !== -1) {
+        lesson_slug = segments[lessonIndex + 1] ?? null;
       }
 
       const { error } = await supabase.from("user_page_views").insert({
@@ -122,17 +172,19 @@ export class TrackingService {
         path,
         course_slug,
         lesson_slug,
-        viewed_at: new Date().toISOString()
+        viewed_at: new Date().toISOString(),
       });
 
       if (error) {
-        Logger.error(`TrackingService.trackPageView DB error: ${error.message}`);
+        logger.error(
+          `TrackingService.trackPageView DB error: ${error.message}`,
+        );
         return;
       }
 
-      Logger.info(`Page view tracciata per ${profileId}: ${path}`);
+      logger.info(`Page view tracciata per ${profileId}: ${path}`);
     } catch (error) {
-      Logger.error(`TrackingService.trackPageView exception: ${String(error)}`);
+      logger.error(`TrackingService.trackPageView exception: ${String(error)}`);
     }
   }
 
@@ -142,6 +194,10 @@ export class TrackingService {
   static async getSessions() {
     try {
       const supabase = getSupabaseAdmin();
+
+      const SESSIONS_LIMIT = Number(
+        process.env.TRACKING_ADMIN_SESSIONS_LIMIT ?? 100,
+      );
 
       const { data, error } = await supabase
         .from("user_sessions")
@@ -162,17 +218,17 @@ export class TrackingService {
         .order("login_at", {
           ascending: false,
         })
-        .limit(100);
+        .limit(SESSIONS_LIMIT);
 
       if (error) {
-        Logger.error(`TrackingService.getSessions error: ${error.message}`);
+        logger.error(`TrackingService.getSessions error: ${error.message}`);
 
         return [];
       }
 
       return data ?? [];
     } catch (error) {
-      Logger.error(`TrackingService.getSessions exception: ${String(error)}`);
+      logger.error(`TrackingService.getSessions exception: ${String(error)}`);
 
       return [];
     }

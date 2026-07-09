@@ -1,7 +1,8 @@
-import { supabaseServer } from "./supabaseClient";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { IUserRepository } from "../ports/IUserRepository";
 import { StudentUser } from "../domain/user";
 import { randomUUID } from "crypto";
+
 
 interface SupabaseProfileRow {
   id: string;
@@ -10,9 +11,9 @@ interface SupabaseProfileRow {
   role: "admin" | "student";
   display_name: string;
   status: "pending" | "active" | "blocked";
-  first_name: string | null;   // 🎯 NUOVO
-  last_name: string | null;    // 🎯 NUOVO
-  avatar_url: string | null;   // 🎯 NUOVO
+  first_name: string | null; // 🎯 NUOVO
+  last_name: string | null; // 🎯 NUOVO
+  avatar_url: string | null; // 🎯 NUOVO
   created_at: string;
   updated_at: string;
 }
@@ -21,11 +22,15 @@ export class SupabaseUserRepository implements IUserRepository {
   private readonly TABLE_NAME = "profiles";
 
   private async getUserClasses(userId: string): Promise<string[]> {
-    const { data, error } = await supabaseServer
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
       .from("profile_classes")
-      .select(`
+      .select(
+        `
         academy_classes ( name )
-      `)
+      `,
+      )
       .eq("profile_id", userId);
 
     if (error) {
@@ -42,9 +47,11 @@ export class SupabaseUserRepository implements IUserRepository {
   }
 
   async findByEmail(email: string): Promise<StudentUser | null> {
+    const supabase = getSupabaseAdmin();
+
     const cleanedEmail = email.toLowerCase().trim();
 
-    const { data, error } = await supabaseServer
+    const { data, error } = await supabase
       .from(this.TABLE_NAME)
       .select("*")
       .eq("email", cleanedEmail)
@@ -62,7 +69,9 @@ export class SupabaseUserRepository implements IUserRepository {
   }
 
   async findById(id: string): Promise<StudentUser | null> {
-    const { data, error } = await supabaseServer
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
       .from(this.TABLE_NAME)
       .select("*")
       .eq("id", id)
@@ -94,7 +103,9 @@ export class SupabaseUserRepository implements IUserRepository {
       avatar_url: user.avatarUrl || null,
     };
 
-    const { data, error } = await supabaseServer
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
       .from(this.TABLE_NAME)
       .insert([dbPayload])
       .select("*")
@@ -129,7 +140,7 @@ export class SupabaseUserRepository implements IUserRepository {
     if (user.displayName !== undefined)
       dbPayload.display_name = user.displayName;
     if (anyUser.status !== undefined) dbPayload.status = anyUser.status;
-    
+
     // Mappatura nuovi campi profilo
     if (user.firstName !== undefined) dbPayload.first_name = user.firstName;
     if (user.lastName !== undefined) dbPayload.last_name = user.lastName;
@@ -137,7 +148,9 @@ export class SupabaseUserRepository implements IUserRepository {
 
     dbPayload.updated_at = new Date().toISOString();
 
-    const { error } = await supabaseServer
+    const supabase = getSupabaseAdmin();
+
+    const { error } = await supabase
       .from(this.TABLE_NAME)
       .update(dbPayload)
       .eq("id", id);
@@ -153,7 +166,8 @@ export class SupabaseUserRepository implements IUserRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    const { error } = await supabaseServer
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase
       .from(this.TABLE_NAME)
       .delete()
       .eq("id", id);
@@ -162,7 +176,8 @@ export class SupabaseUserRepository implements IUserRepository {
   }
 
   async list(): Promise<StudentUser[]> {
-    const { data, error } = await supabaseServer
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
       .from(this.TABLE_NAME)
       .select("*")
       .order("created_at", { ascending: false });
@@ -189,9 +204,9 @@ export class SupabaseUserRepository implements IUserRepository {
       role: row.role,
       displayName: row.display_name,
       status: row.status,
-      firstName: row.first_name || undefined,   // 🎯 Mappatura in camelCase
-      lastName: row.last_name || undefined,     // 🎯 Mappatura in camelCase
-      avatarUrl: row.avatar_url || undefined,   // 🎯 Mappatura in camelCase
+      firstName: row.first_name || undefined, // 🎯 Mappatura in camelCase
+      lastName: row.last_name || undefined, // 🎯 Mappatura in camelCase
+      avatarUrl: row.avatar_url || undefined, // 🎯 Mappatura in camelCase
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString(),
     };

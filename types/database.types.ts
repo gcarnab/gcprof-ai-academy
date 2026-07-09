@@ -601,6 +601,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_page_views: {
+        Row: {
+          course_slug: string | null
+          id: string
+          lesson_slug: string | null
+          path: string
+          profile_id: string | null
+          viewed_at: string
+        }
+        Insert: {
+          course_slug?: string | null
+          id?: string
+          lesson_slug?: string | null
+          path: string
+          profile_id?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          course_slug?: string | null
+          id?: string
+          lesson_slug?: string | null
+          path?: string
+          profile_id?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_page_views_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_sessions: {
         Row: {
           created_at: string

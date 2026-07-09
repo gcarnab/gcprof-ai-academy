@@ -145,6 +145,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |       CoursesTab.tsx
 |   |   |   |       CreateClassForm.tsx
 |   |   |   |       CreateCourseForm.tsx
+|   |   |   |       CreateCourseForm.tsx_old
 |   |   |   |       ManageCategoriesForm.tsx
 |   |   |   |       
 |   |   |   \---services
@@ -196,6 +197,7 @@ GCPROF-AI-ACADEMY
 |   |   +---stats
 |   |   |   +---components
 |   |   |   |   |   AdminStatsDashboard.tsx
+|   |   |   |   |   AdminStatsDashboard.tsx_old
 |   |   |   |   |   StatsTab.tsx
 |   |   |   |   |   
 |   |   |   |   \---charts
@@ -208,14 +210,13 @@ GCPROF-AI-ACADEMY
 |   |   |   |           
 |   |   |   \---services
 |   |   |           adminStatsService.ts
+|   |   |           adminStatsService.ts_old
 |   |   |           
 |   |   +---tracking
 |   |   |   +---components
+|   |   |   |       PageTracker.tsx
 |   |   |   |       TrackingDashboard.tsx
 |   |   |   |       TrackingTab.tsx
-|   |   |   |       
-|   |   |   +---infrastructure
-|   |   |   |       TrackingRepository.ts
 |   |   |   |       
 |   |   |   \---services
 |   |   |           trackingQueries.ts
@@ -356,6 +357,7 @@ GCPROF-AI-ACADEMY
 +---logs
 |       app.log
 |       
+|           
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -408,7 +410,6 @@ GCPROF-AI-ACADEMY
 |           
 \---types
         database.types.ts
-        
         
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
@@ -633,6 +634,21 @@ GCPROF-AI-ACADEMY
 | `user_agent` | `text` |  Nullable |
 | `created_at` | `timestamptz` |  |
 
+## Table `user_page_views`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `profile_id` | `uuid` |  Nullable |
+| `path` | `text` |  |
+| `course_slug` | `text` |  Nullable |
+| `lesson_slug` | `text` |  Nullable |
+| `viewed_at` | `timestamptz` |  |
+
+
+
 
 ### PROMPT 
 
@@ -649,6 +665,7 @@ ULTIMI FEATURES INTRODOTTE :
 
 OBIETTIVO : 
 1. migliorare il sistema di tracking accessi degli utenti completo su DB
+2. debugging dei grafici nella sezione STATS legati al sistema di tracking
 
 VINCOLI: 
 1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
@@ -658,5 +675,5 @@ VINCOLI:
 5. procediamo per gradi senza distruggere il codice integrando le modifiche passo passo 
 e testando che non stiamo regredendo
 6. ricorda di predisporre i nomi delle classi per la feature già abilitata theme light/dark
-7. usa il logger disponibile nel codice per poterlo utilizzare e risolvere più facilmente i bug
+7. usa sempre il logger disponibile nel codice che scrivi 
 8. non fare troppo refactoring e punta a risolvere il problema mantenendo la logica attuale

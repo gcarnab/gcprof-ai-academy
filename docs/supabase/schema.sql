@@ -394,6 +394,19 @@ CREATE OR REPLACE VIEW "public"."student_courses" WITH ("security_invoker"='true
 ALTER VIEW "public"."student_courses" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."user_page_views" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "profile_id" "uuid",
+    "path" "text" NOT NULL,
+    "course_slug" "text",
+    "lesson_slug" "text",
+    "viewed_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
+);
+
+
+ALTER TABLE "public"."user_page_views" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."user_sessions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "profile_id" "uuid" NOT NULL,
@@ -519,6 +532,11 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."user_page_views"
+    ADD CONSTRAINT "user_page_views_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."user_sessions"
     ADD CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("id");
 
@@ -537,6 +555,18 @@ CREATE INDEX "idx_mail_logs_template" ON "public"."mail_logs" USING "btree" ("te
 
 
 CREATE INDEX "idx_mail_templates_key" ON "public"."mail_templates" USING "btree" ("template_key");
+
+
+
+CREATE INDEX "idx_page_views_course_slug" ON "public"."user_page_views" USING "btree" ("course_slug") WHERE ("course_slug" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_page_views_profile_id" ON "public"."user_page_views" USING "btree" ("profile_id");
+
+
+
+CREATE INDEX "idx_page_views_viewed_at" ON "public"."user_page_views" USING "btree" ("viewed_at");
 
 
 
@@ -649,6 +679,11 @@ ALTER TABLE ONLY "public"."profile_lessons_progress"
 
 
 
+ALTER TABLE ONLY "public"."user_page_views"
+    ADD CONSTRAINT "user_page_views_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."user_sessions"
     ADD CONSTRAINT "user_sessions_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -693,6 +728,16 @@ CREATE POLICY "Assegnazioni leggibili da autenticati" ON "public"."course_classe
 
 
 CREATE POLICY "Corsi leggibili da autenticati" ON "public"."courses" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Gli Admin possono leggere tutte le metriche" ON "public"."user_page_views" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."profiles"
+  WHERE (("profiles"."id" = "auth"."uid"()) AND (("profiles"."role")::"text" = 'admin'::"text")))));
+
+
+
+CREATE POLICY "Gli utenti iscritti possono tracciare le proprie visite" ON "public"."user_page_views" FOR INSERT WITH CHECK (("auth"."uid"() = "profile_id"));
 
 
 
@@ -747,6 +792,9 @@ ALTER TABLE "public"."profile_lessons_progress" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."user_page_views" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."user_sessions" ENABLE ROW LEVEL SECURITY;
@@ -1061,6 +1109,12 @@ GRANT ALL ON TABLE "public"."profiles" TO "service_role";
 GRANT ALL ON TABLE "public"."student_courses" TO "anon";
 GRANT ALL ON TABLE "public"."student_courses" TO "authenticated";
 GRANT ALL ON TABLE "public"."student_courses" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."user_page_views" TO "anon";
+GRANT ALL ON TABLE "public"."user_page_views" TO "authenticated";
+GRANT ALL ON TABLE "public"."user_page_views" TO "service_role";
 
 
 

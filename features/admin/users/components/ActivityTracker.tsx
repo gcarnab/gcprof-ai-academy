@@ -21,14 +21,17 @@ export default function ActivityTracker({ courseId, lessonId }: ActivityTrackerP
     );
 
     if (!user) {
-      logger.error("❌ Tracker stop: Nessun utente loggato");
+      //logger.error("❌ Tracker stop: Nessun utente loggato");
+      logger.debug("ActivityTracker: utente non ancora disponibile.");
       return;
     }
-
+    
+    {/*
     if (user.role !== "student") {
       logger.warn("❌ Tracker stop: L'utente non è uno 'student'. Ruolo:", user.role);
       return;
     }
+    */}
 
     logger.warn("🟩 Tracker ATTIVO. Monitoraggio focus ogni 60 secondi...");
 

@@ -106,10 +106,11 @@ export default function RootLayout({
   return (
     <html lang="it" className={cn("font-sans", geist.variable)}>
       <body className="antialiased">
-        {/* Componente di ascolto globale dei cambi pagina */}
-        <PageTracker />
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <PageTracker />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

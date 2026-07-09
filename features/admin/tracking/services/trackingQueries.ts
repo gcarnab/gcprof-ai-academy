@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { Logger } from "@/features/auth/infrastructure/Logger";
+import { logger } from "@/lib/logger";
 
 export async function getTrackingStats() {
   const supabase = getSupabaseAdmin();
@@ -38,12 +38,12 @@ export async function getTrackingStats() {
     ]);
 
     if (sessionsResponse.error) {
-      Logger.error(`[TRACKING QUERY ERROR] Sessions fetch: ${sessionsResponse.error.message}`);
+      logger.error(`[TRACKING QUERY ERROR] Sessions fetch: ${sessionsResponse.error.message}`);
       return getEmptyStats();
     }
 
     if (statsResponse.error) {
-      Logger.error(`[TRACKING QUERY ERROR] Stats fetch: ${statsResponse.error.message}`);
+      logger.error(`[TRACKING QUERY ERROR] Stats fetch: ${statsResponse.error.message}`);
       return getEmptyStats();
     }
 
@@ -72,7 +72,7 @@ export async function getTrackingStats() {
       sessions,
     };
   } catch (error) {
-    Logger.error(`[TRACKING QUERY EXCEPTION]: ${String(error)}`);
+    logger.error(`[TRACKING QUERY EXCEPTION]: ${String(error)}`);
     return getEmptyStats();
   }
 }

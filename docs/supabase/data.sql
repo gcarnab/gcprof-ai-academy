@@ -4,7 +4,7 @@ SET session_replication_role = replica;
 -- PostgreSQL database dump
 --
 
--- \restrict mfR8QthcAMFDhnhE83XCQwWl8f2laTiNFTCBNsdRGaX1hxmWbvQWF3vDH0PdlZr
+-- \restrict OH4v6NdZFiFJ2tVFbyMscDBY2mM3Td3Msnohg2ZG4qID1lfKOdnAlYgCaz6R6Fh
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -227,13 +227,13 @@ e1d86054-2b29-4aa8-86ce-39214c49dbec	Programmazione	programmazione	2026-07-05 17
 --
 
 COPY "public"."courses" ("id", "slug", "title", "description", "created_at", "updated_at", "category", "difficulty", "teacher", "estimated_hours", "cover_image", "published") FROM stdin;
-372d91a8-f414-40b6-a5f6-098793736749	informatica-4-	Informatica 4°	Corso di informatica per le classi quarte del Prof. Carnabuci	2026-07-02 17:21:04.848825+00	2026-07-02 17:21:04.848825+00	Informatica	Avanzato	Prof. G. Carnabuci	60	/courses/gcprof-ai-academy_logo_info_04.png	t
-5987eb43-939e-408f-980a-fee080a56112	informatica-3-	Informatica 3°	Corso di informatica per le classi terze del Prof. Carnabuci	2026-07-02 17:18:41.384923+00	2026-07-02 17:18:41.384923+00	Informatica	Intermedio	Prof. G. Carnabuci	60	/courses/gcprof-ai-academy_logo_info_03.png	t
-842557a2-80a6-4aae-941f-92b046c4d6dc	informatica-2-	Informatica 2°	Corso di informatica per le classi seconde del Prof. Carnabuci	2026-07-02 17:16:55.247655+00	2026-07-02 17:16:55.247655+00	Informatica	Facile	Prof. G. Carnabuci	60	/courses/gcprof-ai-academy_logo_info_02.png	t
-aa600d1a-7dd0-4e3a-ab97-f6c0d41211e1	informatica-1-	Informatica 1°	Corso di informatica per le classi prime del Prof. Carnabuci	2026-07-02 15:42:27.063112+00	2026-07-02 15:42:27.063112+00	Informatica	Facile	Prof. G. Carnabuci	60	/courses/gcprof-ai-academy_logo_info_01.png	t
-b4ab19fb-f69d-401e-a587-a195737a1252	ai-1-	AI 1°	Corso introduttivo su Intelligenza Artificiale del Prof. Carnabuci	2026-07-03 11:16:20.693504+00	2026-07-03 11:16:20.693504+00	AI	Facile	Prof. G. Carnabuci	50	\N	t
-15c71938-702e-4367-92f0-561e74c3bab7	python-1-	Python 1°	Corso base di Python del Prof. Carnabuci	2026-07-05 17:22:11.117785+00	2026-07-05 17:22:11.117785+00	Programmazione	Facile	Prof. G. Carnabuci	50	\N	t
 4a6d4534-259d-4028-b82a-55b315d4bb6c	problem-solving	Problem Solving	Corso base di problem solving del Prof. Carnabuci	2026-07-05 18:13:02.085276+00	2026-07-05 18:13:02.085276+00	Programmazione	Facile	Prof. G. Carnabuci	50	\N	t
+15c71938-702e-4367-92f0-561e74c3bab7	python-1	Python 1°	Corso base di Python del Prof. Carnabuci	2026-07-05 17:22:11.117785+00	2026-07-05 17:22:11.117785+00	Programmazione	Facile	Prof. G. Carnabuci	50	\N	t
+372d91a8-f414-40b6-a5f6-098793736749	informatica-4	Informatica 4°	Corso di informatica per le classi quarte del Prof. Carnabuci	2026-07-02 17:21:04.848825+00	2026-07-02 17:21:04.848825+00	Informatica	Avanzato	Prof. G. Carnabuci	60	/courses/gcprof-ai-academy_logo_info_04.png	t
+842557a2-80a6-4aae-941f-92b046c4d6dc	informatica-2	Informatica 2°	Corso di informatica per le classi seconde del Prof. Carnabuci	2026-07-02 17:16:55.247655+00	2026-07-02 17:16:55.247655+00	Informatica	Facile	Prof. G. Carnabuci	60	/courses/gcprof-ai-academy_logo_info_02.png	t
+5987eb43-939e-408f-980a-fee080a56112	informatica-3	Informatica 3°	Corso di informatica per le classi terze del Prof. Carnabuci	2026-07-02 17:18:41.384923+00	2026-07-02 17:18:41.384923+00	Informatica	Intermedio	Prof. G. Carnabuci	60	/courses/gcprof-ai-academy_logo_info_03.png	t
+aa600d1a-7dd0-4e3a-ab97-f6c0d41211e1	informatica-1	Informatica 1°	Corso di informatica per le classi prime del Prof. Carnabuci	2026-07-02 15:42:27.063112+00	2026-07-02 15:42:27.063112+00	Informatica	Facile	Prof. G. Carnabuci	60	/courses/gcprof-ai-academy_logo_info_01.png	t
+b4ab19fb-f69d-401e-a587-a195737a1252	ai-1	AI 1°	Corso introduttivo su Intelligenza Artificiale del Prof. Carnabuci	2026-07-03 11:16:20.693504+00	2026-07-03 11:16:20.693504+00	AI	Facile	Prof. G. Carnabuci	50	\N	t
 \.
 
 
@@ -342,8 +342,8 @@ MAIL_REPLY_TO	info@gcprof-academy.com	2026-07-04 15:42:53.24029+00
 
 COPY "public"."profiles" ("id", "first_name", "last_name", "display_name", "role", "status", "created_at", "updated_at", "email", "password_hash", "avatar_url", "total_minutes_active") FROM stdin;
 f7cd70e7-a2c4-4f82-86d8-366d066068db	Giuscar		Giuscar	student	active	2026-07-06 08:26:39.73287+00	2026-07-07 07:38:08.588+00	giuscar74@gmail.com	$2b$10$eLu2IBwwOeNHqAoCkLuu1.ZYaE0ZfUS7xRH.IWujrWSta6Q/IJu7W	https://vaokzyznazkcqjpbbkgr.supabase.co/storage/v1/object/public/avatars/uploads/f7cd70e7-a2c4-4f82-86d8-366d066068db-1783409883619.png	20
-cc421283-06af-41de-a08b-4c3adf39f65c	Peppe	Scuola	Peppe Scuola	student	active	2026-07-06 08:27:41.83213+00	2026-07-07 11:06:45.912+00	carnabuci.giuseppe@ismonnet.eu	$2b$10$fUe5qjnfA8VPSR5RVEpXjOsZ5Gl7mywMHeD2lq3AZ78X2Q8MKF0la	https://vaokzyznazkcqjpbbkgr.supabase.co/storage/v1/object/public/avatars/uploads/cc421283-06af-41de-a08b-4c3adf39f65c-1783409817434.png	13
-08be3132-7d36-46c3-9d31-2b1fd0b48d83	Giuseppe	Carnabuci	Prof. Carnabuci	admin	active	2026-07-02 15:39:26.487928+00	2026-07-07 18:47:27.287+00	admin@gcprof-academy.com	$2b$10$GAhB.B3Ht67g1kNu9e939OpnNh6gUMJ1apWvFYHJMXOy55fj4Px8q	https://vaokzyznazkcqjpbbkgr.supabase.co/storage/v1/object/public/avatars/uploads/08be3132-7d36-46c3-9d31-2b1fd0b48d83-1783066842958.png	0
+cc421283-06af-41de-a08b-4c3adf39f65c	Peppe	Scuola	Peppe Scuola	student	active	2026-07-06 08:27:41.83213+00	2026-07-08 10:54:08.964+00	carnabuci.giuseppe@ismonnet.eu	$2b$10$fUe5qjnfA8VPSR5RVEpXjOsZ5Gl7mywMHeD2lq3AZ78X2Q8MKF0la	https://vaokzyznazkcqjpbbkgr.supabase.co/storage/v1/object/public/avatars/uploads/cc421283-06af-41de-a08b-4c3adf39f65c-1783409817434.png	13
+08be3132-7d36-46c3-9d31-2b1fd0b48d83	Giuseppe	Carnabuci	Prof. Carnabuci	admin	active	2026-07-02 15:39:26.487928+00	2026-07-08 10:54:42.053+00	admin@gcprof-academy.com	$2b$10$GAhB.B3Ht67g1kNu9e939OpnNh6gUMJ1apWvFYHJMXOy55fj4Px8q	https://vaokzyznazkcqjpbbkgr.supabase.co/storage/v1/object/public/avatars/uploads/08be3132-7d36-46c3-9d31-2b1fd0b48d83-1783066842958.png	0
 \.
 
 
@@ -403,10 +403,26 @@ cc421283-06af-41de-a08b-4c3adf39f65c	e791e3f7-cdc3-466a-81f3-081a1708d4a4	aa600d
 
 
 --
+-- Data for Name: user_page_views; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY "public"."user_page_views" ("id", "profile_id", "path", "course_slug", "lesson_slug", "viewed_at") FROM stdin;
+\.
+
+
+--
 -- Data for Name: user_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY "public"."user_sessions" ("id", "profile_id", "login_at", "logout_at", "session_duration_seconds", "ip_address", "user_agent", "created_at") FROM stdin;
+1eba208a-9e61-47ab-a67e-a05a8afe3226	08be3132-7d36-46c3-9d31-2b1fd0b48d83	2026-07-08 07:36:08.961+00	2026-07-08 07:42:45.445+00	396	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36	2026-07-08 07:36:08.371014+00
+bc63308a-8243-46ba-bf9f-603b1262d782	08be3132-7d36-46c3-9d31-2b1fd0b48d83	2026-07-08 08:19:54.078+00	2026-07-08 08:20:05.625+00	11	2.157.214.40	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36	2026-07-08 08:19:54.299816+00
+885ccf70-323d-469b-8c10-8dae43fd67dc	08be3132-7d36-46c3-9d31-2b1fd0b48d83	2026-07-08 08:50:44.676+00	2026-07-08 09:20:54.867+00	1810	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36	2026-07-08 08:50:43.993355+00
+35f3af98-368e-4041-84d9-1c1ceaf69d14	08be3132-7d36-46c3-9d31-2b1fd0b48d83	2026-07-08 09:39:14.513+00	\N	\N	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36	2026-07-08 09:39:13.811226+00
+b024c25d-8649-4913-a499-1461fd8ae774	08be3132-7d36-46c3-9d31-2b1fd0b48d83	2026-07-08 10:25:52.729+00	2026-07-08 10:54:05.625+00	1692	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36	2026-07-08 10:25:51.923839+00
+26a6b26d-3ad6-49aa-9163-13a97c27c5d2	cc421283-06af-41de-a08b-4c3adf39f65c	2026-07-08 10:54:09.248+00	2026-07-08 10:54:33.828+00	24	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36	2026-07-08 10:54:08.401217+00
+612535e3-e5a4-49a6-bd78-dada79ac604a	08be3132-7d36-46c3-9d31-2b1fd0b48d83	2026-07-08 10:54:38.531+00	\N	\N	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36	2026-07-08 10:54:37.712303+00
+9be9529c-f27c-406e-8f3b-1d2cc144d5f1	08be3132-7d36-46c3-9d31-2b1fd0b48d83	2026-07-08 10:54:42.368+00	2026-07-08 12:11:23.115+00	4600	::1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36	2026-07-08 10:54:41.517951+00
 \.
 
 
@@ -489,6 +505,6 @@ SELECT pg_catalog.setval('"auth"."refresh_tokens_id_seq"', 1, false);
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict mfR8QthcAMFDhnhE83XCQwWl8f2laTiNFTCBNsdRGaX1hxmWbvQWF3vDH0PdlZr
+-- \unrestrict OH4v6NdZFiFJ2tVFbyMscDBY2mM3Td3Msnohg2ZG4qID1lfKOdnAlYgCaz6R6Fh
 
 RESET ALL;

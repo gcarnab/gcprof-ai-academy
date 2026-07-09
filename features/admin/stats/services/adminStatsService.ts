@@ -3,6 +3,7 @@ import { getAdminUsersList } from "../../users/services/adminService";
 import { getAvailableClassesForCourses } from "../../courses/services/adminCourseService";
 import { getAllCoursesList } from "../../courses/services/adminStructureService";
 import { getCourseClasses } from "@/features/courses/services/courseActions";
+import { logger } from "@/lib/logger"; // Utilizzo rigoroso del logger minuscolo
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -10,8 +11,13 @@ const supabaseAdmin = createClient(
 );
 
 export async function getAdminDashboardStats() {
+  // Variable d'ambiente configurata per la finestra temporale
+  const statsWindowDays = parseInt(process.env.NEXT_PUBLIC_ADMIN_STATS_WINDOW_DAYS || "14", 10);
+  
   const twoWeeksAgo = new Date();
-  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - statsWindowDays);
+
+  logger.info(`Estrazione statistiche admin con finestra temporale di ${statsWindowDays} giorni.`);
 
   const [users, classes, courses, courseClasses, sessionsResponse, pageViewsResponse] =
     await Promise.all([
@@ -39,9 +45,9 @@ export async function getAdminDashboardStats() {
   const totalCourses = courses.length;
   const totalClasses = classes.length;
 
-  // =========================
-  // USERS CHARTS
-  // =========================
+  // ============================================================================
+  // 👥 USERS CHARTS
+  // ============================================================================
   const usersByRole = users.reduce((acc: any, u: any) => {
     acc[u.role] = (acc[u.role] || 0) + 1;
     return acc;
@@ -78,7 +84,7 @@ export async function getAdminDashboardStats() {
     .slice(0, engagementLimit);
 
   // ============================================================================
-  // 🛰️ TRACKING & TRAFFIC CHARTS
+  // 🛰️ TRACKING & TRAFFIC CHARTS (Unificato ed efficiente)
   // ============================================================================
   const hourlyTraffic: Record<string, number> = {};
   for (let i = 0; i < 24; i++) {
@@ -92,19 +98,52 @@ export async function getAdminDashboardStats() {
     dailyTrend[d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" })] = 0;
   }
 
+  const sessionDurationDist: Record<string, number> = {
+    "0-2 min": 0,
+    "2-10 min": 0,
+    "10-30 min": 0,
+    "30+ min": 0,
+  };
+
+  const deviceDistribution: Record<string, number> = {
+    "Desktop": 0,
+    "Mobile/Tablet": 0,
+    "Altro": 0,
+  };
+
+  // Ciclo unico di iterazione per estrarre traffico temporale, durate e user-agent
   sessions.forEach((s) => {
     if (!s.login_at) return;
     const loginDate = new Date(s.login_at);
 
+    // 1. Traffico Orario
     const hourStr = `${String(loginDate.getHours()).padStart(2, "0")}:00`;
     if (hourlyTraffic[hourStr] !== undefined) hourlyTraffic[hourStr]++;
 
+    // 2. Trend Giornaliero
     const dayStr = loginDate.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
     if (dailyTrend[dayStr] !== undefined) dailyTrend[dayStr]++;
+
+    // 3. Durata Sessioni
+    const duration = s.session_duration_seconds ?? 0;
+    if (duration <= 120) sessionDurationDist["0-2 min"]++;
+    else if (duration <= 600) sessionDurationDist["2-10 min"]++;
+    else if (duration <= 1800) sessionDurationDist["10-30 min"]++;
+    else sessionDurationDist["30+ min"]++;
+
+    // 4. Mappatura Dispositivi
+    const ua = (s.user_agent || "").toLowerCase();
+    if (ua.includes("mobi") || ua.includes("android") || ua.includes("iphone")) {
+      deviceDistribution["Mobile/Tablet"]++;
+    } else if (ua.includes("mozilla") || ua.includes("chrome") || ua.includes("safari") || ua.includes("windows")) {
+      deviceDistribution["Desktop"]++;
+    } else {
+      deviceDistribution["Altro"]++;
+    }
   });
 
   // ============================================================================
-  // 🚀 MAPPATURA POLIMORFICA CHIAVI PER EVITARE SCHERMATE VUOTE
+  // 🚀 TRASFORMAZIONE IN OGGETTI PIATTI PER COMPONENTI GRAFICI ({})
   // ============================================================================
   
   // A. Aggregazione Corsi più visti
@@ -113,19 +152,22 @@ export async function getAdminDashboardStats() {
     return acc;
   }, {});
 
-  const mostViewedCourses = Object.entries(courseViewsMap)
+  const mostViewedCoursesRaw = Object.entries(courseViewsMap)
     .map(([slug, count]) => {
       const courseObj = courses.find((c: any) => c.slug === slug || c.id === slug);
-      const titleLabel = courseObj?.title || slug;
-      return {
-        name: titleLabel,
-        title: titleLabel,
-        value: count,
-        count: count
-      };
+      return { label: courseObj?.title || slug, count };
     })
-    .sort((a, b) => b.value - a.value)
+    .sort((a, b) => b.count - a.count)
     .slice(0, statsLimit);
+
+  const mostViewedCourses: Record<string, number> = {};
+  if (mostViewedCoursesRaw.length > 0) {
+    mostViewedCoursesRaw.forEach(item => {
+      mostViewedCourses[item.label] = item.count;
+    });
+  } else {
+    mostViewedCourses["Nessun dato di navigazione"] = 0;
+  }
 
   // B. Aggregazione Lezioni più viste
   const lessonViewsMap = pageViews.reduce((acc: Record<string, number>, pv) => {
@@ -133,33 +175,26 @@ export async function getAdminDashboardStats() {
     return acc;
   }, {});
 
-  const mostViewedLessons = Object.entries(lessonViewsMap)
+  const mostViewedLessonsRaw = Object.entries(lessonViewsMap)
     .map(([slug, count]) => {
       const formattedLabel = slug.replace(/-/g, " ");
-      return {
-        name: formattedLabel,
-        title: formattedLabel,
-        value: count,
-        count: count
-      };
+      return { label: formattedLabel, count };
     })
-    .sort((a, b) => b.value - a.value)
+    .sort((a, b) => b.count - a.count)
     .slice(0, statsLimit);
 
-  // ============================================================================
-  // 🛡️ FALLBACK DATI SICURI IN ASSENZA DI NAVIGAZIONE
-  // ============================================================================
-  const finalCourses = mostViewedCourses.length > 0 ? mostViewedCourses : [
-    { name: "Nessun dato di navigazione", title: "Nessun dato di navigazione", value: 1, count: 1 }
-  ];
+  const mostViewedLessons: Record<string, number> = {};
+  if (mostViewedLessonsRaw.length > 0) {
+    mostViewedLessonsRaw.forEach(item => {
+      mostViewedLessons[item.label] = item.count;
+    });
+  } else {
+    mostViewedLessons["Nessun dato di navigazione"] = 0;
+  }
 
-  const finalLessons = mostViewedLessons.length > 0 ? mostViewedLessons : [
-    { name: "Nessun dato di navigazione", title: "Nessun dato di navigazione", value: 1, count: 1 }
-  ];
-
-  // =========================
-  // COURSES CHARTS
-  // =========================
+  // ============================================================================
+  // 🎓 COURSES CHARTS
+  // ============================================================================
   const coursesByCategory = courses.reduce((acc: any, c: any) => {
     const category = c.category || c.categories?.name || c.course_categories?.name || "Senza categoria";
     acc[category] = (acc[category] || 0) + 1;
@@ -196,11 +231,13 @@ export async function getAdminDashboardStats() {
 
   const courseComplexity = { "Semplici (1-3 moduli)": 0, "Medio (4-7 moduli)": 0, "Complessi (8+ moduli)": 0 };
   courses.forEach((c: any) => {
-    const modules = c.course_modules?.length ?? 0;
+    const modules = c.choice_modules?.length || c.course_modules?.length || 0;
     if (modules <= 3) courseComplexity["Semplici (1-3 moduli)"]++;
     else if (modules <= 7) courseComplexity["Medio (4-7 moduli)"]++;
     else courseComplexity["Complessi (8+ moduli)"]++;
   });
+
+  logger.info("Stats di tracking elaborate correttamente per la dashboard.");
 
   return {
     totals: { users: totalUsers, courses: totalCourses, classes: totalClasses, modules: totalModules, lessons: totalLessons },
@@ -216,8 +253,10 @@ export async function getAdminDashboardStats() {
       courseComplexity,
       hourlyTraffic,
       dailyTrend,
-      mostViewedCourses: finalCourses, 
-      mostViewedLessons: finalLessons, 
+      sessionDurationDist, // Adesso integrato e mappato per DonutChartCard
+      deviceDistribution,  // Adesso integrato e mappato per DonutChartCard
+      mostViewedCourses, 
+      mostViewedLessons, 
     },
     raw: { users, classes, courses, course_classes: courseClasses },
   };

@@ -13,7 +13,7 @@ import { UserAlreadyExistsError } from "../errors/UserAlreadyExistsError";
 import { InvalidCredentialsError } from "../errors/InvalidCredentialsError";
 import { UnauthorizedError } from "../errors/UnauthorizedError";
 import { AUTH_ROLES, ACCOUNT_STATUS } from "../constants/AuthConstants";
-import { Logger } from "../infrastructure/Logger";
+import { logger } from "@/lib/logger";
 
 export class AuthService {
   constructor(
@@ -26,12 +26,12 @@ export class AuthService {
    * 📝 Caso d'uso: Registrazione Studente
    */
   async register(input: RegisterStudentInputDto): Promise<PublicUserDto> {
-    Logger.info(`Tentativo di registrazione per l'email: ${input.email}`);
+    logger.info(`Tentativo di registrazione per l'email: ${input.email}`);
 
     // 1. Verifica se l'utente esiste già
     const existingUser = await this.userRepository.findByEmail(input.email);
     if (existingUser) {
-      Logger.warn(`Registrazione fallita: l'email ${input.email} esiste già.`);
+      logger.warn(`Registrazione fallita: l'email ${input.email} esiste già.`);
       throw new UserAlreadyExistsError(input.email);
     }
 
@@ -56,7 +56,7 @@ export class AuthService {
 
     // 4. Salvataggio nel repository (Disaccoppiato dallo storage reale)
     const savedUser = await this.userRepository.create(newStudent);
-    Logger.info(`Studente registrato con successo. ID: ${savedUser.id}`);
+    logger.info(`Studente registrato con successo. ID: ${savedUser.id}`);
 
     // 5. Ritorno del DTO sicuro (Senza passwordHash)
     const { passwordHash: _, ...publicUser } = savedUser;
@@ -67,25 +67,25 @@ export class AuthService {
    * 🔑 Caso d'uso: Login Utente
    */
   async login(credentials: LoginCredentialsDto): Promise<AuthResultDto> {
-    Logger.info(`Tentativo di login per: ${credentials.email}`);
+    logger.info(`Tentativo di login per: ${credentials.email}`);
 
     // 1. Cerca l'utente nel database
     const user = await this.userRepository.findByEmail(credentials.email);
     if (!user) {
-      Logger.warn(`Login fallito: utente ${credentials.email} non trovato.`);
+      logger.warn(`Login fallito: utente ${credentials.email} non trovato.`);
       throw new InvalidCredentialsError();
     }
 
     // 2. Controllo dello stato dell'account
     if (user.status === ACCOUNT_STATUS.BLOCKED) {
-      Logger.warn(`Login rifiutato: l'account ${credentials.email} è bloccato.`);
+      logger.warn(`Login rifiutato: l'account ${credentials.email} è bloccato.`);
       throw new UnauthorizedError("Il tuo account è stato sospeso. Contatta il docente.");
     }
 
     // 3. Verifica della password tramite l'algoritmo iniettato
     const isPasswordValid = await this.passwordService.verify(credentials.passwordRaw, user.passwordHash);
     if (!isPasswordValid) {
-      Logger.warn(`Login fallito: password errata per ${credentials.email}.`);
+      logger.warn(`Login fallito: password errata per ${credentials.email}.`);
       throw new InvalidCredentialsError();
     }
 
@@ -105,7 +105,7 @@ export class AuthService {
     };
     const token = await this.tokenService.generate(tokenPayload);
 
-    Logger.info(`Login completato per ${user.email}. Token emesso.`);
+    logger.info(`Login completato per ${user.email}. Token emesso.`);
 
     // 6. Ritorno del risultato aggregato in un DTO
     const { passwordHash: _, ...publicUser } = user;

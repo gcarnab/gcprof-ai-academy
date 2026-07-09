@@ -159,7 +159,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/*
           <DonutChartCard
             title="Profili di Durata delle Sessioni"
             data={stats.charts.sessionDurationDist || {}}
@@ -168,15 +167,16 @@ export default function AdminStatsDashboard({ stats }: Props) {
             title="Dispositivi & Browser Utilizzati"
             data={stats.charts.deviceDistribution || {}}
           />
-          */}
           <DonutChartCard
             title="Classifica Corsi Più Visualizzati"
             data={stats.charts.mostViewedCourses || []}
           />
+          {/* 
           <PieChartCard
             title="Lezioni Con Maggior Frequenza di Click"
             data={stats.charts.mostViewedLessons || []}
           />
+          */}
         </div>
       </div>
     </div>
