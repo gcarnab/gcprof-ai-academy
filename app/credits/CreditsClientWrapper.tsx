@@ -44,11 +44,12 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
 
   const [tabs, setTabs] = useState<DocConfig[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>("markdown");
-  const [markdownContent] = useState(initialMarkdown);
+  const [markdownContent, setMarkdownContent] = useState(initialMarkdown);
   const [htmlSlides, setHtmlSlides] = useState("<h1>Caricamento slide...</h1>");
 
   const [editingConfig, setEditingConfig] = useState<Record<string, string>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   // OPTIMIZATION 1: Centralizzazione del fetch slegata dalla reattività di 'saveSuccess' (Evita il Double Fetch)
@@ -76,6 +77,19 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
     loadConfig();
   }, [loadConfig]);
 
+  // Se il file markdown visualizzato cambia o viene aggiornato dall'URL caricato
+  useEffect(() => {
+    if (activeTabId === "markdown" && tabs.length > 0) {
+      const mdTab = tabs.find(t => t.id === "markdown");
+      if (mdTab && mdTab.file_path.startsWith("http")) {
+        fetch(mdTab.file_path, { cache: "no-store" })
+          .then(res => res.ok ? res.text() : initialMarkdown)
+          .then(text => setMarkdownContent(text))
+          .catch(() => setMarkdownContent(initialMarkdown));
+      }
+    }
+  }, [activeTabId, tabs, initialMarkdown]);
+
   // OPTIMIZATION 3: Caching del template HTML delle slide per prevenire chiamate di rete al cambio ripetuto di tab
   useEffect(() => {
     if (activeTabId === "html" && htmlSlides === "<h1>Caricamento slide...</h1>") {
@@ -91,7 +105,6 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
   }, [activeTabId, htmlSlides]);
 
   // OPTIMIZATION 2: Memoizzazione totale del parsing Markdown.
-  // Previene l'esecuzione di cicli e regex pesanti ad ogni singolo tasto premuto negli input di testo (FPS fluidi).
   const renderedMarkdown = useMemo(() => {
     return markdownContent.split("\n").map((line, i) => {
       const trimmed = line.trim();
@@ -100,7 +113,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
         return (
           <h1
             key={i}
-            className="text-3xl font-black border-b border-border pb-2 mb-4"
+            className="text-3xl font-black border-b border-border pb-2 mb-4 text-foreground"
           >
             {trimmed.replace("# ", "")}
           </h1>
@@ -110,7 +123,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
         return (
           <h2
             key={i}
-            className="text-2xl font-bold border-l-4 border-primary pl-3 my-4"
+            className="text-2xl font-bold border-l-4 border-primary pl-3 my-4 text-foreground"
           >
             {trimmed.replace("## ", "")}
           </h2>
@@ -128,23 +141,52 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
 
       if (!trimmed) return <div key={i} className="h-2" />;
 
-      return <p key={i}>{renderSafeText(trimmed)}</p>;
+      return <p key={i} className="text-foreground/90 my-1">{renderSafeText(trimmed)}</p>;
     });
   }, [markdownContent]);
 
-  const handleFileBrowse = (
+  // Gestione dinamica dell'upload sul Bucket di Supabase Storage
+  const handleFileBrowse = async (
     e: React.ChangeEvent<HTMLInputElement>,
     id: string,
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const folder = id === "html" ? "/showcase/" : "/docs/";
+    // Vincolo dimensione file: 1MB massimo per motivi di sicurezza
+    if (file.size > 1048576) {
+      alert("Il file supera la dimensione massima consentita di 1MB.");
+      return;
+    }
 
-    setEditingConfig((prev) => ({
-      ...prev,
-      [id]: `${folder}${file.name}`,
-    }));
+    setUploadingId(id);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("channelId", id);
+
+    try {
+      const response = await fetch("/api/docs/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Errore durante l'upload.");
+      }
+
+      const data = await response.json();
+      
+      // Assegna l'URL pubblico restituito da Supabase Storage all'input
+      setEditingConfig((prev) => ({
+        ...prev,
+        [id]: data.publicUrl,
+      }));
+    } catch (err: any) {
+      alert(`Impossibile caricare il file: ${err.message}`);
+    } finally {
+      setUploadingId(null);
+    }
   };
 
   const handleSave = (id: string) => {
@@ -163,7 +205,6 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
 
         if (res.ok) {
           setSaveSuccess(true);
-          // Aggiorna lo stato in modo pulito e immediato
           loadConfig();
           setTimeout(() => setSaveSuccess(false), 2500);
         } else {
@@ -180,7 +221,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
 
   if (authLoading) {
     return (
-      <div className="text-center p-12 text-muted-foreground font-medium">
+      <div className="text-center p-12 text-muted-foreground font-medium animate-pulse">
         Inizializzazione Workspace...
       </div>
     );
@@ -189,7 +230,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 transition-colors duration-200">
       {/* HEADER */}
       <div className="flex justify-between items-center border-b border-border pb-4">
         <div>
@@ -209,7 +250,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
               {isAdmin ? "Amministratore" : "Sola Lettura"})
             </span>
           ) : (
-            <span className="text-amber-600">
+            <span className="text-amber-600 dark:text-amber-400">
               🌐 Visualizzazione Pubblica (Sola Lettura)
             </span>
           )}
@@ -247,7 +288,7 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
             {tabs.map((tab) => (
               <div
                 key={tab.id}
-                className="p-3 bg-muted/50 rounded-xl border border-border space-y-1.5"
+                className="p-3 bg-muted/50 rounded-xl border border-border space-y-1.5 flex flex-col justify-between"
               >
                 <span className="font-bold text-muted-foreground capitalize">
                   {tab.label}
@@ -263,27 +304,30 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
                         [tab.id]: e.target.value,
                       }))
                     }
-                    className="flex-1 p-2 bg-background border border-border rounded-lg text-foreground font-mono text-[11px]"
-                    disabled={isPending}
+                    className="flex-1 p-2 bg-background border border-border rounded-lg text-foreground font-mono text-[11px] outline-none focus:border-primary transition-colors"
+                    disabled={isPending || uploadingId === tab.id}
+                    placeholder="URL o percorso locale del file"
                   />
 
-                  {(tab.id === "pdf" || tab.id === "html") && (
-                    <label className="bg-secondary hover:bg-secondary/80 px-3 py-2 rounded-lg cursor-pointer flex items-center font-bold">
-                      Sfoglia
-                      <input
-                        type="file"
-                        accept={tab.id === "pdf" ? ".pdf" : ".txt,.html"}
-                        onChange={(e) => handleFileBrowse(e, tab.id)}
-                        className="hidden"
-                        disabled={isPending}
-                      />
-                    </label>
-                  )}
+                  <label className={`px-3 py-2 rounded-lg cursor-pointer flex items-center font-bold text-center transition ${
+                    uploadingId === tab.id 
+                      ? "bg-muted text-muted-foreground cursor-not-allowed animate-pulse" 
+                      : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+                  }`}>
+                    {uploadingId === tab.id ? "..." : "Sfoglia"}
+                    <input
+                      type="file"
+                      accept={tab.id === "pdf" ? ".pdf" : tab.id === "html" ? ".html" : ".md"}
+                      onChange={(e) => handleFileBrowse(e, tab.id)}
+                      className="hidden"
+                      disabled={isPending || uploadingId === tab.id}
+                    />
+                  </label>
 
                   <button
                     onClick={() => handleSave(tab.id)}
-                    className="bg-primary text-primary-foreground hover:opacity-90 font-bold px-3 rounded-lg transition"
-                    disabled={isPending}
+                    className="bg-primary text-primary-foreground hover:opacity-90 font-bold px-3 rounded-lg transition disabled:opacity-50"
+                    disabled={isPending || uploadingId === tab.id}
                   >
                     Salva
                   </button>
@@ -334,7 +378,6 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
         >
           {activeTabId === "markdown" && (
             <div className="absolute inset-0 w-full h-full overflow-y-auto p-6 md:p-8 bg-background text-foreground prose dark:prose-invert max-w-none">
-              {/* OPTIMIZATION 2: Rendering del blocco memoizzato */}
               {renderedMarkdown}
             </div>
           )}
