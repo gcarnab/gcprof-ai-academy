@@ -36,10 +36,24 @@ GCPROF-AI-ACADEMY
 |   |   |   layout.tsx
 |   |   |   page.tsx
 |   |   |   
-|   |   \---dashboard
-|   |           page.tsx
-|   |           
+|   |   +---dashboard
+|   |   |       page.tsx
+|   |   |       
+|   |   \---quiz
+|   |       |   actions.ts
+|   |       |   
+|   |       \---[id]
+|   |           +---analytics
+|   |           |       page.tsx
+|   |           |       
+|   |           \---review
+|   |                   page.tsx
+|   |                   
 |   +---api
+|   |   +---admin
+|   |   |   \---quizzes
+|   |   |           route.ts
+|   |   |           
 |   |   +---auth
 |   |   |   +---logout
 |   |   |   |       route.ts
@@ -53,7 +67,10 @@ GCPROF-AI-ACADEMY
 |   |   +---docs
 |   |   |   |   route.ts
 |   |   |   |   
-|   |   |   \---config
+|   |   |   +---config
+|   |   |   |       route.ts
+|   |   |   |       
+|   |   |   \---upload
 |   |   |           route.ts
 |   |   |           
 |   |   \---seed-admin
@@ -73,16 +90,21 @@ GCPROF-AI-ACADEMY
 |   |   |   
 |   |   \---[slug]
 |   |       |   page.tsx
+|   |       |   page.tsx_old
 |   |       |   
-|   |       \---modules
-|   |           \---[moduleId]
-|   |               \---lessons
-|   |                   \---[lessonId]
-|   |                           page.tsx
-|   |                           
+|   |       +---modules
+|   |       |   \---[moduleId]
+|   |       |       \---lessons
+|   |       |           \---[lessonId]
+|   |       |                   page.tsx
+|   |       |                   page.tsx_old
+|   |       |                   
+|   |       \---quizzes
+|   |           \---[quizId]
+|   |                   page.tsx
+|   |                   
 |   +---credits
 |   |       CreditsClientWrapper.tsx
-|   |       CreditsClientWrapper.tsx_old
 |   |       page.tsx
 |   |       
 |   +---dashboard
@@ -102,6 +124,8 @@ GCPROF-AI-ACADEMY
 |   |   ShowcaseSlides.tsx
 |   |   
 |   \---ui
+|           alert.tsx
+|           badge.tsx
 |           button.tsx
 |           card.tsx
 |           checkbox.tsx
@@ -109,6 +133,7 @@ GCPROF-AI-ACADEMY
 |           dropdown-menu.tsx
 |           input.tsx
 |           label.tsx
+|           radio-group.tsx
 |           select.tsx
 |           table.tsx
 |           tabs.tsx
@@ -116,6 +141,7 @@ GCPROF-AI-ACADEMY
 |           
 +---docs
 |   |   credits.md
+|   |   gcprof-academy_DEV_GUIDE.md
 |   |   HANDOVER_PROMPT.md
 |   |   Python_Practice.md
 |   |   Python_Practice_Full.md
@@ -124,6 +150,10 @@ GCPROF-AI-ACADEMY
 |   |   Python_Practice_LM.md
 |   |   README-DB.md
 |   |   
+|   +---quiz
+|   |       quiz_AI_base_01.md
+|   |       template.md
+|   |       
 |   \---supabase
 |           data.sql
 |           roles.sql
@@ -145,7 +175,6 @@ GCPROF-AI-ACADEMY
 |   |   |   |       CoursesTab.tsx
 |   |   |   |       CreateClassForm.tsx
 |   |   |   |       CreateCourseForm.tsx
-|   |   |   |       CreateCourseForm.tsx_old
 |   |   |   |       ManageCategoriesForm.tsx
 |   |   |   |       
 |   |   |   \---services
@@ -159,11 +188,11 @@ GCPROF-AI-ACADEMY
 |   |   |   \---components
 |   |   |           AdminDashboard.tsx
 |   |   |           AdminHeader.tsx
+|   |   |           QuizAnalyticsDashboard.tsx
 |   |   |           
 |   |   +---mail
 |   |   |   +---actions
 |   |   |   |       mailBulkActions.ts
-|   |   |   |       mailBulkActions.ts_resend
 |   |   |   |       mailSettingsActions.ts
 |   |   |   |       mailTemplateActions.ts
 |   |   |   |       mailTestActions.ts
@@ -197,7 +226,6 @@ GCPROF-AI-ACADEMY
 |   |   +---stats
 |   |   |   +---components
 |   |   |   |   |   AdminStatsDashboard.tsx
-|   |   |   |   |   AdminStatsDashboard.tsx_old
 |   |   |   |   |   StatsTab.tsx
 |   |   |   |   |   
 |   |   |   |   \---charts
@@ -210,9 +238,11 @@ GCPROF-AI-ACADEMY
 |   |   |   |           
 |   |   |   \---services
 |   |   |           adminStatsService.ts
-|   |   |           adminStatsService.ts_old
 |   |   |           
 |   |   +---tracking
+|   |   |   +---actions
+|   |   |   |       trackPageViewAction.ts
+|   |   |   |       
 |   |   |   +---components
 |   |   |   |       PageTracker.tsx
 |   |   |   |       TrackingDashboard.tsx
@@ -279,12 +309,10 @@ GCPROF-AI-ACADEMY
 |   |   +---infrastructure
 |   |   |       BcryptPasswordService.ts
 |   |   |       JoseTokenService.ts
-|   |   |       Logger.ts
 |   |   |       MemoryUserRepository.ts
 |   |   |       NextCookieService.ts
 |   |   |       RepositoryFactory.ts
 |   |   |       ResendEmailService.ts
-|   |   |       supabaseClient.ts
 |   |   |       SupabaseUserRepository.ts
 |   |   |       
 |   |   +---ports
@@ -303,22 +331,34 @@ GCPROF-AI-ACADEMY
 |   +---courses
 |   |   |   index.ts
 |   |   |   
+|   |   +---actions
+|   |   |       courseActions.ts
+|   |   |       
 |   |   +---components
 |   |   |   |   CategoryFilter.tsx
 |   |   |   |   CourseCard.tsx
+|   |   |   |   CourseDashboard.tsx
 |   |   |   |   CourseList.tsx
 |   |   |   |   CourseSearch.tsx
 |   |   |   |   CoursesHeader.tsx
+|   |   |   |   CourseViewer.tsx
 |   |   |   |   MarkdownPreview.tsx
 |   |   |   |   
 |   |   |   \---lesson
 |   |   |           LessonRenderer.tsx
 |   |   |           
+|   |   +---domain
+|   |   |       CourseMapper.ts
+|   |   |       
 |   |   +---hooks
 |   |   |       useCourses.ts
 |   |   |       
 |   |   +---queries
 |   |   |       getStudentCourses.ts
+|   |   |       getStudentCourses.ts_old
+|   |   |       
+|   |   +---repositories
+|   |   |       SupabaseCourseRepository.ts
 |   |   |       
 |   |   +---services
 |   |   |       courseActions.ts
@@ -342,6 +382,44 @@ GCPROF-AI-ACADEMY
 |   |   \---services
 |   |           profileActions.ts
 |   |           
+|   +---quiz
+|   |   +---actions
+|   |   |       getQuizAction.ts
+|   |   |       quizActions.ts
+|   |   |       statsActions.ts
+|   |   |       teacherActions.ts
+|   |   |       
+|   |   +---components
+|   |   |       AdminQuizPanel.tsx
+|   |   |       AssignQuizButton.tsx
+|   |   |       AssignQuizModal.tsx
+|   |   |       CorrectionForm.tsx
+|   |   |       QuizStatsDashboard.tsx
+|   |   |       QuizViewer.tsx
+|   |   |       TeacherQuizDashboard.tsx
+|   |   |       
+|   |   +---domain
+|   |   |       Question.ts
+|   |   |       Quiz.ts
+|   |   |       QuizAnswer.ts
+|   |   |       QuizAttempt.ts
+|   |   |       QuizReview.ts
+|   |   |       
+|   |   +---markdown
+|   |   |   \---parser
+|   |   |           quizParser.ts
+|   |   |           
+|   |   +---ports
+|   |   |       IQuizRepository.ts
+|   |   |       
+|   |   +---repositories
+|   |   |       QuizRepositoryFactory.ts
+|   |   |       QuizStatsRepository.ts
+|   |   |       SupabaseQuizRepository.ts
+|   |   |       
+|   |   \---validators
+|   |           quizValidators.ts
+|   |           
 |   \---theme
 |       +---components
 |       |       ThemeToggle.tsx
@@ -357,7 +435,6 @@ GCPROF-AI-ACADEMY
 +---logs
 |       app.log
 |       
-|           
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -411,6 +488,7 @@ GCPROF-AI-ACADEMY
 \---types
         database.types.ts
         
+
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
@@ -473,6 +551,7 @@ GCPROF-AI-ACADEMY
 | `estimated_hours` | `int4` |  Nullable |
 | `cover_image` | `text` |  Nullable |
 | `published` | `bool` |  Nullable |
+| `allowed_classes` | `_text` |  |
 
 ## Table `course_modules`
 
@@ -647,6 +726,134 @@ GCPROF-AI-ACADEMY
 | `lesson_slug` | `text` |  Nullable |
 | `viewed_at` | `timestamptz` |  |
 
+## Table `quizzes`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `varchar` |  |
+| `description` | `text` |  Nullable |
+| `status` | `quiz_status` |  |
+| `penalty_enabled` | `bool` |  |
+| `negative_mark` | `numeric` |  |
+| `max_score` | `numeric` |  |
+| `created_by` | `uuid` |  Nullable |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+| `passing_score` | `numeric` |  |
+
+## Table `quiz_questions`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `quiz_id` | `uuid` |  |
+| `type` | `question_type` |  |
+| `order_index` | `int4` |  |
+| `text` | `text` |  |
+| `points` | `numeric` |  |
+| `created_at` | `timestamptz` |  |
+
+## Table `quiz_options`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `question_id` | `uuid` |  |
+| `text` | `text` |  |
+| `is_correct` | `bool` |  |
+
+## Table `course_quizzes`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `course_id` | `uuid` | Primary |
+| `quiz_id` | `uuid` | Primary |
+
+## Table `quiz_attempts`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `quiz_id` | `uuid` |  |
+| `student_id` | `uuid` |  |
+| `started_at` | `timestamptz` |  |
+| `completed_at` | `timestamptz` |  Nullable |
+| `auto_score` | `numeric` |  |
+| `teacher_score` | `numeric` |  |
+| `final_score` | `numeric` |  |
+| `status` | `attempt_status` |  |
+| `created_at` | `timestamptz` |  |
+
+## Table `quiz_answers`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `attempt_id` | `uuid` |  |
+| `question_id` | `uuid` |  |
+| `selected_option_id` | `uuid` |  Nullable |
+| `open_answer_text` | `text` |  Nullable |
+| `is_correct` | `bool` |  Nullable |
+| `score` | `numeric` |  |
+| `created_at` | `timestamptz` |  |
+
+## Table `quiz_reviews`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `attempt_id` | `uuid` |  |
+| `teacher_id` | `uuid` |  Nullable |
+| `question_id` | `uuid` |  |
+| `score` | `numeric` |  |
+| `comment` | `text` |  Nullable |
+| `reviewed_at` | `timestamptz` |  |
+
+## Table `lessons`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `module_id` | `uuid` |  |
+| `title` | `text` |  |
+| `duration` | `int4` |  |
+| `content_type` | `text` |  |
+| `youtube_url` | `text` |  Nullable |
+| `google_drive_url` | `text` |  Nullable |
+| `quiz_id` | `uuid` |  Nullable |
+| `sort_order` | `int4` |  |
+| `created_at` | `timestamptz` |  |
+
+## Table `quiz_assignments`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `quiz_id` | `uuid` |  |
+| `course_id` | `uuid` |  |
+| `assigned_at` | `timestamptz` |  |
+| `due_at` | `timestamptz` |  Nullable |
+| `is_visible` | `bool` |  |
+
 
 
 
@@ -661,19 +868,68 @@ ULTIMI BUG RISCONTRATI :
 1. app stabile
 
 ULTIMI FEATURES INTRODOTTE :
-1. feature in fase di sviluppo ma stabile
+1. feature in fase di sviluppo
 
 OBIETTIVO : 
-1. migliorare il sistema di tracking accessi degli utenti completo su DB
-2. debugging dei grafici nella sezione STATS legati al sistema di tracking
+Migliorare la funzionalità gestione QUIZ attualmente in fase di sviluppo. Capire lo stato dell'arte attuale.
+Fare refactoring e mantenere un flusso univoco e stabile sfoltendo il codice doppio o inutile o orfano a causa di 
+livelli diversi di analisi effettuati con diversi modelli AI.
+
+Le seguenti sono le caratteristiche minime che un quiz deve possedere:
+
+1. Deve contenere 8 domande chiuse a risposta multipla ognuna con quattro alternative non ambigue di cui solo una giusta.
+2. Deve contenere 1 domanda aperta
+3. La domanda aperta deve essere validata dal docente che può assegnare un punteggio da 0 a 6
+4. Ogni domanda chiusa vale 0.5 punti per un totale di 4 punti massimi su 8 domande 
+5. Le risposte errate delle domande chiuse possono essere penalizzate di 0.25 punti ognuna. La penalizzazione deve essere impostabile ed abilitabile dal creatore del quiz.
+6. L'unico a creare i quiz è l'utente admin. 
+7. Il punteggio massimo ottenibile dallo studente è 10/10
+8. Ogni quiz creato sarà in modalità draft fino a quando l'amministratore deciderà di associarlo allo specifico corso e renderlo attivo.
+9. Ogni corso può avere più quiz associati 
+10. Il template che caricherà automaticamente la struttura di un particolare quiz sarà in formato markdown.
+11. Dovrai creare tu la struttura del template necessario per generare un quiz commentando il markdown generato.
+12. In fase di creazione del quiz il sistema prevede il caricamento del template markdown ed automaticamente verrà generato il quiz.
+13. Gli argomenti e le domande dei quiz saranno a carico del creatore che le inserirà nel template al posto giusto usando l'intelligenza artificiale per creare il contenuto del quiz fornendo il template da seguire.
+14. Bisogna predisporre tutta la struttura del DB adeguata in modo che lo specifico quiz sarà disponibile per gli studenti iscritti allo specifico corso al quale è assegnato il quiz.
+15. Sarà presente una sezione dedicata nella dashboard di amministrazione chiamata QUIZ all'interno della quale sarà possibile gestire per intero i quiz e le domande di ogni quiz(CRUD) 
+16. Nella sezione QUIZ sarà possibile effettuare le correzioni del quiz per ogni studente iscritto allo specifico corso.
+17. La sotto sezione QUIZ sarà presente anche nella sezione STATS della dashboard all'interno della quale ci saranno i grafici relativi ai quiz. 
+
+per non andare fuori obiettivo ti descrivo la situazione attuale :
+1. faccio login come admin
+2. vado nella sezione QUIZ della admin/dashboard
+3. uso il tasto importa da markdown e seleziono un template di quiz valido
+4. il sistema processa correttamente e mostra Quiz importato e salvato nel database con successo!
+5. il nuovo quiz viene mostrato nella lista sottostante co il seguenti campi di intestazione : titolo del quiz, soglia minima, Azioni
+6. faccio click sul tasto "Analizza risultati" del quiz appena creato
+7. atterro su una pagina "Admin Analytics" in questa sezione ho due pulsanti "Assegna al corso", "Correggi Quiz" 
+oltre che una lista che rappresenta il registro dei test
+RICHIESTE :
+- la lista registro test deve essere predisposta a gestire un numero elevato di record deve avere funzionalità di ricerca per 
+poter individuare con precisione i quiz da analizzare
+- introdurre il filtraggio per corso e per classi
+- la pagina deve avere un abreadcrumb per tornare alla sezione di partenza della dashboard admin 
+- la pagina deve dare la possibilità di modificare la correzione della domanda aperto e quindi cambiare di conseguenza il punteggio
+
+8. faccio click sul pulsante "Assegna al corso"
+9. uso il popup per assegnare il quiz ad un corso ottengo : 🎉 Quiz assegnato con successo! 
+sul db viene popolata la tabella quiz_assignments
+10. vado nella sezione corsi seleziono il corso al quale ho assegnato il quiz e vedo il quiz come link
+11. faccio click sul link del quiz eseguo il quiz compilando tutte le risposte
+12. faccio click sul tasto "Analizza risultati" atterro su una pagina "Admin Analytics" in questa sezione ho due pulsanti "Assegna al corso", "Correggi Quiz"
+13. faccio click su "Correggi Quiz" ed eseguo la correzione del quiz nella sezione Registro Correzioni Quiz
+RICHIESTE :
+- la pagina deve avere un abreadcrumb per tornare alla sezione di partenza della dashboard admin 
+- la pagina deve avere navbar e footer
+
+
 
 VINCOLI: 
 1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
 2. ricorda di aspettare sempre la mia conferma per scrivere il codice
 3. fai riferimento al tree del filesystem del progetto ed allo schema del DB allegati in questa chat
 4. intercetta sempre i punti hardcoded che adrebbero spostati nel file .env come variabili
-5. procediamo per gradi senza distruggere il codice integrando le modifiche passo passo 
-e testando che non stiamo regredendo
+5. procediamo per gradi senza distruggere il codice integrando le modifiche passo passo e testando che non stiamo regredendo
 6. ricorda di predisporre i nomi delle classi per la feature già abilitata theme light/dark
 7. usa sempre il logger disponibile nel codice che scrivi 
-8. non fare troppo refactoring e punta a risolvere il problema mantenendo la logica attuale
+8. fare il refactoring essenziale e puntare a risolvere il problema mantenendo quanto più possibile la logica attuale senza regredire

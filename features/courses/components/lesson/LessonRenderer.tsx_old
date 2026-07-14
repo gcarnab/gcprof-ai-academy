@@ -1,23 +1,22 @@
 import React, { useState } from "react";
 
-export type LessonContentType =
-  | "video"
-  | "document"
-  | "colab"
-  | "markdown"
-  | "sandbox"
-  | "text"
-  | "file"
-  | "link";
+export type LessonContentType = 
+  | "video" 
+  | "document" 
+  | "colab" 
+  | "markdown" 
+  | "sandbox" 
+  | "text"  
+  | "file"  
+  | "link"; 
 
 export interface LessonContent {
   type?: LessonContentType;
-  content_type?: string;
+  content_type?: string; // Supporto DB nativo
   title?: string;
   url?: string;
-  external_url?: string;
+  external_url?: string; // Supporto DB nativo
   content?: string;
-  quiz_id?: string | null; // 🎯 AGGIORNATO: Supporto nativo per l'ID del quiz nella lezione
 }
 
 interface Props {
@@ -27,12 +26,10 @@ interface Props {
 export default function LessonRenderer({ contents }: Props) {
   if (!contents || !Array.isArray(contents)) return null;
 
-  // Estraiamo un eventuale quiz_id associato a questa lezione
-  const activeQuizId = contents.find((item) => item.quiz_id)?.quiz_id;
-
   return (
     <div className="space-y-8">
       {contents.map((item, index) => {
+        // 🛡️ Estrazione sicura: supporta sia l'oggetto normalizzato sia la riga nativa di Supabase
         const rawType = item.type || item.content_type;
         const activeType = rawType === "text" ? "markdown" : rawType;
         const url = item.url || item.external_url;
@@ -46,7 +43,7 @@ export default function LessonRenderer({ contents }: Props) {
           case "video": {
             if (!url) return null;
             let embedUrl = url;
-
+            
             if (embedUrl.includes("watch?v=")) {
               embedUrl = embedUrl.replace("watch?v=", "embed/");
             } else if (embedUrl.includes("youtu.be/")) {
@@ -58,10 +55,7 @@ export default function LessonRenderer({ contents }: Props) {
             }
 
             return (
-              <div
-                key={index}
-                className="rounded-xl overflow-hidden border border-border shadow-sm bg-background"
-              >
+              <div key={index} className="rounded-xl overflow-hidden border border-border shadow-sm bg-background">
                 <iframe
                   className="aspect-video w-full"
                   src={embedUrl}
@@ -71,9 +65,7 @@ export default function LessonRenderer({ contents }: Props) {
                 />
                 {title && (
                   <div className="p-3 bg-background border-t border-border">
-                    <h4 className="text-sm font-semibold text-foreground">
-                      {title}
-                    </h4>
+                    <h4 className="text-sm font-semibold text-foreground">{title}</h4>
                   </div>
                 )}
               </div>
@@ -81,15 +73,16 @@ export default function LessonRenderer({ contents }: Props) {
           }
 
           /**
-           * 2. DOCUMENT PREVIEWER INTERNO
+           * 2. DOCUMENT PREVIEWER INTERNO (Google Docs, Sheets, Slides & Drive)
            */
           case "document":
           case "file": {
             if (!url) return null;
             let previewUrl = url;
-
-            const isGoogleResource =
-              previewUrl.includes("drive.google.com") ||
+            
+            // 🛡️ RILEVAMENTO ED EMBEDDING SILENZIOSO DI GOOGLE DOCS / DRIVE
+            const isGoogleResource = 
+              previewUrl.includes("drive.google.com") || 
               previewUrl.includes("docs.google.com");
 
             if (isGoogleResource) {
@@ -97,28 +90,20 @@ export default function LessonRenderer({ contents }: Props) {
                 previewUrl = previewUrl.split("/edit")[0] + "/preview";
               } else if (previewUrl.includes("/view")) {
                 previewUrl = previewUrl.split("/view")[0] + "/preview";
-              } else if (
-                !previewUrl.endsWith("/preview") &&
-                !previewUrl.includes("/preview")
-              ) {
+              } else if (!previewUrl.endsWith("/preview") && !previewUrl.includes("/preview")) {
+                // Rimuove eventuali query parameters residui agganciando correttamente la preview
                 if (previewUrl.includes("?")) {
                   const base = previewUrl.split("?")[0];
-                  previewUrl = base.endsWith("/")
-                    ? `${base}preview`
-                    : `${base}/preview`;
+                  previewUrl = base.endsWith("/") ? `${base}preview` : `${base}/preview`;
                 } else {
-                  previewUrl = previewUrl.endsWith("/")
-                    ? `${previewUrl}preview`
-                    : `${previewUrl}/preview`;
+                  previewUrl = previewUrl.endsWith("/") ? `${previewUrl}preview` : `${previewUrl}/preview`;
                 }
               }
             }
 
             return (
               <div key={index} className="space-y-2">
-                {title && (
-                  <h3 className="text-lg font-bold text-foreground">{title}</h3>
-                )}
+                {title && <h3 className="text-lg font-bold text-foreground">{title}</h3>}
                 {isGoogleResource ? (
                   <div className="rounded-xl overflow-hidden border border-border shadow-inner h-[700px] bg-muted">
                     <iframe
@@ -132,9 +117,7 @@ export default function LessonRenderer({ contents }: Props) {
                   <div className="rounded-xl border bg-background p-4 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">📄</span>
-                      <span className="font-medium text-muted-foreground">
-                        {title || "Visualizza Documento Risorsa"}
-                      </span>
+                      <span className="font-medium text-muted-foreground">{title || "Visualizza Documento Risorsa"}</span>
                     </div>
                     <a
                       href={url}
@@ -156,25 +139,15 @@ export default function LessonRenderer({ contents }: Props) {
           case "colab": {
             if (!url) return null;
             return (
-              <div
-                key={index}
-                className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
-              >
+              <div key={index} className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🚀</span>
-                    <span className="text-xs uppercase tracking-wider font-bold text-blue-600">
-                      Google Colab Notebook
-                    </span>
+                    <span className="text-xs uppercase tracking-wider font-bold text-blue-600">Google Colab Notebook</span>
                   </div>
-                  <h3 className="text-lg font-bold text-foreground">
-                    {title || "Notebook di Esercitazione"}
-                  </h3>
+                  <h3 className="text-lg font-bold text-foreground">{title || "Notebook di Esercitazione"}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Questo modulo contiene un ambiente interattivo di
-                    programmazione. Clicca sul pulsante a destra per aprire il
-                    foglio di lavoro protetto direttamente nel tuo account
-                    Google Drive ed eseguire il codice Python.
+                    Questo modulo contiene un ambiente interattivo di programmazione. Clicca sul pulsante a destra per aprire il foglio di lavoro protetto direttamente nel tuo account Google Drive ed eseguire il codice Python.
                   </p>
                 </div>
                 <a
@@ -194,17 +167,12 @@ export default function LessonRenderer({ contents }: Props) {
            * 4. NATIVE MARKDOWN RENDERER
            */
           case "markdown": {
-            const rawText =
-              contentBody || contentBody === "" ? contentBody : url || "";
+            const rawText = contentBody || contentBody === "" ? contentBody : url || "";
             if (!rawText.trim()) return null;
 
             return (
               <div key={index} className="space-y-4">
-                {title && (
-                  <h3 className="text-xl font-bold text-foreground border-b pb-2">
-                    {title}
-                  </h3>
-                )}
+                {title && <h3 className="text-xl font-bold text-foreground border-b pb-2">{title}</h3>}
                 <div className="prose prose-blue max-w-none text-foreground leading-relaxed space-y-4">
                   <MarkdownComponent text={rawText} />
                 </div>
@@ -219,9 +187,7 @@ export default function LessonRenderer({ contents }: Props) {
             if (!url) return null;
             return (
               <div key={index} className="space-y-2">
-                {title && (
-                  <h3 className="text-lg font-bold text-foreground">{title}</h3>
-                )}
+                {title && <h3 className="text-lg font-bold text-foreground">{title}</h3>}
                 <div className="rounded-xl overflow-hidden border border-purple-200 shadow-sm h-[500px] bg-gray-900">
                   <iframe
                     src={url}
@@ -238,27 +204,6 @@ export default function LessonRenderer({ contents }: Props) {
             return null;
         }
       })}
-
-      {/* 🎯 NUOVO BLOCCO: Box condizionale di sbarramento per il Quiz in fondo alla lezione */}
-      {activeQuizId && (
-        <div className="mt-8 p-5 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-          <div className="space-y-1 text-center sm:text-left">
-            <h4 className="font-bold text-base text-primary flex items-center justify-center sm:justify-start gap-2">
-              📝 Test di Sbarramento Richiesto
-            </h4>
-            <p className="text-xs text-muted-foreground max-w-xl">
-              Per completare questa lezione e sbloccare i contenuti successivi,
-              devi superare il quiz di verifica associato a questo modulo.
-            </p>
-          </div>
-          <button
-            onClick={() => (window.location.href = `/quiz/${activeQuizId}`)}
-            className="w-full sm:w-auto bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all shadow-md active:scale-95 shrink-0"
-          >
-            Inizia il Quiz
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -274,13 +219,8 @@ function MarkdownComponent({ text }: { text: string }) {
       {blocks.map((block, bIdx) => {
         if (block.startsWith("```")) {
           const firstLineBreak = block.indexOf("\n");
-          const header = block
-            .substring(3, firstLineBreak)
-            .trim()
-            .toLowerCase();
-          const code = block
-            .substring(firstLineBreak + 1, block.length - 3)
-            .trim();
+          const header = block.substring(3, firstLineBreak).trim().toLowerCase();
+          const code = block.substring(firstLineBreak + 1, block.length - 3).trim();
           const language = header || "code";
 
           return <CodeBlock key={bIdx} code={code} language={language} />;
@@ -291,42 +231,22 @@ function MarkdownComponent({ text }: { text: string }) {
             {block.split("\n").map((line, lIdx) => {
               const trimmed = line.trim();
               if (!trimmed) return <div key={lIdx} className="h-2" />;
-
+              
               if (trimmed.startsWith("### ")) {
-                return (
-                  <h4
-                    key={lIdx}
-                    className="text-md font-bold text-foreground mt-4 mb-1"
-                  >
-                    {trimmed.replace("### ", "")}
-                  </h4>
-                );
+                return <h4 key={lIdx} className="text-md font-bold text-foreground mt-4 mb-1">{trimmed.replace("### ", "")}</h4>;
               }
               if (trimmed.startsWith("## ")) {
-                return (
-                  <h3
-                    key={lIdx}
-                    className="text-lg font-bold text-foreground mt-5 mb-2"
-                  >
-                    {trimmed.replace("## ", "")}
-                  </h3>
-                );
+                return <h3 key={lIdx} className="text-lg font-bold text-foreground mt-5 mb-2">{trimmed.replace("## ", "")}</h3>;
               }
               if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
                 return (
                   <ul key={lIdx} className="list-disc pl-5 my-1 space-y-0.5">
-                    <li className="text-muted-foreground">
-                      {parseInlineStyles(trimmed.substring(2))}
-                    </li>
+                    <li className="text-muted-foreground">{parseInlineStyles(trimmed.substring(2))}</li>
                   </ul>
                 );
               }
 
-              return (
-                <p key={lIdx} className="text-muted-foreground my-1">
-                  {parseInlineStyles(line)}
-                </p>
-              );
+              return <p key={lIdx} className="text-muted-foreground my-1">{parseInlineStyles(line)}</p>;
             })}
           </div>
         );
@@ -369,11 +289,7 @@ function parseInlineStyles(line: string): React.ReactNode[] {
   const parts = line.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={index} className="font-semibold text-foreground">
-          {part.slice(2, -2)}
-        </strong>
-      );
+      return <strong key={index} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>;
     }
     return part;
   });

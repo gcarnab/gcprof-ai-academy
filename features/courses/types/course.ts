@@ -5,14 +5,23 @@ export interface Lesson {
   title: string;
   duration: number; // in minuti
   contentType: "video" | "document" | "mixed";
-  youtubeUrl?: string;     // es: https://www.youtube.com/watch?v=... o https://youtu.be/...
-  googleDriveUrl?: string; // es: https://docs.google.com/document/d/.../edit o /pub
+  youtubeUrl?: string;
+  googleDriveUrl?: string;
+  quizId?: string;
 }
 
 export interface Module {
   id: string;
   title: string;
   lessons: Lesson[];
+}
+
+// Nuova interfaccia per l'assegnazione dei quiz a livello di corso
+export interface QuizAssignment {
+  id: string;
+  quizId: string;
+  quizTitle: string;
+  dueAt?: string;
 }
 
 export interface Course {
@@ -28,4 +37,5 @@ export interface Course {
   published: boolean;
   allowedClasses: string[];
   modules: Module[]; // Struttura ad albero per i contenuti
+  quizAssignments: QuizAssignment[];
 }

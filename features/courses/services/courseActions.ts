@@ -1,15 +1,17 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import type { Course, Module, Lesson } from "../types/course";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "super-secret-key-change-me-in-production",
 );
+
+const supabaseAdmin = getSupabaseAdmin();
 
 /**
  * Helper interno per generare gli slug in modo coerente e pulito
@@ -25,10 +27,13 @@ function generateSlug(text: string): string {
 /* ============================================================================
  * 🛰️ LETTURA CORSI
  * ========================================================================== */
-export async function getLiveCourses(): Promise<Course[]> {
+export async function getLiveCourses( role?: "admin" | "student"): Promise<Course[]> {
   try {
-    // 🎯 SCHEMA ALLINEATO: Scarichiamo le relazioni course_classes -> academy_classes (name)
-    const { data, error } = await supabaseAdmin.from("courses").select(`
+
+    // 1. 🟢 QUERY ORIGINALE (FUNZIONANTE): Recupera i corsi senza inquinare la select
+    const { data: coursesData, error: coursesError } = await supabaseAdmin.from(
+      "courses",
+    ).select(`
         id, 
         title, 
         slug, 
@@ -59,14 +64,82 @@ export async function getLiveCourses(): Promise<Course[]> {
         )
       `);
 
-    if (error) {
-      logger.error("Errore Supabase nel recupero dei corsi:", error.message);
+    if (coursesError) {
+      logger.error(
+        "Errore Supabase nel recupero dei corsi:",
+        coursesError.message,
+      );
       return [];
     }
 
-    if (!data) return [];
+    if (!coursesData) return [];
 
-    return data.map((dbCourse: any) => {
+    // 2. QUIZ
+    // Recupera solamente i quiz pubblicati per la visualizzazione studenti
+    const quizzesByCourse: Record<string, any[]> = {};
+
+    try {
+      let quizzesQuery = supabaseAdmin.from("quiz_assignments").select(
+        `
+          id,
+          course_id,
+          quiz_id,
+          due_at,
+          quizzes!inner (
+            id,
+            title,
+            status
+          )
+        `,
+      );
+
+      if (role === "student") {
+        quizzesQuery = quizzesQuery.eq("quizzes.status", "active");
+      }
+      const { data: quizzesData, error: quizzesError } = await quizzesQuery;
+
+      if (quizzesError) {
+        logger.warn("Errore recupero quiz assegnati:", quizzesError.message);
+      }
+
+      if (quizzesData) {
+        quizzesData.forEach((assignment: any) => {
+          const quizEntity = Array.isArray(assignment.quizzes)
+            ? assignment.quizzes[0]
+            : assignment.quizzes;
+
+          if (!quizEntity?.id || !quizEntity?.title) {
+            logger.warn(
+              "Assegnazione quiz senza relazione valida:",
+              assignment,
+            );
+            return;
+          }
+
+          if (!quizzesByCourse[assignment.course_id]) {
+            quizzesByCourse[assignment.course_id] = [];
+          }
+
+          quizzesByCourse[assignment.course_id].push({
+            id: assignment.id,
+            quiz_id: quizEntity.id,
+            quiz_title: quizEntity.title,
+            due_at: assignment.due_at,
+
+            quiz: {
+              id: quizEntity.id,
+              title: quizEntity.title,
+              status: quizEntity.status,
+            },
+          });
+        });
+      }
+    } catch (quizErr) {
+      logger.error("Eccezione durante recupero quiz assegnati:", quizErr);
+    }
+
+    // 3. 🗺️ MAPPING FINALE COMBINATO
+    return coursesData.map((dbCourse: any) => {
       const sortedModules = (dbCourse.course_modules || []).sort(
         (a: any, b: any) => a.order_index - b.order_index,
       );
@@ -76,6 +149,9 @@ export async function getLiveCourses(): Promise<Course[]> {
         .map((cc: any) => cc.academy_classes?.name)
         .filter(Boolean);
 
+      // Recuperiamo i quiz associati a questo ID corso (se presenti)
+      const associatedQuizzes = quizzesByCourse[dbCourse.id] || [];
+
       return {
         id: dbCourse.id,
         title: dbCourse.title,
@@ -83,12 +159,34 @@ export async function getLiveCourses(): Promise<Course[]> {
         description: dbCourse.description || "",
         category: dbCourse.category || "Informatica",
         difficulty: dbCourse.difficulty || "Facile",
-        teacher: dbCourse.teacher || process.env.NEXT_PUBLIC_DEFAULT_TEACHER || "Prof. G. Carnabuci",
+        teacher:
+          dbCourse.teacher ||
+          process.env.NEXT_PUBLIC_DEFAULT_TEACHER ||
+          "Prof. G. Carnabuci",
         estimatedHours: dbCourse.estimated_hours || 0,
         coverImage:
           dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_info_01.png",
         published: dbCourse.published ?? true,
         allowedClasses: allowedClassesNames,
+
+        // FIX: Forniamo entrambe le nomenclature per evitare bug sul frontend `page.tsx`
+        quiz_assignments: associatedQuizzes.map((qa: any) => ({
+          id: qa.id,
+          quiz_id: qa.quiz_id,
+          quiz_title: qa.quiz_title,
+          due_at: qa.due_at,
+          // Fallback di sicurezza nel caso il frontend cerchi un oggetto annidato
+          quiz: {
+            id: qa.quiz_id,
+            title: qa.quiz_title,
+          },
+        })),
+        quizAssignments: associatedQuizzes.map((qa: any) => ({
+          id: qa.id,
+          quizId: qa.quiz_id,
+          quizTitle: qa.quiz_title,
+          dueAt: qa.due_at,
+        })),
 
         modules: sortedModules.map((mod: any) => {
           const sortedLessons = (mod.course_lessons || []).sort(
@@ -102,19 +200,13 @@ export async function getLiveCourses(): Promise<Course[]> {
               id: les.id,
               title: les.title,
               duration: les.duration || 15,
-
-              // Manteniamo la logica attuale
               contentType: les.content_type,
-
               youtubeUrl:
                 les.content_type === "video"
                   ? les.external_url || les.video_url
                   : undefined,
-
               googleDriveUrl:
                 les.content_type === "document" ? les.external_url : undefined,
-
-              // ✅ Nuovi campi necessari ai nuovi renderer
               external_url: les.external_url || "",
               video_url: les.video_url || "",
               content: les.content || "",
@@ -124,7 +216,7 @@ export async function getLiveCourses(): Promise<Course[]> {
       };
     });
   } catch (err) {
-    logger.error("Eccezione durante il fetch dei corsi dal DB:", err);
+    logger.error("Eccezione generale durante il fetch dei corsi dal DB:", err);
     return [];
   }
 }
@@ -460,7 +552,6 @@ export async function getCourseClasses() {
   //logger.debug("=== COURSE_CLASSES ADMIN ===", data);
 
   if (error) {
-
     logger.error("Errore getCourseClasses:", error);
     return [];
   }

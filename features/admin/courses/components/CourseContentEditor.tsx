@@ -35,16 +35,18 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
   const [editingModuleTitle, setEditingModuleTitle] = useState("");
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [editingLessonTitle, setEditingLessonTitle] = useState("");
-  const [editingLessonContent, setEditingLessonContent] = useState(""); // 📝 Nuovo stato per edit Markdown
-  const [editingLessonExternalUrl, setEditingLessonExternalUrl] = useState(""); // 🔗 Nuovo stato per edit URL
+  const [editingLessonContent, setEditingLessonContent] = useState("");
+  const [editingLessonExternalUrl, setEditingLessonExternalUrl] = useState("");
 
-  const [activeModuleIdForLesson, setActiveModuleIdForLesson] = useState<string | null>(null);
+  const [activeModuleIdForLesson, setActiveModuleIdForLesson] = useState<
+    string | null
+  >(null);
   const [lessonTitle, setLessonTitle] = useState("");
-  
-  // 🎯 AGGIORNATO: Esteso il tipo dello stato usando l'enum centralizzato delle Server Actions
-  const [contentType, setContentType] = useState<ExtendedLessonContentType>("video");
+
+  const [contentType, setContentType] =
+    useState<ExtendedLessonContentType>("video");
   const [externalUrl, setExternalUrl] = useState("");
-  const [lessonContent, setLessonContent] = useState(""); // Nuovo stato per il testo Markdown/Teoria
+  const [lessonContent, setLessonContent] = useState("");
 
   const [isPending, startTransition] = useTransition();
 
@@ -79,9 +81,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
 
   const handleAddLesson = (moduleId: string) => {
     if (!lessonTitle.trim()) return;
-    // Validazione condizionale: se non è markdown, l'URL esterno è obbligatorio
     if (contentType !== "markdown" && !externalUrl.trim()) return;
-    // Se è markdown, il contenuto testuale è obbligatorio
     if (contentType === "markdown" && !lessonContent.trim()) return;
 
     startTransition(async () => {
@@ -91,10 +91,10 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
       const nextOrder = (targetModule?.course_lessons?.length || 0) + 1;
 
       const res = await addLesson(moduleId, {
-        title: lessonTitle,
+        title: lessonTitle.trim(),
         content_type: contentType,
         external_url: contentType === "markdown" ? "" : externalUrl.trim(),
-        content: contentType === "markdown" ? lessonContent : "",
+        content: contentType === "markdown" ? lessonContent.trim() : "",
         order_index: nextOrder,
       });
 
@@ -102,7 +102,10 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
         setLessonTitle("");
         setExternalUrl("");
         setLessonContent("");
+        setContentType("video");
         setActiveModuleIdForLesson(null);
+        setEditingLessonContent("");
+        setEditingLessonExternalUrl("");
         await loadCourseStructureFromDB(selectedCourseId);
       } else {
         alert("Errore durante il salvataggio sul DB: " + res.error);
@@ -110,14 +113,13 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
     });
   };
 
-  // ✏️ SALVA MODIFICA MODULO
   const handleRenameModule = (moduleId: string, orderIndex: number) => {
     if (!editingModuleTitle.trim()) return;
     startTransition(async () => {
       try {
         await upsertModule(selectedCourseId, {
           id: moduleId,
-          title: editingModuleTitle,
+          title: editingModuleTitle.trim(),
           orderIndex,
         });
         setEditingModuleId(null);
@@ -128,20 +130,23 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
     });
   };
 
-  // ✏️ SALVA MODIFICA LEZIONE (Titolo + Contenuto/URL)
   const handleRenameLesson = (
     moduleId: string,
     lessonId: string,
     currentLesson: any,
   ) => {
     if (!editingLessonTitle.trim()) return;
-    
-    // Validazioni in fase di modifica
-    if (currentLesson.content_type === "markdown" && !editingLessonContent.trim()) {
+    if (
+      currentLesson.content_type === "markdown" &&
+      !editingLessonContent.trim()
+    ) {
       alert("Il contenuto in Markdown non può essere vuoto.");
       return;
     }
-    if (currentLesson.content_type !== "markdown" && !editingLessonExternalUrl.trim()) {
+    if (
+      currentLesson.content_type !== "markdown" &&
+      !editingLessonExternalUrl.trim()
+    ) {
       alert("L'URL della lezione è obbligatorio.");
       return;
     }
@@ -150,13 +155,23 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
       try {
         await upsertLesson(moduleId, {
           id: lessonId,
-          title: editingLessonTitle,
+          title: editingLessonTitle.trim(),
           contentType: currentLesson.content_type,
-          externalUrl: currentLesson.content_type === "markdown" ? "" : editingLessonExternalUrl.trim(),
-          content: currentLesson.content_type === "markdown" ? editingLessonContent : "",
+          externalUrl:
+            currentLesson.content_type === "markdown"
+              ? ""
+              : editingLessonExternalUrl.trim(),
+          content:
+            currentLesson.content_type === "markdown"
+              ? editingLessonContent.trim()
+              : "",
           orderIndex: currentLesson.order_index || 1,
+          duration: currentLesson.duration ?? 15,
         });
         setEditingLessonId(null);
+        setEditingLessonTitle("");
+        setEditingLessonContent("");
+        setEditingLessonExternalUrl("");
         await loadCourseStructureFromDB(selectedCourseId);
       } catch (err: any) {
         alert(err.message);
@@ -165,7 +180,10 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
   };
 
   const handleDeleteModule = (moduleId: string, title: string) => {
-    if (!window.confirm(`Eliminare il modulo "${title}" e tutte le sue lezioni?`)) return;
+    if (
+      !window.confirm(`Eliminare il modulo "${title}" e tutte le sue lezioni?`)
+    )
+      return;
     startTransition(async () => {
       try {
         await deleteModule(moduleId);
@@ -188,18 +206,19 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
     });
   };
 
-  // Helper per ricavare il corretto placeholder dell'input URL
   const getUrlPlaceholder = (type: string) => {
-    if (type === "video") return "URL YouTube o Vimeo (es: https://www.youtube.com/watch?v=...)";
-    if (type === "colab") return "URL Google Colab (es: https://colab.research.google.com/drive/...)";
+    if (type === "video")
+      return "URL YouTube o Vimeo (es: https://www.youtube.com/watch?v=...)";
+    if (type === "colab")
+      return "URL Google Colab (es: https://colab.research.google.com/drive/...)";
     if (type === "document") return "URL Google Drive o link diretto al PDF";
-    if (type === "sandbox") return "URL Embed CodeSandbox / Replit / StackBlitz";
+    if (type === "sandbox")
+      return "URL Embed CodeSandbox / Replit / StackBlitz";
     return "URL Esterno";
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Intestazione */}
+    <div className="p-6 space-y-6 relative">
       <div>
         <h2 className="text-xl font-bold text-foreground mb-1">
           Costruttore Struttura Corsi
@@ -290,7 +309,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                           setEditingModuleId(mod.id);
                           setEditingModuleTitle(mod.title);
                         }}
-                        className="text-xs text-muted-foreground hover:text-muted-foreground"
+                        className="text-xs text-muted-foreground"
                       >
                         ✏️
                       </button>
@@ -303,10 +322,10 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                         setActiveModuleIdForLesson(
                           activeModuleIdForLesson === mod.id ? null : mod.id,
                         );
-                        // Reset form lezione al cambio modulo
                         setLessonTitle("");
                         setExternalUrl("");
                         setLessonContent("");
+                        setContentType("video");
                       }}
                       className="text-xs text-blue-600 font-medium hover:underline"
                     >
@@ -333,62 +352,36 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                       className="w-full rounded border p-1.5 bg-background text-foreground"
                     />
 
-                    {/* Radio Buttons estesi con Markdown e Sandbox */}
                     <div className="flex gap-4 my-2 text-muted-foreground flex-wrap">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="contentType"
-                          checked={contentType === "video"}
-                          onChange={() => setContentType("video")}
-                        />
-                        🎥 Video
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="contentType"
-                          checked={contentType === "document"}
-                          onChange={() => setContentType("document")}
-                        />
-                        📄 Documento
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer text-blue-600 font-medium">
-                        <input
-                          type="radio"
-                          name="contentType"
-                          checked={contentType === "colab"}
-                          onChange={() => setContentType("colab")}
-                        />
-                        🚀 Colab
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer text-emerald-600 font-medium">
-                        <input
-                          type="radio"
-                          name="contentType"
-                          checked={contentType === "markdown"}
-                          onChange={() => setContentType("markdown")}
-                        />
-                        📝 Markdown
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer text-purple-600 font-medium">
-                        <input
-                          type="radio"
-                          name="contentType"
-                          checked={contentType === "sandbox"}
-                          onChange={() => setContentType("sandbox")}
-                        />
-                        💻 Sandbox Live
-                      </label>
+                      {[
+                        "video",
+                        "document",
+                        "colab",
+                        "markdown",
+                        "sandbox",
+                      ].map((type) => (
+                        <label
+                          key={type}
+                          className="flex items-center gap-1.5 cursor-pointer capitalize font-medium text-xs"
+                        >
+                          <input
+                            type="radio"
+                            name="contentType"
+                            checked={contentType === type}
+                            onChange={() => setContentType(type as any)}
+                          />
+                          {type}
+                        </label>
+                      ))}
                     </div>
 
                     {contentType === "markdown" ? (
                       <textarea
-                        placeholder="Scrivi qui la tua lezione in Markdown. Puoi inserire blocchi di codice usando ```python ... ```"
+                        placeholder="Scrivi in Markdown..."
                         value={lessonContent}
                         onChange={(e) => setLessonContent(e.target.value)}
                         rows={5}
-                        className="w-full rounded border p-1.5 bg-background text-foreground font-mono text-xs focus:ring-1 focus:ring-emerald-500 outline-none"
+                        className="w-full rounded border p-1.5 bg-background text-foreground font-mono text-xs outline-none"
                       />
                     ) : (
                       <input
@@ -396,13 +389,14 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                         placeholder={getUrlPlaceholder(contentType)}
                         value={externalUrl}
                         onChange={(e) => setExternalUrl(e.target.value)}
-                        className="w-full rounded border p-1.5 bg-background text-foreground focus:ring-1 focus:ring-blue-500 outline-none"
+                        className="w-full rounded border p-1.5 bg-background text-foreground outline-none"
                       />
                     )}
 
                     <div className="flex justify-end">
                       <Button
                         size="sm"
+                        disabled={isPending}
                         onClick={() => handleAddLesson(mod.id)}
                         className="bg-green-600 text-white hover:bg-green-700"
                       >
@@ -420,52 +414,45 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                     >
                       {editingLessonId === les.id ? (
                         <div className="flex flex-col gap-2 w-full bg-background p-2 rounded border border-border">
-                          {/* Modifica Titolo */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-muted-foreground shrink-0">Titolo:</span>
+                          <input
+                            type="text"
+                            value={editingLessonTitle}
+                            onChange={(e) =>
+                              setEditingLessonTitle(e.target.value)
+                            }
+                            className="border rounded p-1 text-xs text-foreground bg-background"
+                          />
+                          {les.content_type === "markdown" ? (
+                            <textarea
+                              value={editingLessonContent}
+                              onChange={(e) =>
+                                setEditingLessonContent(e.target.value)
+                              }
+                              rows={4}
+                              className="w-full rounded border p-1 bg-background text-foreground font-mono text-xs"
+                            />
+                          ) : (
                             <input
                               type="text"
-                              value={editingLessonTitle}
-                              onChange={(e) => setEditingLessonTitle(e.target.value)}
-                              className="border rounded p-1 text-xs flex-1 text-foreground bg-background"
+                              value={editingLessonExternalUrl}
+                              onChange={(e) =>
+                                setEditingLessonExternalUrl(e.target.value)
+                              }
+                              className="border rounded p-1 text-xs text-foreground bg-background font-mono"
                             />
-                          </div>
-
-                          {/* Modifica Contenuto Condizionale (Markdown o URL) */}
-                          {les.content_type === "markdown" ? (
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-semibold text-muted-foreground">Contenuto Markdown:</span>
-                              <textarea
-                                value={editingLessonContent}
-                                onChange={(e) => setEditingLessonContent(e.target.value)}
-                                rows={6}
-                                className="w-full rounded border p-1.5 bg-background text-foreground font-mono text-xs focus:ring-1 focus:ring-emerald-500 outline-none"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-muted-foreground shrink-0">URL:</span>
-                              <input
-                                type="text"
-                                placeholder={getUrlPlaceholder(les.content_type)}
-                                value={editingLessonExternalUrl}
-                                onChange={(e) => setEditingLessonExternalUrl(e.target.value)}
-                                className="border rounded p-1 text-xs flex-1 text-foreground bg-background font-mono"
-                              />
-                            </div>
                           )}
-
-                          {/* Pulsanti di Azione sotto */}
-                          <div className="flex justify-end gap-2 text-xs pt-1.5 border-t">
+                          <div className="flex justify-end gap-2 text-xs pt-1">
                             <button
-                              onClick={() => handleRenameLesson(mod.id, les.id, les)}
-                              className="text-green-600 font-bold hover:underline"
+                              onClick={() =>
+                                handleRenameLesson(mod.id, les.id, les)
+                              }
+                              className="text-green-600 font-bold"
                             >
                               Salva
                             </button>
                             <button
                               onClick={() => setEditingLessonId(null)}
-                              className="text-muted-foreground hover:underline"
+                              className="text-muted-foreground"
                             >
                               Annulla
                             </button>
@@ -474,30 +461,28 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                       ) : (
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="text-base select-none shrink-0">
-                              {les.content_type === "video" && "🎥"}
-                              {les.content_type === "document" && "📄"}
-                              {les.content_type === "colab" && "🚀"}
-                              {les.content_type === "markdown" && "📝"}
-                              {les.content_type === "sandbox" && "💻"}
-                            </span>
                             <span className="font-medium text-foreground truncate">
                               {les.title}
                             </span>
+
                             <button
                               onClick={() => {
                                 setEditingLessonId(les.id);
-                                setEditingLessonTitle(les.title);
-                                setEditingLessonContent(les.content || ""); // Pre-popola il markdown esistente
-                                setEditingLessonExternalUrl(les.external_url || ""); // Pre-popola l'URL esistente
+                                setEditingLessonTitle(les.title ?? "");
+                                setEditingLessonContent(les.content ?? "");
+                                setEditingLessonExternalUrl(
+                                  les.external_url ?? les.video_url ?? "",
+                                );
                               }}
-                              className="text-[11px] text-muted-foreground hover:text-muted-foreground"
+                              className="text-[11px] text-muted-foreground ml-1"
                             >
                               ✏️
                             </button>
                           </div>
                           <button
-                            onClick={() => handleDeleteLesson(les.id, les.title)}
+                            onClick={() =>
+                              handleDeleteLesson(les.id, les.title)
+                            }
                             className="text-xs text-red-400 hover:text-red-600 ml-2"
                           >
                             ✕

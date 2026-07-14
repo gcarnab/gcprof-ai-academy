@@ -2,14 +2,42 @@
 
 import { useState, useEffect } from "react";
 import { useParams, notFound, useRouter } from "next/navigation";
-import { hasCourseAccess } from "@/features/courses/services/courseService";
-import { getLiveCourses } from "@/features/courses/services/courseActions";
-import type { Course, Module } from "@/features/courses/types/course";
+import { hasCourseAccess} from "@/features/courses/services/courseService";
+import type { Course, Module, Lesson } from "@/features/courses/types/course"; 
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 import LoginDialog from "@/features/auth/components/LoginDialog";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
+import { getLiveCourses } from "@/features/courses/services/courseActions";
+
+// Mappa di configurazione dei contenuti per gestire i Quiz e gli altri formati
+const CONTENT_TYPES: Record<string, { icon: string; label: string; textStyle: string; badgeStyle: string }> = {
+  video: {
+    icon: "📺",
+    label: "Video YouTube",
+    textStyle: "text-blue-600 hover:text-blue-800",
+    badgeStyle: "text-blue-600 bg-blue-50 border-blue-200",
+  },
+  colab: {
+    icon: "🚀",
+    label: "Google Colab",
+    textStyle: "text-emerald-600 hover:text-emerald-800",
+    badgeStyle: "text-emerald-600 bg-emerald-50 border-emerald-200",
+  },
+  quiz: {
+    icon: "📝",
+    label: "Quiz di Verifica",
+    textStyle: "text-purple-600 hover:text-purple-800",
+    badgeStyle: "text-purple-600 bg-purple-50 border-purple-200",
+  },
+  default: {
+    icon: "📄",
+    label: "Google Drive",
+    textStyle: "text-slate-600 hover:text-slate-800",
+    badgeStyle: "text-slate-500 bg-slate-50 border-slate-200",
+  },
+};
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -20,13 +48,12 @@ export default function CourseDetailPage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Caricamento asincrono del corso in base allo slug reale presente sul DB
   useEffect(() => {
     async function loadCourseDetail() {
       setIsLoading(true);
       try {
-        const liveCourses = await getLiveCourses();
-        const currentCourse = liveCourses.find((c) => c.slug === slug);
+        const allCourses = await getLiveCourses(user?.role === "admin" ? "admin" : "student");
+        const currentCourse = allCourses.find((c: Course) => c.slug === slug);
         setCourse(currentCourse || null);
       } catch (err) {
         console.error("Errore nel caricamento del corso:", err);
@@ -39,7 +66,6 @@ export default function CourseDetailPage() {
     }
   }, [slug]);
 
-  // Se stiamo caricando, mostriamo uno stato di attesa elegante
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col bg-muted">
@@ -54,19 +80,18 @@ export default function CourseDetailPage() {
     );
   }
 
-  // Se il corso non esiste sul DB emaniamo il 404
   if (!course) {
     notFound();
   }
 
-  // Calcolo delle autorizzazioni di acesso basate sulla logica esistente
   const isClassAuthorized = hasCourseAccess(course, user);
-  const isPendingUser =
-    user && user.status === "pending" && user.role !== "admin";
+  const isPendingUser = user && user.status === "pending" && user.role !== "admin";
+
+  // Estraiamo in modo sicuro l'array dei quiz a livello di corso
+  const courseQuizzes = (course as any).quiz_assignments || [];
 
   return (
     <div className="flex min-h-screen flex-col bg-muted">
-      {/* 🎯 IL SENSORE ATTIVO IN BACKGROUND */}
       <ActivityTracker />
       <Navbar />
 
@@ -75,8 +100,7 @@ export default function CourseDetailPage() {
         <div className="flex flex-col gap-6 md:flex-row md:items-center border-b border-border pb-8">
           <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl border border-border bg-background p-2 shadow-sm flex items-center justify-center text-4xl">
             {course.coverImage ? (
-              course.coverImage.startsWith("http") ||
-              course.coverImage.startsWith("/") ? (
+              course.coverImage.startsWith("http") || course.coverImage.startsWith("/") ? (
                 <img
                   src={course.coverImage}
                   alt={course.title}
@@ -101,12 +125,9 @@ export default function CourseDetailPage() {
           </div>
         </div>
 
-        {/* CORPO INFERIORE */}
+        {/* CORPO CONTENUTI */}
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <h2 className="text-xl font-bold text-foreground">
-              Moduli del corso
-            </h2>
 
             {!user ? (
               <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6 text-center shadow-sm">
@@ -128,8 +149,7 @@ export default function CourseDetailPage() {
                   Account in fase di verifica
                 </h3>
                 <p className="text-sm text-amber-700 mt-2">
-                  Il tuo account è attualmente in attesa di attivazione da parte
-                  dello staff.
+                  Il tuo account è attualmente in attesa di attivazione da parte dello staff.
                 </p>
               </div>
             ) : !isClassAuthorized ? (
@@ -139,71 +159,110 @@ export default function CourseDetailPage() {
                   Accesso Riservato
                 </h3>
                 <p className="text-sm text-red-700 mt-1">
-                  Il tuo utente non ha i permessi per accedere a questo
-                  materiale.
+                  Il tuo utente non ha i permessi per accedere a questo materiale.
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {course.modules && course.modules.length > 0 ? (
-                  course.modules.map((module: Module) => (
-                    <div
-                      key={module.id}
-                      className="rounded-lg border bg-background p-4 shadow-sm"
-                    >
-                      <h3 className="font-bold text-foreground">
-                        📂 {module.title}
-                      </h3>
-                      <ul className="mt-3 space-y-2 pl-2">
-                        {module.lessons && module.lessons.length > 0 ? (
-                          module.lessons.map((lesson: any) => {
-                            const currentType =
-                              lesson.contentType || lesson.content_type;
-                            return (
-                              <li
-                                key={lesson.id}
-                                className="flex justify-between items-center text-sm p-2 rounded border border-transparent transition-colors hover:bg-muted hover:border-border"
-                              >
-                                <button
-                                  onClick={() =>
-                                    router.push(
-                                      `/courses/${slug}/modules/${module.id}/lessons/${lesson.id}`,
-                                    )
-                                  }
-                                  className="text-blue-600 hover:underline font-medium text-left flex items-center gap-2"
-                                >
-                                  <span>
-                                    {currentType === "video"
-                                      ? "📺"
-                                      : currentType === "colab"
-                                        ? "🚀"
-                                        : "📄"}
-                                  </span>
-                                  <span>{lesson.title}</span>
-                                </button>
-                                <span className="text-xs text-muted-foreground font-mono">
-                                  {currentType === "video"
-                                    ? "Video YouTube"
-                                    : currentType === "colab"
-                                      ? "Google Colab"
-                                      : "Google Drive"}
-                                </span>
-                              </li>
-                            );
-                          })
-                        ) : (
-                          <li className="text-xs italic text-muted-foreground pl-6">
-                            Nessuna lezione presente.
-                          </li>
-                        )}
-                      </ul>
+              <div className="space-y-6">
+                
+                {/* SEZIONE: QUIZ DIRETTI DEL CORSO */}
+                {courseQuizzes.length > 0 && (
+                  <div className="space-y-3">
+                    <h2 className="text-xl font-bold text-foreground">
+                      Quiz del Corso
+                    </h2>
+                    <div className="rounded-lg border border-purple-100 bg-purple-50/40 p-4 shadow-sm space-y-2">
+                      {courseQuizzes.map((assignment: any, index: number) => {
+                        const quizTitle = assignment.quiz_title || assignment.quiz?.title || `Quiz di Verifica #${index + 1}`;
+                        
+                        return (
+                          <div 
+                            key={assignment.id || index}
+                            className="flex justify-between items-center text-sm p-2 rounded border bg-background border-purple-100 transition-colors hover:bg-purple-50/50"
+                          >
+                            <button
+                              onClick={() => router.push(`/courses/${slug}/quizzes/${assignment.quiz_id}`)}
+                              className="underline-offset-2 hover:underline font-semibold text-left flex items-center gap-2 text-purple-700 hover:text-purple-900"
+                            >
+                              <span className="text-base select-none">📝</span>
+                              <span>{quizTitle}</span>
+                            </button>
+                            
+                            {assignment.due_at && (
+                              <span className="text-xs text-muted-foreground font-mono">
+                                Scadenza: {new Date(assignment.due_at).toLocaleDateString("it-IT", {
+                                  hour: "2-digit",
+                                  minute: "2-digit"
+                                })}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))
-                ) : (
-                  <p className="text-sm italic text-muted-foreground p-4">
-                    Nessun modulo didattico caricato per questo corso.
-                  </p>
+                  </div>
                 )}
+
+                {/* SEZIONE: MODULI E LEZIONI */}
+                <div className="space-y-3">
+                  <h2 className="text-xl font-bold text-foreground">
+                    Moduli del corso
+                  </h2>
+                  
+                  {course.modules && course.modules.length > 0 ? (
+                    course.modules.map((module: Module) => (
+                      <div
+                        key={module.id}
+                        className="rounded-lg border bg-background p-4 shadow-sm"
+                      >
+                        <h3 className="font-bold text-foreground">
+                          📂 {module.title}
+                        </h3>
+                        
+                        <ul className="mt-3 space-y-2 pl-2">
+                          {module.lessons && module.lessons.length > 0 ? (
+                            module.lessons.map((lesson: Lesson) => {
+                              const rawType = (lesson.contentType || (lesson as any).content_type) as string;
+                              const config = CONTENT_TYPES[rawType] || CONTENT_TYPES.default;
+
+                              const targetPath = rawType === "quiz"
+                                ? `/courses/${slug}/modules/${module.id}/quizzes/${lesson.id}`
+                                : `/courses/${slug}/modules/${module.id}/lessons/${lesson.id}`;
+
+                              return (
+                                <li
+                                  key={lesson.id}
+                                  className="flex justify-between items-center text-sm p-2 rounded border border-transparent transition-colors hover:bg-muted hover:border-border"
+                                >
+                                  <button
+                                    onClick={() => router.push(targetPath)}
+                                    className={`underline-offset-2 hover:underline font-medium text-left flex items-center gap-2 ${config.textStyle}`}
+                                  >
+                                    <span className="text-base select-none">{config.icon}</span>
+                                    <span>{lesson.title}</span>
+                                  </button>
+                                  
+                                  <span className={`text-xs font-mono px-2 py-0.5 rounded border ${config.badgeStyle}`}>
+                                    {config.label}
+                                  </span>
+                                </li>
+                              );
+                            })
+                          ) : (
+                            <li className="text-xs italic text-muted-foreground pl-6">
+                              Nessun contenuto presente in questo modulo.
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm italic text-muted-foreground p-4">
+                      Nessun modulo didattico caricato per questo corso.
+                    </p>
+                  )}
+                </div>
+
               </div>
             )}
           </div>
