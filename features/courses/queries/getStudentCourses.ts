@@ -4,7 +4,7 @@ export async function getStudentCoursesAction(profileId: string) {
   const supabase = getSupabaseAdmin();
 
   try {
-    // 🎯 AGGIORNATO: Estesa la select per includere moduli e lezioni con la colonna quiz_id
+    // 🎯 ALLINEATO: Selezioniamo solo colonne reali presenti nella tabella fisica 'course_lessons'
     const { data, error } = await supabase
       .from("profile_courses")
       .select(
@@ -32,8 +32,7 @@ export async function getStudentCoursesAction(profileId: string) {
               content_type,
               external_url,
               content,
-              order_index,
-              quiz_id
+              order_index
             )
           )
         )
@@ -64,7 +63,7 @@ export async function getStudentCoursesAction(profileId: string) {
         cover_image: item.courses.cover_image,
         published: item.courses.published,
         course_assigned_at: item.enrolled_at,
-        // 🎯 NUOVO: Passiamo la struttura moduli/lezioni aggiornata alla UI
+        // Passiamo la struttura moduli/lezioni originale alla UI
         modules: item.courses.course_modules || [],
       })) || [];
 

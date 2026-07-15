@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -15,12 +16,13 @@ import {
   Clock,
   Award,
   FileSpreadsheet,
+  Edit,
+  ArrowLeft,
 } from "lucide-react";
 import { QuizAttempt } from "@/features/quiz/domain/QuizAttempt";
 import { Quiz } from "@/features/quiz/domain/Quiz";
 import { QuizQuestion } from "@/features/quiz/domain/Question";
 import { CorrectionForm } from "./CorrectionForm";
-import { useEffect, useState } from "react";
 import { getAttemptOpenAnswerAction } from "../actions/teacherActions";
 
 interface AttemptWithUser extends QuizAttempt {
@@ -29,7 +31,7 @@ interface AttemptWithUser extends QuizAttempt {
 
 interface TeacherQuizDashboardProps {
   quiz: Quiz;
-  openQuestion: QuizQuestion; // La domanda aperta associata a questo quiz
+  openQuestion: QuizQuestion;
   attempts: AttemptWithUser[];
 }
 
@@ -39,36 +41,68 @@ export function TeacherQuizDashboard({
   attempts,
 }: TeacherQuizDashboardProps) {
   const [activeTab, setActiveTab] = useState<"pending" | "graded">("pending");
-
-  const [selectedAttempt, setSelectedAttempt] =
-    useState<AttemptWithUser | null>(null);
-
+  const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(
+    null,
+  );
   const [studentAnswer, setStudentAnswer] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoadingAnswer, setIsLoadingAnswer] = useState(false);
 
+  // Deriviamo l'oggetto attempt in tempo reale ad ogni render per evitare disallineamenti di stato
+  const selectedAttempt = useMemo(
+    () => attempts.find((a) => a.id === selectedAttemptId) || null,
+    [attempts, selectedAttemptId],
+  );
+
+  // Reset degli stati di visualizzazione al cambio di tab
   useEffect(() => {
-    if (selectedAttempt === null) {
+    setIsEditing(false);
+    setSelectedAttemptId(null);
+  }, [activeTab]);
+
+  // Caricamento asincrono della risposta con protezione dai race conditions
+  useEffect(() => {
+    if (!selectedAttemptId) {
       setStudentAnswer("");
       return;
     }
 
-    const attemptId = selectedAttempt.id;
+    // Creiamo una costante locale immutabile.
+    // Essendo una const ed essendo posizionata dopo il controllo,
+    // TypeScript la tipizza rigorosamente come 'string' (escludendo il null).
+    const attemptId = selectedAttemptId;
+
+    let isCurrent = true;
+    setIsLoadingAnswer(true);
 
     async function loadAnswer() {
-      const result = await getAttemptOpenAnswerAction(
-        attemptId,
-        openQuestion.id,
-      );
-
-      if (result.success) {
-        setStudentAnswer(result.answer);
+      try {
+        const result = await getAttemptOpenAnswerAction(
+          attemptId,
+          openQuestion.id,
+        );
+        if (isCurrent && result.success) {
+          const textToSet =
+            (result as any).answerText ?? (result as any).answer ?? "";
+          setStudentAnswer(textToSet);
+        }
+      } catch (error) {
+        console.error("Errore nel caricamento della risposta aperta:", error);
+      } finally {
+        if (isCurrent) {
+          setIsLoadingAnswer(false);
+        }
       }
     }
 
     loadAnswer();
-  }, [selectedAttempt, openQuestion.id]);
+
+    return () => {
+      isCurrent = false; // Annulla l'aggiornamento dello stato se l'utente cambia selezione rapidamente
+    };
+  }, [selectedAttemptId, openQuestion.id]);
 
   const pendingAttempts = attempts.filter((a) => a.status === "submitted");
-
   const gradedAttempts = attempts.filter((a) => a.status === "graded");
 
   return (
@@ -88,40 +122,33 @@ export function TeacherQuizDashboard({
           <Button
             variant={activeTab === "pending" ? "default" : "ghost"}
             size="sm"
-            onClick={() => {
-              setActiveTab("pending");
-              setSelectedAttempt(null);
-            }}
+            onClick={() => setActiveTab("pending")}
             className="gap-2"
           >
             <Clock className="h-4 w-4" />
             Da Correggere
-            <span className="ml-1 px-1.5 py-0.2 bg-background text-foreground text-xs rounded-full font-bold">
+            <span className="ml-1 px-1.5 py-0.5 bg-background text-foreground text-xs rounded-full font-bold">
               {pendingAttempts.length}
             </span>
           </Button>
           <Button
             variant={activeTab === "graded" ? "default" : "ghost"}
             size="sm"
-            onClick={() => {
-              setActiveTab("graded");
-              setSelectedAttempt(null);
-            }}
+            onClick={() => setActiveTab("graded")}
             className="gap-2"
           >
             <CheckCircle2 className="h-4 w-4" />
             Valutati
-            <span className="ml-1 px-1.5 py-0.2 bg-background text-foreground text-xs rounded-full font-bold">
+            <span className="ml-1 px-1.5 py-0.5 bg-background text-foreground text-xs rounded-full font-bold">
               {gradedAttempts.length}
             </span>
           </Button>
         </div>
       </div>
 
-      {/* Layout a due colonne: Lista Tentativi + Pannello di Correzione Condizionale */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Colonna Sinistra: Lista dei record */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block px-1">
             {activeTab === "pending"
               ? "Sottomissioni pendenti"
@@ -149,17 +176,20 @@ export function TeacherQuizDashboard({
               <Card
                 key={attempt.id}
                 className={`cursor-pointer transition-all border hover:border-primary/50 ${
-                  selectedAttempt?.id === attempt.id
+                  selectedAttemptId === attempt.id
                     ? "ring-2 ring-primary border-primary"
                     : "bg-card"
                 }`}
-                onClick={() => setSelectedAttempt(attempt)}
+                onClick={() => {
+                  setSelectedAttemptId(attempt.id);
+                  setIsEditing(false); // Chiude form di edit se si cambia studente
+                }}
               >
                 <CardHeader className="p-4 pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="truncate max-w-[180px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm font-medium min-w-0">
+                      <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="truncate" title={attempt.studentEmail}>
                         {attempt.studentEmail}
                       </span>
                     </div>
@@ -195,19 +225,65 @@ export function TeacherQuizDashboard({
         {/* Colonna Destra: Modulo Dinamico di Correzione o Riepilogo */}
         <div className="lg:col-span-2">
           {selectedAttempt ? (
-            activeTab === "pending" ? (
-              // Se è da correggere, inietta il modulo CorrectionForm passando i dati statici dell'utente
+            isLoadingAnswer ? (
+              <Card className="border-border bg-card p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
+                <Clock className="h-8 w-8 text-muted-foreground/60 animate-spin mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Recupero della risposta in corso...
+                </p>
+              </Card>
+            ) : activeTab === "pending" ? (
+              // NUOVA CORREZIONE
               <CorrectionForm
-                key={selectedAttempt.id} // Forza il reset dello stato del componente se si cambia studente
+                key={`pending-${selectedAttempt.id}`}
                 attemptId={selectedAttempt.id}
                 questionId={openQuestion.id}
                 questionText={openQuestion.text}
                 studentAnswerText={studentAnswer}
                 studentEmail={selectedAttempt.studentEmail}
               />
+            ) : // VALUTATI
+            isEditing ? (
+              <div className="space-y-4">
+                <div className="flex justify-start">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditing(false)}
+                    className="gap-2 text-muted-foreground"
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Annulla Modifica
+                  </Button>
+                </div>
+                <CorrectionForm
+                  key={`edit-${selectedAttempt.id}`}
+                  attemptId={selectedAttempt.id}
+                  questionId={openQuestion.id}
+                  questionText={openQuestion.text}
+                  studentAnswerText={studentAnswer}
+                  studentEmail={selectedAttempt.studentEmail}
+                  editMode={true}
+                  initialScore={Number(
+                    (
+                      selectedAttempt.finalScore - selectedAttempt.autoScore
+                    ).toFixed(2),
+                  )}
+                />
+              </div>
             ) : (
-              // Se è già valutato, mostra una card di riepilogo fissa
-              <Card className="border-border bg-card">
+              <Card className="border-border bg-card relative">
+                <div className="absolute top-4 right-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                    className="gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Modifica
+                  </Button>
+                </div>
+
                 <CardHeader>
                   <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <Award className="h-6 w-6" />
@@ -252,10 +328,6 @@ export function TeacherQuizDashboard({
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground italic text-center pt-2">
-                    Il voto è definitivo e visibile nella dashboard dello
-                    studente.
-                  </p>
                 </CardContent>
               </Card>
             )
@@ -267,7 +339,7 @@ export function TeacherQuizDashboard({
               </h3>
               <p className="text-sm text-muted-foreground max-w-sm mt-1">
                 Seleziona uno studente dalla colonna di sinistra per esaminare
-                la sua risposta aperta ed emettere il voto finale.
+                la sua risposta aperta ed emettere o modificare il voto finale.
               </p>
             </Card>
           )}
@@ -277,9 +349,6 @@ export function TeacherQuizDashboard({
   );
 }
 
-/**
- * Piccola sotto-funzione di rendering interna per uniformare i Badge di punteggio
- */
 function BadgeParziale({
   autoScore,
   status,
@@ -291,13 +360,13 @@ function BadgeParziale({
 }) {
   if (status === "graded") {
     return (
-      <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-bold text-green-700 dark:text-green-400 border border-green-500/20">
+      <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-bold text-green-700 dark:text-green-400 border border-green-500/20 shrink-0">
         {finalScore.toFixed(2)} / 10
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-yellow-500/10 px-2.5 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-400 border border-yellow-500/20">
+    <span className="inline-flex items-center rounded-full bg-yellow-500/10 px-2.5 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-400 border border-yellow-500/20 shrink-0">
       Parziale: {autoScore.toFixed(2)} pt
     </span>
   );

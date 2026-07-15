@@ -7,7 +7,7 @@ import { ParsedQuiz } from "../validators/quizValidators";
 
 export interface IQuizRepository {
   // --- OPERATIONS: QUIZ MANAGEMENT (ADMIN CRUD & ASSOCIAZIONI) ---
-  
+
   /**
    * Registra in modo atomico un intero quiz parsed (metadati, domande ed opzioni) nel database.
    * Gestisce l'inserimento in transazione per garantire la consistenza dei dati.
@@ -22,7 +22,9 @@ export interface IQuizRepository {
   /**
    * Recupera la struttura completa di un quiz, includendo tutte le domande e le relative opzioni.
    */
-  findFullQuizStructure(quizId: string): Promise<{ quiz: Quiz; questions: QuizQuestion[] }>;
+  findFullQuizStructure(
+    quizId: string,
+  ): Promise<{ quiz: Quiz; questions: QuizQuestion[] }>;
 
   /**
    * Ritorna la lista di tutti i quiz presenti a sistema (per la dashboard di amministrazione).
@@ -54,7 +56,6 @@ export interface IQuizRepository {
    */
   delete(id: string): Promise<void>;
 
-
   // --- OPERATIONS: STUDENT ATTEMPTS & ANSWERS ---
 
   /**
@@ -63,13 +64,13 @@ export interface IQuizRepository {
   createAttempt(quizId: string, studentId: string): Promise<QuizAttempt>;
 
   /**
-   * Salva in blocco le risposte fornite dallo studente e contestualmente aggiorna 
+   * Salva in blocco le risposte fornite dallo studente e contestualmente aggiorna
    * il tentativo con i punteggi calcolati ed il cambio di stato in 'submitted'.
    */
   saveAttemptSubmission(
-    attemptId: string, 
-    answers: Omit<QuizAnswer, "id" | "createdAt">[], 
-    autoScore: number
+    attemptId: string,
+    answers: Omit<QuizAnswer, "id" | "createdAt">[],
+    autoScore: number,
   ): Promise<QuizAttempt>;
 
   /**
@@ -82,6 +83,13 @@ export interface IQuizRepository {
    */
   findAttemptById(attemptId: string): Promise<QuizAttempt | null>;
 
+  findReviewByAttemptAndQuestion(
+    attemptId: string,
+    questionId: string,
+  ): Promise<QuizReview | null>;
+
+  findReviewsByAttemptId(attemptId: string): Promise<QuizReview[]>;
+
   /**
    * Recupera tutte le risposte fornite dallo studente all'interno di un determinato tentativo.
    */
@@ -92,7 +100,6 @@ export interface IQuizRepository {
    */
   findAttemptsByQuizId(quizId: string): Promise<QuizAttempt[]>;
 
-
   // --- OPERATIONS: GRADING & REVIEWS (TEACHER) ---
 
   /**
@@ -100,10 +107,15 @@ export interface IQuizRepository {
    * del tentativo calcolando il final_score e mutando lo stato in 'graded'.
    */
   submitReviewAndGrade(
-    review: Omit<QuizReview, "id" | "reviewedAt">, 
-    finalScore: number
+    review: Omit<QuizReview, "id" | "reviewedAt">,
+    finalScore: number,
   ): Promise<QuizAttempt>;
 
+  updateReviewAndGrade(
+    reviewId: string,
+    review: Omit<QuizReview, "id" | "reviewedAt">,
+    finalScore: number,
+  ): Promise<QuizAttempt>;
 
   // --- OPERATIONS: ANALYTICS & STATS ---
 
@@ -126,5 +138,9 @@ export interface IQuizRepository {
   /**
    * Ritorna la classifica o l'elenco delle domande chiuse che hanno registrato la percentuale di errore più alta.
    */
-  getMostFailedQuestions(limit?: number): Promise<{ questionId: string; questionText: string; errorCount: number }[]>;
+  getMostFailedQuestions(
+    limit?: number,
+  ): Promise<
+    { questionId: string; questionText: string; errorCount: number }[]
+  >;
 }

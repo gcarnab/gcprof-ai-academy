@@ -90,14 +90,12 @@ GCPROF-AI-ACADEMY
 |   |   |   
 |   |   \---[slug]
 |   |       |   page.tsx
-|   |       |   page.tsx_old
 |   |       |   
 |   |       +---modules
 |   |       |   \---[moduleId]
 |   |       |       \---lessons
 |   |       |           \---[lessonId]
 |   |       |                   page.tsx
-|   |       |                   page.tsx_old
 |   |       |                   
 |   |       \---quizzes
 |   |           \---[quizId]
@@ -152,7 +150,10 @@ GCPROF-AI-ACADEMY
 |   |   
 |   +---quiz
 |   |       quiz_AI_base_01.md
-|   |       template.md
+|   |       quiz_AI_Fondamenti_ML.md
+|   |       quiz_DB_Fondamenti_DB_SQL_01.md
+|   |       quiz_FINANCE_base_01.md
+|   |       quiz_Python_base_01.md
 |   |       
 |   \---supabase
 |           data.sql
@@ -355,7 +356,6 @@ GCPROF-AI-ACADEMY
 |   |   |       
 |   |   +---queries
 |   |   |       getStudentCourses.ts
-|   |   |       getStudentCourses.ts_old
 |   |   |       
 |   |   +---repositories
 |   |   |       SupabaseCourseRepository.ts
@@ -434,7 +434,7 @@ GCPROF-AI-ACADEMY
 |       
 +---logs
 |       app.log
-|       
+|             
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -895,7 +895,7 @@ Le seguenti sono le caratteristiche minime che un quiz deve possedere:
 16. Nella sezione QUIZ sarà possibile effettuare le correzioni del quiz per ogni studente iscritto allo specifico corso.
 17. La sotto sezione QUIZ sarà presente anche nella sezione STATS della dashboard all'interno della quale ci saranno i grafici relativi ai quiz. 
 
-per non andare fuori obiettivo ti descrivo la situazione attuale :
+SITUAZIONE ATTUALE :
 1. faccio login come admin
 2. vado nella sezione QUIZ della admin/dashboard
 3. uso il tasto importa da markdown e seleziono un template di quiz valido
@@ -904,24 +904,17 @@ per non andare fuori obiettivo ti descrivo la situazione attuale :
 6. faccio click sul tasto "Analizza risultati" del quiz appena creato
 7. atterro su una pagina "Admin Analytics" in questa sezione ho due pulsanti "Assegna al corso", "Correggi Quiz" 
 oltre che una lista che rappresenta il registro dei test
-RICHIESTE :
-- la lista registro test deve essere predisposta a gestire un numero elevato di record deve avere funzionalità di ricerca per 
-poter individuare con precisione i quiz da analizzare
-- introdurre il filtraggio per corso e per classi
-- la pagina deve avere un abreadcrumb per tornare alla sezione di partenza della dashboard admin 
-- la pagina deve dare la possibilità di modificare la correzione della domanda aperto e quindi cambiare di conseguenza il punteggio
-
 8. faccio click sul pulsante "Assegna al corso"
 9. uso il popup per assegnare il quiz ad un corso ottengo : 🎉 Quiz assegnato con successo! 
 sul db viene popolata la tabella quiz_assignments
 10. vado nella sezione corsi seleziono il corso al quale ho assegnato il quiz e vedo il quiz come link
 11. faccio click sul link del quiz eseguo il quiz compilando tutte le risposte
-12. faccio click sul tasto "Analizza risultati" atterro su una pagina "Admin Analytics" in questa sezione ho due pulsanti "Assegna al corso", "Correggi Quiz"
+12. faccio click sul tasto "Analizza risultati" atterro su una pagina "Admin Analytics" in questa sezione ho due pulsanti "Assegna al corso" "Correggi Quiz"
 13. faccio click su "Correggi Quiz" ed eseguo la correzione del quiz nella sezione Registro Correzioni Quiz
-RICHIESTE :
-- la pagina deve avere un abreadcrumb per tornare alla sezione di partenza della dashboard admin 
-- la pagina deve avere navbar e footer
 
+
+DASHBOARD STUDENTE devo avere la sezione dedicata ai quiz provati dallo studente 
+e mostrare il loro stato e tutte le informazioni utili relative ai quiz effettuati dallo studente
 
 
 VINCOLI: 
@@ -933,3 +926,4 @@ VINCOLI:
 6. ricorda di predisporre i nomi delle classi per la feature già abilitata theme light/dark
 7. usa sempre il logger disponibile nel codice che scrivi 
 8. fare il refactoring essenziale e puntare a risolvere il problema mantenendo quanto più possibile la logica attuale senza regredire
+9. adotta sempre il metodo di spezzare i file (part1, part2...) quando sono troppo grandi per riscriverli per intero non darmi le modifiche puntuali che mi fanno perdere più tempo

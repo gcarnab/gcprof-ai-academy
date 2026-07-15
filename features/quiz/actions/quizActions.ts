@@ -60,8 +60,8 @@ export async function importQuizFromMarkdownAction(rawMarkdown: string) {
     );
 
     // Invalida la cache sia della route statica che della dashboard amministrativa attiva
-    revalidatePath("/admin/quiz");
-    revalidatePath("/admin/dashboard");
+revalidatePath("/admin/quiz", "layout"); 
+revalidatePath("/admin/dashboard", "layout");
 
     return { success: true, quizId: newQuiz.id };
   } catch (error: any) {
@@ -83,8 +83,8 @@ export async function updateQuizStatusAction(
     await getAuthenticatedSession("admin");
     await quizRepository.updateStatus(quizId, status);
 
-    revalidatePath("/admin/quiz");
-    revalidatePath("/admin/dashboard");
+revalidatePath("/admin/quiz", "layout"); 
+revalidatePath("/admin/dashboard", "layout");
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -102,8 +102,8 @@ export async function assignQuizToCourseAction(
     await getAuthenticatedSession("admin");
     await quizRepository.assignToCourse(quizId, courseId);
 
-    revalidatePath(`/admin/quiz`);
-    revalidatePath("/admin/dashboard");
+revalidatePath("/admin/quiz", "layout"); 
+revalidatePath("/admin/dashboard", "layout");
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -156,28 +156,20 @@ export async function submitStudentAttemptAction(
 
       if (q.type === "multiple_choice") {
         const correctOption = q.options?.find((o) => o.isCorrect);
-
         const isCorrect = correctOption?.id === studentAns?.selectedOptionId;
 
         let scoreForQuestion = 0.0;
 
+        /********* CALCOLO PUNTEGGIO QUIZ ************/
         if (isCorrect) {
-          // Risposta corretta
-          scoreForQuestion = Number(q.points);
-
           correctClosedAnswers++;
         } else {
-          // Risposta errata
           wrongClosedAnswers++;
-
-          if (quiz.penaltyEnabled) {
-            scoreForQuestion = -Math.abs(Number(quiz.negativeMark));
-          } else {
-            scoreForQuestion = 0.0;
-          }
         }
 
+        scoreForQuestion = isCorrect ? Number(q.points) : 0;
         calculatedAutoScore += scoreForQuestion;
+        /**********************************************/
 
         finalAnswersPayload.push({
           questionId: q.id,
@@ -186,10 +178,7 @@ export async function submitStudentAttemptAction(
           score: scoreForQuestion,
         });
       } else {
-        // Domanda aperta:
-        // memorizza il testo, il punteggio iniziale è 0.00
-        // in attesa della correzione del docente
-
+        // Domanda aperta: memorizza il testo, il punteggio iniziale è 0.00
         finalAnswersPayload.push({
           questionId: q.id,
           openAnswerText: studentAns?.openAnswerText || "",
@@ -199,12 +188,23 @@ export async function submitStudentAttemptAction(
       }
     }
 
-    // Il punteggio automatico riguarda solo le domande chiuse.
-    // Non può mai essere negativo.
-    calculatedAutoScore = Math.max(0, calculatedAutoScore);
+    // Somma massima disponibile delle domande chiuse
+    const maxClosedScore = questions
+      .filter((q) => q.type === "multiple_choice")
+      .reduce((sum, q) => sum + Number(q.points), 0);
 
-    // Inizializza il record e salva i dettagli delle risposte
-    // in transazione logica
+    // Applica la penalità sugli errori
+    if (quiz.penaltyEnabled) {
+      calculatedAutoScore =
+        maxClosedScore -
+        wrongClosedAnswers * Math.abs(Number(quiz.negativeMark));
+    } else {
+      calculatedAutoScore =
+        maxClosedScore - (maxClosedScore - calculatedAutoScore);
+    }
+
+    // Evita punteggi negativi
+    calculatedAutoScore = Math.max(0, calculatedAutoScore);
 
     const attempt = await quizRepository.createAttempt(
       quizId,
@@ -217,7 +217,7 @@ export async function submitStudentAttemptAction(
       calculatedAutoScore,
     );
 
-    revalidatePath("/dashboard/courses");
+    revalidatePath("/dashboard/courses", "layout");
 
     return {
       success: true,
@@ -233,17 +233,19 @@ export async function submitStudentAttemptAction(
 }
 
 // ======================================================
-// TEACHER ACTIONS (CORREZIONE MANUALE)
+// TEACHER ACTIONS
 // ======================================================
 
 /**
- * Consente al docente di validare la domanda aperta assegnando un voto da 0 a 6
+ * Consente al docente di validare la domanda aperta assegnando un voto da 0 a 6.
+ * Utilizza una logica a interi per garantire la precisione dei decimali nel calcolo del voto finale.
  */
 export async function gradeOpenAnswerAction(payload: {
   attemptId: string;
   questionId: string;
-  score: number; // Validato da 0 a 6
+  score: number;
   comment?: string;
+  reviewId?: string;
 }) {
   try {
     const adminSession = await getAuthenticatedSession("admin");
@@ -255,29 +257,68 @@ export async function gradeOpenAnswerAction(payload: {
     }
 
     const attempt = await quizRepository.findAttemptById(payload.attemptId);
-    if (!attempt) throw new Error("Tentativo dello studente non trovato.");
-    if (attempt.status === "graded")
-      throw new Error("Questo tentativo è già stato corretto.");
+    if (!attempt) {
+      throw new Error("Tentativo dello studente non trovato.");
+    }
 
-    // Calcolo matematico del voto finale finale (AutoScore chiuse + Score manuale aperta)
-    const finalScore = Number(attempt.autoScore) + Number(payload.score);
+    // 1. Costante per la gestione della precisione (100 = 2 cifre decimali)
+    const SCORE_MULTIPLIER = 100;
 
-    await quizRepository.submitReviewAndGrade(
-      {
-        attemptId: payload.attemptId,
-        teacherId: adminSession.id,
-        questionId: payload.questionId,
-        score: payload.score,
-        comment: payload.comment,
-      },
-      finalScore,
+    // 2. Recupero risposte e calcolo
+    const answers = await quizRepository.findAnswersByAttemptId(payload.attemptId);
+    
+    // Somma i punteggi di tutte le ALTRE domande convertendoli in interi
+    const otherAnswersScoreInt = answers
+      .filter((a) => a.questionId !== payload.questionId)
+      .reduce((acc, curr) => acc + Math.round(Number(curr.score) * SCORE_MULTIPLIER), 0);
+    
+    // Convertiamo il nuovo punteggio in intero
+    const currentScoreInt = Math.round(Number(payload.score) * SCORE_MULTIPLIER);
+
+    // Calcolo del punteggio totale come intero
+    const finalScoreInt = otherAnswersScoreInt + currentScoreInt;
+    
+    // Riconversione in decimale per il salvataggio
+    const finalScore = finalScoreInt / SCORE_MULTIPLIER;
+
+    // 3. Verifica esistenza revisione
+    const existingReview = await quizRepository.findReviewByAttemptAndQuestion(
+      payload.attemptId,
+      payload.questionId,
     );
 
-    revalidatePath("/admin/quiz");
-    revalidatePath("/admin/dashboard");
-    return { success: true, finalScore };
+    const reviewPayload = {
+      attemptId: payload.attemptId,
+      teacherId: adminSession.id,
+      questionId: payload.questionId,
+      score: payload.score, // Salviamo il punteggio originale (es. 2.5)
+      comment: payload.comment,
+    };
+
+    // 4. Operazione su DB
+    if (existingReview) {
+      await quizRepository.updateReviewAndGrade(
+        existingReview.id,
+        reviewPayload,
+        finalScore, // Salviamo il totale ricalcolato preciso
+      );
+    } else {
+      await quizRepository.submitReviewAndGrade(reviewPayload, finalScore);
+    }
+
+    // 5. Invalida la cache per forzare il refresh della UI
+    revalidatePath("/admin/quiz", "layout");
+    revalidatePath("/admin/dashboard", "layout");
+
+    return {
+      success: true,
+      finalScore,
+    };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      error: error.message,
+    };
   }
 }
 
@@ -289,7 +330,6 @@ export async function getAttemptOpenAnswerAction(
     await getAuthenticatedSession("admin");
 
     const answers = await quizRepository.findAnswersByAttemptId(attemptId);
-
     const answer = answers.find((a) => a.questionId === questionId);
 
     return {

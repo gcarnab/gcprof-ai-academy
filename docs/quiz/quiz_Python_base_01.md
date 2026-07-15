@@ -41,11 +41,7 @@ Quale simbolo viene utilizzato in Python per inserire un commento nel codice?
 - [ ] D) **
 
 # Q6
-Quale risultato produce il seguente codice Python?
-
-nome = "Anna"  
-print(nome)
-
+Quale risultato produce il seguente codice Python? nome = "Anna" print(nome)
 - [x] A) Visualizza la parola Anna sullo schermo.
 - [ ] B) Cancella il contenuto della variabile nome.
 - [ ] C) Crea una nuova variabile chiamata print.

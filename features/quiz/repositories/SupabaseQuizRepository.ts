@@ -294,13 +294,11 @@ export class SupabaseQuizRepository implements IQuizRepository {
     return data ? this.mapToAttemptEntity(data) : null;
   }
 
-async findAnswersByAttemptId(
-  attemptId: string
-): Promise<QuizAnswer[]> {
-
-  const { data, error } = await supabase
-    .from("quiz_answers")
-    .select(`
+  async findAnswersByAttemptId(attemptId: string): Promise<QuizAnswer[]> {
+    const { data, error } = await supabase
+      .from("quiz_answers")
+      .select(
+        `
       id,
       attempt_id,
       question_id,
@@ -309,38 +307,30 @@ async findAnswersByAttemptId(
       is_correct,
       score,
       created_at
-    `)
-    .eq("attempt_id", attemptId);
+    `,
+      )
+      .eq("attempt_id", attemptId);
 
+    if (error) {
+      throw new Error("Errore recupero risposte tentativo: " + error.message);
+    }
 
-  if (error) {
-    throw new Error(
-      "Errore recupero risposte tentativo: " + error.message
-    );
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      attemptId: row.attempt_id,
+      questionId: row.question_id,
+
+      selectedOptionId: row.selected_option_id ?? undefined,
+
+      openAnswerText: row.open_answer_text ?? undefined,
+
+      isCorrect: row.is_correct ?? undefined,
+
+      score: Number(row.score),
+
+      createdAt: new Date(row.created_at),
+    }));
   }
-
-
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    attemptId: row.attempt_id,
-    questionId: row.question_id,
-
-    selectedOptionId:
-      row.selected_option_id ?? undefined,
-
-    openAnswerText:
-      row.open_answer_text ?? undefined,
-
-    isCorrect:
-      row.is_correct ?? undefined,
-
-    score:
-      Number(row.score),
-
-    createdAt:
-      new Date(row.created_at),
-  }));
-}
 
   async findAttemptsByQuizId(quizId: string): Promise<QuizAttempt[]> {
     const { data, error } = await supabase
@@ -389,6 +379,108 @@ async findAnswersByAttemptId(
       .single();
 
     if (attemptError) throw new Error(attemptError.message);
+    return this.mapToAttemptEntity(attemptData);
+  }
+
+  async findReviewByAttemptAndQuestion(
+    attemptId: string,
+    questionId: string,
+  ): Promise<QuizReview | null> {
+    const { data, error } = await supabase
+      .from("quiz_reviews")
+      .select("*")
+      .eq("attempt_id", attemptId)
+      .eq("question_id", questionId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error("Errore recupero valutazione manuale: " + error.message,);
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    return {
+      id: data.id,
+      attemptId: data.attempt_id,
+      teacherId: data.teacher_id,
+      questionId: data.question_id,
+      score: Number(data.score),
+      comment: data.comment ?? undefined,
+      reviewedAt: new Date(data.reviewed_at),
+    };
+  }
+
+  async findReviewsByAttemptId(attemptId: string): Promise<QuizReview[]> {
+    const { data, error } = await supabase
+      .from("quiz_reviews")
+      .select("*")
+      .eq("attempt_id", attemptId)
+      .order("reviewed_at", {
+        ascending: false,
+      });
+
+    if (error) {
+      throw new Error("Errore recupero storico valutazioni: " + error.message,);
+    }
+
+    return (data ?? []).map((review) => ({
+      id: review.id,
+      attemptId: review.attempt_id,
+      teacherId: review.teacher_id,
+      questionId: review.question_id,
+      score: Number(review.score),
+      comment: review.comment ?? undefined,
+      reviewedAt: new Date(review.reviewed_at),
+    }));
+  }
+
+  async updateReviewAndGrade(
+    reviewId: string,
+    review: Omit<QuizReview, "id" | "reviewedAt">,
+    finalScore: number,
+  ): Promise<QuizAttempt> {
+    const { error: reviewError } = await supabase
+      .from("quiz_reviews")
+      .update({
+        score: review.score,
+        comment: review.comment,
+      })
+      .eq("id", reviewId);
+
+    if (reviewError) {
+      throw new Error(reviewError.message);
+    }
+
+    const { error: answerError } = await supabase
+      .from("quiz_answers")
+      .update({
+        score: review.score,
+        is_correct: review.score > 0,
+      })
+      .eq("attempt_id", review.attemptId)
+      .eq("question_id", review.questionId);
+
+    if (answerError) {
+      throw new Error(answerError.message);
+    }
+
+    const { data: attemptData, error: attemptError } = await supabase
+      .from("quiz_attempts")
+      .update({
+        teacher_score: review.score,
+        final_score: finalScore,
+        status: "graded",
+      })
+      .eq("id", review.attemptId)
+      .select("*")
+      .single();
+
+    if (attemptError) {
+      throw new Error(attemptError.message);
+    }
+
     return this.mapToAttemptEntity(attemptData);
   }
 
