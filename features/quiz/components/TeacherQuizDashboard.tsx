@@ -105,6 +105,8 @@ export function TeacherQuizDashboard({
   const pendingAttempts = attempts.filter((a) => a.status === "submitted");
   const gradedAttempts = attempts.filter((a) => a.status === "graded");
 
+  console.log("===> TeacherQuizDashboard DEBUG ATTEMPT:", selectedAttempt);
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-4">
       {/* Header Dashboard */}
@@ -241,6 +243,8 @@ export function TeacherQuizDashboard({
                 questionText={openQuestion.text}
                 studentAnswerText={studentAnswer}
                 studentEmail={selectedAttempt.studentEmail}
+                editMode={true}
+                initialScore={selectedAttempt.teacherScore}
               />
             ) : // VALUTATI
             isEditing ? (
@@ -263,11 +267,9 @@ export function TeacherQuizDashboard({
                   studentAnswerText={studentAnswer}
                   studentEmail={selectedAttempt.studentEmail}
                   editMode={true}
-                  initialScore={Number(
-                    (
-                      selectedAttempt.finalScore - selectedAttempt.autoScore
-                    ).toFixed(2),
-                  )}
+
+                  //initialScore={Number((selectedAttempt.finalScore - selectedAttempt.autoScore).toFixed(2),)}
+                  initialScore={selectedAttempt.teacherScore}
                 />
               </div>
             ) : (

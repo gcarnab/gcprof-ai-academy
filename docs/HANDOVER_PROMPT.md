@@ -913,8 +913,10 @@ sul db viene popolata la tabella quiz_assignments
 13. faccio click su "Correggi Quiz" ed eseguo la correzione del quiz nella sezione Registro Correzioni Quiz
 
 
-DASHBOARD STUDENTE devo avere la sezione dedicata ai quiz provati dallo studente 
-e mostrare il loro stato e tutte le informazioni utili relative ai quiz effettuati dallo studente
+sfruttando la possibilità della piattaforma di mandare email a qualsiasi indirizzo email usando SMPT di gmail già implementato
+voglio che sia notificato per email allo studente che prova il quiz : 
+1. la fase di consegna del quiz con l'esito prima della correzione della domanda aperta
+2. il termine della correzione ed il voto finale
 
 
 VINCOLI: 

@@ -5,6 +5,8 @@ import { SupabaseQuizRepository } from "../repositories/SupabaseQuizRepository";
 import { parseQuizMarkdown } from "../markdown/parser/quizParser";
 import { JoseTokenService } from "@/features/auth/infrastructure/JoseTokenService";
 import { NextCookieService } from "@/features/auth/infrastructure/NextCookieService";
+import { sendQuizSubmittedMail } from "./quizMailActions";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 const quizRepository = new SupabaseQuizRepository();
 const tokenService = new JoseTokenService();
@@ -60,8 +62,8 @@ export async function importQuizFromMarkdownAction(rawMarkdown: string) {
     );
 
     // Invalida la cache sia della route statica che della dashboard amministrativa attiva
-revalidatePath("/admin/quiz", "layout"); 
-revalidatePath("/admin/dashboard", "layout");
+    revalidatePath("/admin/quiz", "layout");
+    revalidatePath("/admin/dashboard", "layout");
 
     return { success: true, quizId: newQuiz.id };
   } catch (error: any) {
@@ -83,8 +85,8 @@ export async function updateQuizStatusAction(
     await getAuthenticatedSession("admin");
     await quizRepository.updateStatus(quizId, status);
 
-revalidatePath("/admin/quiz", "layout"); 
-revalidatePath("/admin/dashboard", "layout");
+    revalidatePath("/admin/quiz", "layout");
+    revalidatePath("/admin/dashboard", "layout");
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -102,8 +104,8 @@ export async function assignQuizToCourseAction(
     await getAuthenticatedSession("admin");
     await quizRepository.assignToCourse(quizId, courseId);
 
-revalidatePath("/admin/quiz", "layout"); 
-revalidatePath("/admin/dashboard", "layout");
+    revalidatePath("/admin/quiz", "layout");
+    revalidatePath("/admin/dashboard", "layout");
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -217,6 +219,30 @@ export async function submitStudentAttemptAction(
       calculatedAutoScore,
     );
 
+    // RECUPERO DATI ANAGRAFICI STUDENTE PER EMAIL
+    const { data: studentProfile } = await getSupabaseAdmin()
+      .from("profiles")
+      .select("first_name,last_name,display_name")
+      .eq("id", studentSession.id)
+      .single();
+
+    console.log("STUDENT PROFILE EMAIL VARIABLES", {
+      first_name: studentProfile?.first_name,
+      last_name: studentProfile?.last_name,
+      display_name: studentProfile?.display_name,
+    });
+
+    // INVIO EMAIL CONFERMA CONSEGNA QUIZ
+    await sendQuizSubmittedMail(studentSession.email, {
+      first_name: studentProfile?.first_name ?? "",
+      last_name: studentProfile?.last_name ?? "",
+      display_name: studentProfile?.display_name ?? "",
+
+      quiz_title: quiz.title,
+      auto_score: calculatedAutoScore.toFixed(2),
+      quiz_status: "In attesa della correzione della domanda aperta",
+    });
+
     revalidatePath("/dashboard/courses", "layout");
 
     return {
@@ -261,25 +287,19 @@ export async function gradeOpenAnswerAction(payload: {
       throw new Error("Tentativo dello studente non trovato.");
     }
 
-    // 1. Costante per la gestione della precisione (100 = 2 cifre decimali)
-    const SCORE_MULTIPLIER = 100;
+    // Recupero tentativo corrente
+    const currentAttempt = await quizRepository.findAttemptById(
+      payload.attemptId,
+    );
 
-    // 2. Recupero risposte e calcolo
-    const answers = await quizRepository.findAnswersByAttemptId(payload.attemptId);
-    
-    // Somma i punteggi di tutte le ALTRE domande convertendoli in interi
-    const otherAnswersScoreInt = answers
-      .filter((a) => a.questionId !== payload.questionId)
-      .reduce((acc, curr) => acc + Math.round(Number(curr.score) * SCORE_MULTIPLIER), 0);
-    
-    // Convertiamo il nuovo punteggio in intero
-    const currentScoreInt = Math.round(Number(payload.score) * SCORE_MULTIPLIER);
+    if (!currentAttempt) {
+      throw new Error("Tentativo non trovato.");
+    }
 
-    // Calcolo del punteggio totale come intero
-    const finalScoreInt = otherAnswersScoreInt + currentScoreInt;
-    
-    // Riconversione in decimale per il salvataggio
-    const finalScore = finalScoreInt / SCORE_MULTIPLIER;
+    // Il punteggio finale è:
+    // punti automatici + punti docente
+    const finalScore = Number(currentAttempt.autoScore) + Number(payload.score);
+
 
     // 3. Verifica esistenza revisione
     const existingReview = await quizRepository.findReviewByAttemptAndQuestion(
@@ -309,6 +329,7 @@ export async function gradeOpenAnswerAction(payload: {
     // 5. Invalida la cache per forzare il refresh della UI
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
+    revalidatePath(`/admin/quiz/${payload.attemptId}`, "layout");
 
     return {
       success: true,
