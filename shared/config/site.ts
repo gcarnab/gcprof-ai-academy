@@ -73,6 +73,6 @@ export const siteConfig = {
     "",
 
   adminMail:
-    process.env.MAIL_ADMIN ??
+    process.env.GMAIL_SMTP_USER ??
     "",
 } as const;

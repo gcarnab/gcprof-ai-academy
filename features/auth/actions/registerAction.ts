@@ -7,6 +7,7 @@ import { MailTemplateService } from "@/features/admin/mail/services/MailTemplate
 import { MailTemplateEngine } from "@/features/admin/mail/services/MailTemplateEngine";
 import { createClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
+import { MailTemplateKeys } from "@/features/admin/mail/constants/MailTemplateKeys";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -172,6 +173,12 @@ async function startEmailDispatches(params: {
       class_name: params.className,
       class_slug: params.classSlug,
 
+      // Stato registrazione
+      status: "pending",
+
+      // Timestamp evento
+      created_at: new Date().toLocaleString("it-IT"),
+
       // Alias retrocompatibili
       studentName: params.displayName,
       studentEmail: params.studentEmail,
@@ -180,7 +187,9 @@ async function startEmailDispatches(params: {
     const engine = new MailTemplateEngine(contextVariables);
 
     // --- INVIO EMAIL ALLO STUDENTE (PENDING) ---
-    const studentTemplate = await templateService.getTemplate("WELCOME");
+    const studentTemplate = await templateService.getTemplate(
+      MailTemplateKeys.WELCOME,
+    );
     if (studentTemplate && studentTemplate.enabled) {
       const subject = engine.render(
         studentTemplate.subject ?? "Registrazione Ricevuta",
@@ -212,9 +221,10 @@ async function startEmailDispatches(params: {
     }
 
     // --- INVIO NOTIFICA ALL'ADMIN ---
-    /*
-    const adminTemplate =
-      await templateService.getTemplate("admin_notification");
+
+    const adminTemplate = await templateService.getTemplate(
+      MailTemplateKeys.ADMIN_NEW_REGISTRATION,
+    );
     if (adminTemplate && adminTemplate.enabled) {
       const subject = engine.render(
         adminTemplate.subject ?? "Nuovo Studente Registrato",
@@ -236,7 +246,6 @@ async function startEmailDispatches(params: {
         process.env.GMAIL_SMTP_USER || "gcarnab74@gmail.com";
       await emailService.sendGenericEmail(adminRecipient, subject, html);
     }
-      */
   } catch (err) {
     console.error(
       "❌ Errore durante l'elaborazione dei template email dinamici:",

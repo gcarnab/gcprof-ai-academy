@@ -9,7 +9,7 @@ if (!apiKey) {
 
 const resend = new Resend(apiKey);
 
-const ADMIN_EMAIL = process.env.MAIL_ADMIN!;
+const ADMIN_EMAIL = process.env.GMAIL_SMTP_USER!;
 
 const DEFAULT_FROM =
 `${process.env.MAIL_FROM_NAME} <${process.env.MAIL_FROM}>`;

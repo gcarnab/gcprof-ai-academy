@@ -890,7 +890,9 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-aggiorniamo la navigation ed il layout del sito come un esperto marketing advisor
+verificare che l'admin che ha la mail gcarnab74@gmail.com venga notificato per mail per i seguenti eventi :
+1. registrazione nuovo studente/utente del sito
+2. utilizzare il sistema di invio email già funzionante della piattaforma
 
 SITUAZIONE ATTUALE :
 1. la nuova feature è in fase di sviluppo
