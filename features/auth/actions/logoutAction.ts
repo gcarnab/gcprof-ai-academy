@@ -7,5 +7,5 @@ export async function logoutAction() {
   const cookieService = new NextCookieService();
   await cookieService.clearSession();
   
-  redirect("/login");
+  redirect("/");
 }

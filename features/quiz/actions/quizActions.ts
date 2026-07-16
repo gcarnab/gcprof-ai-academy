@@ -5,8 +5,9 @@ import { SupabaseQuizRepository } from "../repositories/SupabaseQuizRepository";
 import { parseQuizMarkdown } from "../markdown/parser/quizParser";
 import { JoseTokenService } from "@/features/auth/infrastructure/JoseTokenService";
 import { NextCookieService } from "@/features/auth/infrastructure/NextCookieService";
-import { sendQuizSubmittedMail } from "./quizMailActions";
+import { sendQuizSubmittedMail, sendQuizGradedMail } from "./quizMailActions";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 
 const quizRepository = new SupabaseQuizRepository();
 const tokenService = new JoseTokenService();
@@ -67,6 +68,7 @@ export async function importQuizFromMarkdownAction(rawMarkdown: string) {
 
     return { success: true, quizId: newQuiz.id };
   } catch (error: any) {
+    logger.error("Errore durante l'importazione del quiz da Markdown", error);
     return {
       success: false,
       error: error.message || "Errore sconosciuto durante l'importazione.",
@@ -89,6 +91,7 @@ export async function updateQuizStatusAction(
     revalidatePath("/admin/dashboard", "layout");
     return { success: true };
   } catch (error: any) {
+    logger.error(`Errore aggiornamento stato quiz ${quizId}`, error);
     return { success: false, error: error.message };
   }
 }
@@ -108,6 +111,7 @@ export async function assignQuizToCourseAction(
     revalidatePath("/admin/dashboard", "layout");
     return { success: true };
   } catch (error: any) {
+    logger.error(`Errore assegnazione quiz ${quizId} al corso ${courseId}`, error);
     return { success: false, error: error.message };
   }
 }
@@ -226,7 +230,7 @@ export async function submitStudentAttemptAction(
       .eq("id", studentSession.id)
       .single();
 
-    console.log("STUDENT PROFILE EMAIL VARIABLES", {
+    logger.info("Variabili anagrafiche recuperate per email sottomissione studente", {
       first_name: studentProfile?.first_name,
       last_name: studentProfile?.last_name,
       display_name: studentProfile?.display_name,
@@ -237,7 +241,6 @@ export async function submitStudentAttemptAction(
       first_name: studentProfile?.first_name ?? "",
       last_name: studentProfile?.last_name ?? "",
       display_name: studentProfile?.display_name ?? "",
-
       quiz_title: quiz.title,
       auto_score: calculatedAutoScore.toFixed(2),
       quiz_status: "In attesa della correzione della domanda aperta",
@@ -251,6 +254,7 @@ export async function submitStudentAttemptAction(
       autoScore: calculatedAutoScore,
     };
   } catch (error: any) {
+    logger.error("Errore durante la sottomissione del tentativo dello studente", error);
     return {
       success: false,
       error: error.message || "Errore durante il salvataggio delle risposte.",
@@ -264,7 +268,7 @@ export async function submitStudentAttemptAction(
 
 /**
  * Consente al docente di validare la domanda aperta assegnando un voto da 0 a 6.
- * Utilizza una logica a interi per garantire la precisione dei decimali nel calcolo del voto finale.
+ * Integra la logica di calcolo del punteggio finale e l'invio della notifica di fine correzione.
  */
 export async function gradeOpenAnswerAction(payload: {
   attemptId: string;
@@ -282,26 +286,16 @@ export async function gradeOpenAnswerAction(payload: {
       );
     }
 
-    const attempt = await quizRepository.findAttemptById(payload.attemptId);
-    if (!attempt) {
+    // 1. Recupero del tentativo dello studente (chiamata singola ottimizzata)
+    const currentAttempt = await quizRepository.findAttemptById(payload.attemptId);
+    if (!currentAttempt) {
       throw new Error("Tentativo dello studente non trovato.");
     }
 
-    // Recupero tentativo corrente
-    const currentAttempt = await quizRepository.findAttemptById(
-      payload.attemptId,
-    );
-
-    if (!currentAttempt) {
-      throw new Error("Tentativo non trovato.");
-    }
-
-    // Il punteggio finale è:
-    // punti automatici + punti docente
+    // 2. Calcolo del punteggio totale combinato
     const finalScore = Number(currentAttempt.autoScore) + Number(payload.score);
 
-
-    // 3. Verifica esistenza revisione
+    // 3. Verifica dell'esistenza di una revisione precedente per la stessa domanda
     const existingReview = await quizRepository.findReviewByAttemptAndQuestion(
       payload.attemptId,
       payload.questionId,
@@ -311,22 +305,50 @@ export async function gradeOpenAnswerAction(payload: {
       attemptId: payload.attemptId,
       teacherId: adminSession.id,
       questionId: payload.questionId,
-      score: payload.score, // Salviamo il punteggio originale (es. 2.5)
+      score: payload.score,
       comment: payload.comment,
     };
 
-    // 4. Operazione su DB
+    // 4. Persistenza dei dati su database tramite Repository
     if (existingReview) {
       await quizRepository.updateReviewAndGrade(
         existingReview.id,
         reviewPayload,
-        finalScore, // Salviamo il totale ricalcolato preciso
+        finalScore,
       );
     } else {
       await quizRepository.submitReviewAndGrade(reviewPayload, finalScore);
     }
 
-    // 5. Invalida la cache per forzare il refresh della UI
+    // 5. Recupero informazioni del Quiz e Profilo/Email dello studente per invio notifica
+    const [quiz, { data: studentProfile }] = await Promise.all([
+      quizRepository.findById(currentAttempt.quizId),
+      getSupabaseAdmin()
+        .from("profiles")
+        .select("email, first_name, last_name, display_name")
+        .eq("id", currentAttempt.studentId)
+        .single()
+    ]);
+
+    const targetEmail = studentProfile?.email;
+
+    if (targetEmail) {
+      await sendQuizGradedMail(targetEmail, {
+        first_name: studentProfile?.first_name ?? "",
+        last_name: studentProfile?.last_name ?? "",
+        display_name: studentProfile?.display_name ?? "",
+        quiz_title: quiz?.title ?? "Quiz",
+        score: finalScore.toFixed(2),
+        final_score: finalScore.toFixed(2),
+        max_score: quiz?.maxScore?.toString() ?? "10",
+        comment: payload.comment ?? "Nessun commento aggiuntivo fornito dal docente.",
+      });
+      logger.info(`Email di fine correzione inviata correttamente a ${targetEmail} per il tentativo ${payload.attemptId}`);
+    } else {
+      logger.error(`Impossibile inviare la notifica di correzione: email non trovata nel profilo dello studente con ID ${currentAttempt.studentId}`);
+    }
+
+    // 6. Invalidazione selettiva delle cache Next.js
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
     revalidatePath(`/admin/quiz/${payload.attemptId}`, "layout");
@@ -336,6 +358,7 @@ export async function gradeOpenAnswerAction(payload: {
       finalScore,
     };
   } catch (error: any) {
+    logger.error(`Errore durante la valutazione della domanda aperta per il tentativo ${payload.attemptId}`, error);
     return {
       success: false,
       error: error.message,
@@ -358,6 +381,7 @@ export async function getAttemptOpenAnswerAction(
       answerText: answer?.openAnswerText ?? "",
     };
   } catch (error: any) {
+    logger.error(`Errore nel recupero della risposta aperta del tentativo ${attemptId}`, error);
     return {
       success: false,
       error: error.message,

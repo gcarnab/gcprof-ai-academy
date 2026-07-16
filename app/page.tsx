@@ -3,6 +3,10 @@ import Hero from "@/features/home/components/Hero";
 import CoursePreview from "@/features/home/components/CoursePreview";
 import type { Metadata } from "next";
 import { siteConfig } from "@/shared/config/site";
+import HeroSection from "@/features/marketing/components/HeroSection";
+import WhyChoose from "@/features/marketing/components/WhyChoose";
+import HowItWorks from "@/features/marketing/components/HowItWorks";
+import StudentFeatures from "@/features/marketing/components/StudentFeatures";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -18,9 +22,13 @@ export default function HomePage() {
 
   return (
     <PublicLayout>
-      <Hero />
+      {/*<Hero /> */}
+      <HeroSection/>
+      <WhyChoose/>
+      <HowItWorks/>
+      <StudentFeatures/>
       {/* Il componente CoursePreview internamente utilizzerà useCourses o mostrerà le anteprime */}
-      <CoursePreview />
+      {/*<CoursePreview />*/}
     </PublicLayout>
   );
 }

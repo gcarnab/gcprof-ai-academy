@@ -131,6 +131,7 @@ GCPROF-AI-ACADEMY
 |           dropdown-menu.tsx
 |           input.tsx
 |           label.tsx
+|           progress.tsx
 |           radio-group.tsx
 |           select.tsx
 |           table.tsx
@@ -386,6 +387,7 @@ GCPROF-AI-ACADEMY
 |   |   +---actions
 |   |   |       getQuizAction.ts
 |   |   |       quizActions.ts
+|   |   |       quizMailActions.ts
 |   |   |       statsActions.ts
 |   |   |       teacherActions.ts
 |   |   |       
@@ -396,6 +398,7 @@ GCPROF-AI-ACADEMY
 |   |   |       CorrectionForm.tsx
 |   |   |       QuizStatsDashboard.tsx
 |   |   |       QuizViewer.tsx
+|   |   |       StudentQuizDashboard.tsx
 |   |   |       TeacherQuizDashboard.tsx
 |   |   |       
 |   |   +---domain
@@ -434,7 +437,7 @@ GCPROF-AI-ACADEMY
 |       
 +---logs
 |       app.log
-|             
+|       
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -864,36 +867,26 @@ CONTESTO :
 2.ho comprato un dominio su cloudflare gcprof-academy.com già configurato su vercel 
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
-ULTIMI BUG RISCONTRATI :
-1. app stabile
-
-ULTIMI FEATURES INTRODOTTE :
-1. feature in fase di sviluppo
-
 OBIETTIVO : 
-Migliorare la funzionalità gestione QUIZ attualmente in fase di sviluppo. Capire lo stato dell'arte attuale.
-Fare refactoring e mantenere un flusso univoco e stabile sfoltendo il codice doppio o inutile o orfano a causa di 
-livelli diversi di analisi effettuati con diversi modelli AI.
+sfruttando la possibilità della piattaforma di mandare email a qualsiasi indirizzo email usando SMPT di gmail già implementato
+voglio che sia notificato per email allo studente che prova il quiz : 
+1. la fase di consegna del quiz con l'esito prima della correzione della domanda aperta (già implementata da controllare)
+2. il termine della correzione ed il voto finale (da implementare)
 
-Le seguenti sono le caratteristiche minime che un quiz deve possedere:
+SITUAZIONE ATTUALE :
+1. la fase di consegna del quiz con l'esito prima della correzione della domanda aperta (già implementata da controllare)
 
-1. Deve contenere 8 domande chiuse a risposta multipla ognuna con quattro alternative non ambigue di cui solo una giusta.
-2. Deve contenere 1 domanda aperta
-3. La domanda aperta deve essere validata dal docente che può assegnare un punteggio da 0 a 6
-4. Ogni domanda chiusa vale 0.5 punti per un totale di 4 punti massimi su 8 domande 
-5. Le risposte errate delle domande chiuse possono essere penalizzate di 0.25 punti ognuna. La penalizzazione deve essere impostabile ed abilitabile dal creatore del quiz.
-6. L'unico a creare i quiz è l'utente admin. 
-7. Il punteggio massimo ottenibile dallo studente è 10/10
-8. Ogni quiz creato sarà in modalità draft fino a quando l'amministratore deciderà di associarlo allo specifico corso e renderlo attivo.
-9. Ogni corso può avere più quiz associati 
-10. Il template che caricherà automaticamente la struttura di un particolare quiz sarà in formato markdown.
-11. Dovrai creare tu la struttura del template necessario per generare un quiz commentando il markdown generato.
-12. In fase di creazione del quiz il sistema prevede il caricamento del template markdown ed automaticamente verrà generato il quiz.
-13. Gli argomenti e le domande dei quiz saranno a carico del creatore che le inserirà nel template al posto giusto usando l'intelligenza artificiale per creare il contenuto del quiz fornendo il template da seguire.
-14. Bisogna predisporre tutta la struttura del DB adeguata in modo che lo specifico quiz sarà disponibile per gli studenti iscritti allo specifico corso al quale è assegnato il quiz.
-15. Sarà presente una sezione dedicata nella dashboard di amministrazione chiamata QUIZ all'interno della quale sarà possibile gestire per intero i quiz e le domande di ogni quiz(CRUD) 
-16. Nella sezione QUIZ sarà possibile effettuare le correzioni del quiz per ogni studente iscritto allo specifico corso.
-17. La sotto sezione QUIZ sarà presente anche nella sezione STATS della dashboard all'interno della quale ci saranno i grafici relativi ai quiz. 
+VINCOLI: 
+1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
+2. ricorda di aspettare sempre la mia conferma per scrivere il codice
+3. fai riferimento al tree del filesystem del progetto ed allo schema del DB allegati in questa chat
+4. intercetta sempre i punti hardcoded che adrebbero spostati nel file .env come variabili
+5. procediamo per gradi senza distruggere il codice integrando le modifiche passo passo e testando che non stiamo regredendo
+6. ricorda di predisporre i nomi delle classi per la feature già abilitata theme light/dark
+7. usa sempre il logger disponibile nel codice che scrivi 
+8. fare il refactoring essenziale e puntare a risolvere il problema mantenendo quanto più possibile la logica attuale senza regredire
+9. adotta sempre il metodo di spezzare i file (part1, part2...) quando sono troppo grandi per riscriverli per intero non darmi le modifiche puntuali che mi fanno perdere più tempo
+
 
 SITUAZIONE ATTUALE :
 1. faccio login come admin
@@ -911,21 +904,3 @@ sul db viene popolata la tabella quiz_assignments
 11. faccio click sul link del quiz eseguo il quiz compilando tutte le risposte
 12. faccio click sul tasto "Analizza risultati" atterro su una pagina "Admin Analytics" in questa sezione ho due pulsanti "Assegna al corso" "Correggi Quiz"
 13. faccio click su "Correggi Quiz" ed eseguo la correzione del quiz nella sezione Registro Correzioni Quiz
-
-
-sfruttando la possibilità della piattaforma di mandare email a qualsiasi indirizzo email usando SMPT di gmail già implementato
-voglio che sia notificato per email allo studente che prova il quiz : 
-1. la fase di consegna del quiz con l'esito prima della correzione della domanda aperta
-2. il termine della correzione ed il voto finale
-
-
-VINCOLI: 
-1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
-2. ricorda di aspettare sempre la mia conferma per scrivere il codice
-3. fai riferimento al tree del filesystem del progetto ed allo schema del DB allegati in questa chat
-4. intercetta sempre i punti hardcoded che adrebbero spostati nel file .env come variabili
-5. procediamo per gradi senza distruggere il codice integrando le modifiche passo passo e testando che non stiamo regredendo
-6. ricorda di predisporre i nomi delle classi per la feature già abilitata theme light/dark
-7. usa sempre il logger disponibile nel codice che scrivi 
-8. fare il refactoring essenziale e puntare a risolvere il problema mantenendo quanto più possibile la logica attuale senza regredire
-9. adotta sempre il metodo di spezzare i file (part1, part2...) quando sono troppo grandi per riscriverli per intero non darmi le modifiche puntuali che mi fanno perdere più tempo

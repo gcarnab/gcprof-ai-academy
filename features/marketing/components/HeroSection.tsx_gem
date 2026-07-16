@@ -1,0 +1,69 @@
+import Link from "next/link";
+import { Check } from "lucide-react"; // Assicurati di avere lucide-react installato
+
+export default function HeroSection() {
+  const features = [
+    "Quiz intelligenti con correzione immediata",
+    "Dashboard evolute per il monitoraggio",
+    "Percorsi didattici AI-Powered"
+  ];
+
+  return (
+    <section className="relative overflow-hidden bg-background py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-16 lg:grid-cols-2 lg:items-center">
+          
+          {/* Colonna Sinistra: Contenuto */}
+          <div>
+            <div className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+              <span className="mr-2">✨</span> Novità: Tutor AI Integrato
+            </div>
+            
+            <h1 className="mt-6 max-w-2xl text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
+              Impara l'Informatica con l'Intelligenza Artificiale
+            </h1>
+            
+            <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
+              La piattaforma italiana pensata per studenti e docenti. 
+              Smetti di imparare a memoria, inizia a dominare la logica algoritmica 
+              con strumenti interattivi e un metodo strutturato.
+            </p>
+
+            {/* Checklist Benefici */}
+            <ul className="mt-8 space-y-3">
+              {features.map((feature, i) => (
+                <li key={i} className="flex items-center gap-3 text-foreground">
+                  <div className="rounded-full bg-blue-100 p-1">
+                    <Check className="h-4 w-4 text-blue-600" />
+                  </div>
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            {/* Call to Actions */}
+            <div className="mt-10 flex items-center gap-x-6">
+              <Link
+                href="/auth/register"
+                className="rounded-xl bg-blue-600 px-8 py-3 font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow-lg"
+              >
+                Inizia gratuitamente
+              </Link>
+              <Link href="/courses" className="text-sm font-semibold leading-6 text-foreground hover:underline">
+                Esplora i corsi <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Colonna Destra: Mockup */}
+          <div className="relative rounded-2xl border border-border/50 bg-white p-2 shadow-2xl shadow-blue-500/10">
+            <div className="aspect-video w-full rounded-xl bg-slate-900 overflow-hidden flex items-center justify-center text-slate-400">
+              {/* Qui andrà il tuo screenshot della dashboard */}
+              <p className="text-sm">Mockup della Dashboard (GCPROF)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
