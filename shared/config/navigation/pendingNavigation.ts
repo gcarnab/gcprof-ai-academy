@@ -10,8 +10,7 @@ import { NavigationItem } from "./NavigationItem";
  */
 
 export const pendingNavigation: NavigationItem[] = [
-  {
-    label: "Profilo",
-    href: "/profile",
-  },
+  { label: "Home", href: "/" },
+  { label: "Contatti", href: "/contacts" },
+  { label: "Profilo", href: "/profile",},
 ];

@@ -12,13 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
-
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { loginAction } from "@/features/auth/actions/loginAction";
-import { requestPasswordResetAction } from "@/features/auth/actions/requestPasswordResetAction"; // 🎯 NUOVO
+import { requestPasswordResetAction } from "@/features/auth/actions/requestPasswordResetAction";
+import { useRouter } from "next/navigation";
 
 export default function LoginDialog() {
-  const { login } = useAuth(); 
+  const { login } = useAuth();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [email, setEmail] = useState("");
@@ -58,6 +59,17 @@ export default function LoginDialog() {
             setEmail("");
             setPassword("");
             setOpen(false);
+
+            // 3. 🎯 NUOVO: Flusso di redirect in base al ruolo e allo stato
+            const { role, status } = result.user;
+            if (role === "admin") {
+              //router.push("/admin/dashboard"); // L'admin va dritto al pannello di controllo
+              window.location.href = "/admin/dashboard";
+            } else if (status === "pending") {
+              window.location.href = "/"; // Lo studente non ancora abilitato va alla pagina di attesa
+            } else {
+              window.location.href = "/dashboard";// Lo studente attivo va alla dashboard didattica
+            }
           } else {
             setError(result?.error || "Credenziali non valide. Riprova.");
           }
@@ -69,14 +81,17 @@ export default function LoginDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => {
-      setOpen(v);
-      if(!v) { 
-        setIsResetMode(false); 
-        setError(""); 
-        setSuccessMessage("");
-      }
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) {
+          setIsResetMode(false);
+          setError("");
+          setSuccessMessage("");
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">
           Accedi
@@ -87,9 +102,13 @@ export default function LoginDialog() {
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
             {isResetMode && (
-              <button 
-                type="button" 
-                onClick={() => { setIsResetMode(false); setError(""); setSuccessMessage(""); }}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsResetMode(false);
+                  setError("");
+                  setSuccessMessage("");
+                }}
                 className="p-1 hover:bg-muted rounded-full text-muted-foreground"
               >
                 <ArrowLeft size={16} />
@@ -113,7 +132,10 @@ export default function LoginDialog() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="dialog-email" className="text-muted-foreground font-medium">
+            <Label
+              htmlFor="dialog-email"
+              className="text-muted-foreground font-medium"
+            >
               Email
             </Label>
             <Input
@@ -131,7 +153,10 @@ export default function LoginDialog() {
           {!isResetMode && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="dialog-password" className="text-muted-foreground font-medium">
+                <Label
+                  htmlFor="dialog-password"
+                  className="text-muted-foreground font-medium"
+                >
                   Password
                 </Label>
                 <button
@@ -175,10 +200,10 @@ export default function LoginDialog() {
             disabled={isPending}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all disabled:opacity-50"
           >
-            {isPending 
-              ? "Elaborazione in corso..." 
-              : isResetMode 
-                ? "Invia istruzioni di reset" 
+            {isPending
+              ? "Elaborazione in corso..."
+              : isResetMode
+                ? "Invia istruzioni di reset"
                 : "Entra"}
           </Button>
 

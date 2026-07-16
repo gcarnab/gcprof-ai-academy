@@ -22,13 +22,10 @@ export default function HomePage() {
 
   return (
     <PublicLayout>
-      {/*<Hero /> */}
       <HeroSection/>
-      <WhyChoose/>
-      <HowItWorks/>
+      <WhyChoose id="why-choose"/>
+      <HowItWorks id="how-it-works"/>
       <StudentFeatures/>
-      {/* Il componente CoursePreview internamente utilizzerà useCourses o mostrerà le anteprime */}
-      {/*<CoursePreview />*/}
     </PublicLayout>
   );
 }

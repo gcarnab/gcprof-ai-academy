@@ -53,9 +53,13 @@ const features = [
   },
 ];
 
-export default function WhyChoose() {
+interface WhyChooseProps {
+  id?: string;
+}
+
+export default function WhyChoose({ id }: WhyChooseProps) {
   return (
-    <section className="bg-muted/30 py-24">
+    <section id={id} className="bg-muted/30 py-24">
       <PageContainer>
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">

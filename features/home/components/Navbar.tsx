@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,48 +9,69 @@ import LoginDialog from "@/features/auth/components/LoginDialog";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import ThemeToggle from "@/features/theme/components/ThemeToggle";
 import { getNavigationForUser } from "@/shared/config/navigation/getNavigationForUser";
+import { logger } from "@/lib/logger";
 
 export default function Navbar() {
   const { user, logout, isLoading } = useAuth();
-
   const pathname = usePathname();
-
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // =====================================================
-  // BRAND
+  // CONFIGURAZIONI DA AMBIENTE (.env)
   // =====================================================
-
   const appName = process.env.NEXT_PUBLIC_APP_NAME || "GCPROF";
-
   const appSubtitle = process.env.NEXT_PUBLIC_APP_SUBTITLE || "ACADEMY";
-
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "V 1.0";
 
-  // =====================================================
-  // NAVIGATION
-  // =====================================================
+  // Top Bar Variables
+  const isTopBarEnabled = process.env.NEXT_PUBLIC_TOPBAR_ENABLED === "true";
+  const topBarText =
+    process.env.NEXT_PUBLIC_TOPBAR_TEXT || "🚀 Benvenuto in GCPROF Academy!";
 
+  // =====================================================
+  // SCROLL DETECTION (Evoluzione UI Sticky)
+  // =====================================================
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Logger di tracciamento montaggio e stato utente
+  useEffect(() => {
+    logger.info("Navbar montata correttamente", {
+      userId: user?.id || "anonimo",
+      role: user?.role || "pubblico",
+      status: user?.status || null,
+    });
+  }, [user]);
+
+  // =====================================================
+  // NAVIGATION HELPERS
+  // =====================================================
   const navigationItems = getNavigationForUser(user);
 
   const isActive = (path: string): boolean => {
     if (path === "/") {
       return pathname === "/";
     }
-
     return pathname.startsWith(path);
   };
 
   const linkClass = (path: string): string =>
     `transition-colors duration-200 ${
       isActive(path)
-        ? "font-semibold text-blue-600"
+        ? "font-semibold text-blue-600 dark:text-blue-400"
         : "text-muted-foreground hover:text-foreground"
     }`;
-
-  // =====================================================
-  // USER HELPERS
-  // =====================================================
 
   const getInitials = (): string => {
     if (!user) return "";
@@ -70,58 +91,89 @@ export default function Navbar() {
     return user.displayName?.substring(0, 2).toUpperCase() || "US";
   };
 
+  // Logout sicuro con log di tracciamento
+  const handleLogout = async () => {
+    try {
+      logger.info("Tentativo di logout avviato dall'utente", {
+        userId: user?.id,
+      });
+      await logout();
+      setMobileMenuOpen(false);
+      // 🎯 FORZA IL REINDIRIZZAMENTO E IL REFRESH HARD
+      // window.location.href distrugge lo stato React in memoria e pulisce la cache di Next.js
+      window.location.href = "/";
+    } catch (error) {
+      logger.error("Errore durante la disconnessione", { error });
+    }
+  };
+
   return (
-    <header className="border-b border-border bg-background shadow-sm">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
-        {/* =====================================================
-            LOGO
-        ===================================================== */}
+    <div className="sticky top-0 z-50 w-full flex flex-col">
+      {/* =====================================================
+          STEP 2: TOP BAR PROMOZIONALE (DINAMICA DA .ENV)
+      ===================================================== */}
+      {isTopBarEnabled && (
+        <div className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 text-white text-center py-1.5 px-4 text-xs font-medium tracking-wide shadow-inner">
+          {topBarText}
+        </div>
+      )}
 
-        <Link
-          href="/"
-          className="group flex items-center gap-3"
-          onClick={() => setMobileMenuOpen(false)}
+      {/* =====================================================
+          STEP 3: HEADER GLASSMORPHISM DINAMICO
+      ===================================================== */}
+      <header
+        className={`w-full border-b border-border transition-all duration-300 ${
+          isScrolled
+            ? "bg-background/85 backdrop-blur-md shadow-md"
+            : "bg-background shadow-sm"
+        }`}
+      >
+        <div
+          className={`mx-auto flex items-center justify-between px-4 md:px-6 transition-all duration-300 ${
+            isScrolled ? "h-14" : "h-16"
+          } max-w-7xl`}
         >
-          <Image
-            src="/gcprof-ai-academy_logo_small.png"
-            alt={`${appName} ${appSubtitle}`}
-            width={46}
-            height={46}
-            priority
-            className="transition-transform duration-300 group-hover:scale-105"
-          />
+          {/* LOGO */}
+          <Link
+            href="/"
+            className="group flex items-center gap-3"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Image
+              src="/gcprof-ai-academy_logo_small.png"
+              alt={`${appName} ${appSubtitle}`}
+              width={isScrolled ? 38 : 44}
+              height={isScrolled ? 38 : 44}
+              priority
+              className="transition-transform duration-300 group-hover:scale-105"
+            />
 
-          <div className="flex flex-col leading-none">
-            <span className="text-lg font-extrabold tracking-tight text-foreground">
-              {appName}
-            </span>
+            <div className="flex flex-col leading-none">
+              <span className="text-lg font-extrabold tracking-tight text-foreground">
+                {appName}
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-blue-600 dark:text-blue-400">
+                {appSubtitle} ({appVersion})
+              </span>
+            </div>
+          </Link>
 
-            <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-blue-600">
-              {appSubtitle} ({appVersion})
-            </span>
-          </div>
-        </Link>
+          {/* DESKTOP NAVIGATION */}
+          <nav aria-label="Navigazione principale" className="hidden md:block">
+            <ul className="flex items-center gap-8 text-sm">
+              {navigationItems.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={linkClass(item.href)}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
 
-        {/* =====================================================
-            DESKTOP NAVIGATION
-        ===================================================== */}
-
-        <nav aria-label="Navigazione principale" className="hidden md:block">
-          <ul className="flex items-center gap-8 text-sm">
-            {navigationItems.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={linkClass(item.href)}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-
-            {!user && (
-              <>
+              {!user && (
                 <li>
                   <Link
                     href="/credits"
@@ -130,167 +182,188 @@ export default function Navbar() {
                     Credits
                   </Link>
                 </li>
-              </>
-            )}
-          </ul>
-        </nav>
-        {/* =====================================================
-            USER AREA DESKTOP
-        ===================================================== */}
+              )}
+            </ul>
+          </nav>
 
-        <div className="hidden md:flex items-center gap-4">
-          <ThemeToggle />
+          {/* USER AREA DESKTOP */}
+          <div className="hidden md:flex items-center gap-4">
+            <ThemeToggle />
 
-          {isLoading ? (
-            <div className="text-xs text-muted-foreground animate-pulse">
-              Verifica sessione...
-            </div>
-          ) : user ? (
-            <div className="flex items-center gap-3">
-              {/* USER INFO */}
-
-              <div className="text-right">
-                <p className="text-sm font-semibold text-foreground">
-                  {user.displayName}
-                </p>
-
-                <div className="text-xs text-muted-foreground">
-                  {user.role === "admin" ? (
-                    <span className="font-medium text-purple-600">
-                      👨‍🏫 Admin
-                    </span>
-                  ) : user.status === "pending" ? (
-                    <span className="font-medium text-amber-600">
-                      ⏳ In attesa di attivazione
-                    </span>
-                  ) : (
-                    <span>
-                      🎓 {user.classes?.join(", ") || "Nessuna classe"}
-                    </span>
-                  )}
-                </div>
+            {isLoading ? (
+              <div className="text-xs text-muted-foreground animate-pulse">
+                Verifica sessione...
               </div>
-
-              {/* AVATAR */}
-
-              <Link
-                href="/profile"
-                className="relative flex h-9 w-9 overflow-hidden rounded-full border shadow-sm"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.displayName}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-blue-600 text-xs font-bold text-white">
-                    {getInitials()}
+            ) : user ? (
+              <div className="flex items-center gap-3">
+                {/* USER INFO */}
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-foreground">
+                    {user.displayName}
+                  </p>
+                  <div className="text-xs text-muted-foreground">
+                    {user.role === "admin" ? (
+                      <span className="font-medium text-purple-600 dark:text-purple-400">
+                        👨‍🏫 Admin
+                      </span>
+                    ) : user.status === "pending" ? (
+                      <span className="font-medium text-amber-600 dark:text-amber-400">
+                        ⏳ In attesa
+                      </span>
+                    ) : (
+                      <span className="font-medium text-blue-600 dark:text-blue-400">
+                        🎓 {user.classes?.join(", ") || "Studente"}
+                      </span>
+                    )}
                   </div>
-                )}
-              </Link>
+                </div>
 
-              {/* LOGOUT */}
-
-              <button
-                onClick={logout}
-                className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-accent"
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Link href="/register" className={linkClass("/register")}>
-                Registrati
-              </Link>
-
-              <LoginDialog />
-            </div>
-          )}
-        </div>
-
-        {/* =====================================================
-            MOBILE BUTTON
-        ===================================================== */}
-
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="flex rounded-md p-2 hover:bg-accent md:hidden"
-          aria-label="Apri menu"
-        >
-          {mobileMenuOpen ? (
-            <X className="h-6 w-6" />
-          ) : (
-            <Menu className="h-6 w-6" />
-          )}
-        </button>
-      </div>
-
-      {/* =====================================================
-          MOBILE MENU
-      ===================================================== */}
-
-      {mobileMenuOpen && (
-        <div className="border-t bg-background md:hidden">
-          <nav className="flex flex-col space-y-2 p-4">
-            {navigationItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`rounded-md px-3 py-2 ${
-                  isActive(item.href)
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-accent"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-
-            <div className="border-t pt-4">
-              <ThemeToggle />
-            </div>
-
-            {user ? (
-              <>
+                {/* AVATAR */}
                 <Link
                   href="/profile"
+                  className="relative flex h-9 w-9 overflow-hidden rounded-full border border-border shadow-sm hover:scale-105 transition-transform"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-md px-3 py-2 hover:bg-accent"
                 >
-                  👤 Profilo
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.displayName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-blue-600 dark:bg-blue-500 text-xs font-bold text-white">
+                      {getInitials()}
+                    </div>
+                  )}
                 </Link>
 
+                {/* LOGOUT */}
                 <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    logout();
-                  }}
-                  className="rounded-md border px-3 py-2 text-left hover:bg-accent"
+                  onClick={handleLogout}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs font-semibold hover:bg-accent text-foreground transition-colors"
                 >
-                  Logout
+                  🚪 Esci
                 </button>
-              </>
+              </div>
             ) : (
-              <>
+              /* DISCONNESSO - STEP 1: CTA IN EVIDENZA */
+              <div className="flex items-center gap-4">
+                <LoginDialog />
                 <Link
                   href="/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-md px-3 py-2 hover:bg-accent"
+                  className="rounded-md bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-4 py-2 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
                 >
                   Registrati
                 </Link>
-
-                <LoginDialog />
-              </>
+              </div>
             )}
-          </nav>
+          </div>
+
+          {/* MOBILE BUTTON */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex rounded-md p-2 hover:bg-accent md:hidden text-foreground"
+            aria-label="Apri menu"
+          >
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </button>
         </div>
-      )}
-    </header>
+
+        {/* MOBILE MENU */}
+        {mobileMenuOpen && (
+          <div className="border-t border-border bg-background md:hidden transition-all duration-300">
+            <nav className="flex flex-col space-y-2 p-4">
+              {/* BRANDING EXTRA MOBILE SE LOGGATO (Dashboard Feeling) */}
+              {user && (
+                <div className="flex items-center gap-3 p-3 mb-2 rounded-lg bg-accent/40 border border-border">
+                  <div className="relative h-10 w-10 overflow-hidden rounded-full border shadow-sm">
+                    {user.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.displayName}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-blue-600 dark:bg-blue-500 text-xs font-bold text-white">
+                        {getInitials()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">
+                      {user.displayName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user.role === "admin"
+                        ? "👨‍🏫 Admin"
+                        : user.status === "pending"
+                          ? "⏳ In attesa di attivazione"
+                          : `🎓 ${user.classes?.join(", ") || "Studente"}`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Voci Navigazione Mobile */}
+              {navigationItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive(item.href)
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+
+              <div className="border-t border-border pt-4 flex items-center justify-between px-3">
+                <span className="text-xs text-muted-foreground">
+                  Cambia tema:
+                </span>
+                <ThemeToggle />
+              </div>
+
+              {user ? (
+                <div className="flex flex-col gap-2 pt-2 border-t border-border">
+                  <Link
+                    href="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-md px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                  >
+                    👤 Profilo Account
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="rounded-md border border-border px-3 py-2 text-sm font-semibold text-left hover:bg-accent text-foreground transition-colors"
+                  >
+                    🚪 Esci dall'Academy
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 pt-4 border-t border-border">
+                  <LoginDialog />
+                  <Link
+                    href="/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-md bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-center text-white px-3 py-2.5 text-sm font-semibold shadow-sm transition-all"
+                  >
+                    Registrati
+                  </Link>
+                </div>
+              )}
+            </nav>
+          </div>
+        )}
+      </header>
+    </div>
   );
 }

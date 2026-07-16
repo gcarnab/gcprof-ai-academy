@@ -115,7 +115,10 @@ GCPROF-AI-ACADEMY
 |   +---profile
 |   |       page.tsx
 |   |       
-|   \---register
+|   +---register
+|   |       page.tsx
+|   |       
+|   \---students
 |           page.tsx
 |           
 +---components
@@ -195,6 +198,7 @@ GCPROF-AI-ACADEMY
 |   |   +---mail
 |   |   |   +---actions
 |   |   |   |       mailBulkActions.ts
+|   |   |   |       mailBulkActions.ts_resend
 |   |   |   |       mailSettingsActions.ts
 |   |   |   |       mailTemplateActions.ts
 |   |   |   |       mailTestActions.ts
@@ -375,6 +379,14 @@ GCPROF-AI-ACADEMY
 |   |           Footer.tsx
 |   |           Hero.tsx
 |   |           Navbar.tsx
+|   |           Navbar.tsx_old
+|   |           
+|   +---marketing
+|   |   \---components
+|   |           HeroSection.tsx
+|   |           HowItWorks.tsx
+|   |           StudentFeatures.tsx
+|   |           WhyChoose.tsx
 |   |           
 |   +---profile
 |   |   +---components
@@ -438,6 +450,7 @@ GCPROF-AI-ACADEMY
 +---logs
 |       app.log
 |       
+|           
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -462,9 +475,18 @@ GCPROF-AI-ACADEMY
 |           
 +---shared
 |   +---config
-|   |       navigation.ts
-|   |       site.ts
-|   |       
+|   |   |   navigation.ts
+|   |   |   site.ts
+|   |   |   
+|   |   \---navigation
+|   |           adminNavigation.ts
+|   |           getNavigationForUser.ts
+|   |           index.ts
+|   |           NavigationItem.ts
+|   |           pendingNavigation.ts
+|   |           publicNavigation.ts
+|   |           studentNavigation.ts
+|   |           
 |   +---layout
 |   |       PublicLayout.tsx
 |   |       
@@ -490,7 +512,7 @@ GCPROF-AI-ACADEMY
 |           
 \---types
         database.types.ts
-        
+          
 
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
@@ -868,13 +890,10 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-sfruttando la possibilità della piattaforma di mandare email a qualsiasi indirizzo email usando SMPT di gmail già implementato
-voglio che sia notificato per email allo studente che prova il quiz : 
-1. la fase di consegna del quiz con l'esito prima della correzione della domanda aperta (già implementata da controllare)
-2. il termine della correzione ed il voto finale (da implementare)
+aggiorniamo la navigation ed il layout del sito come un esperto marketing advisor
 
 SITUAZIONE ATTUALE :
-1. la fase di consegna del quiz con l'esito prima della correzione della domanda aperta (già implementata da controllare)
+1. la nuova feature è in fase di sviluppo
 
 VINCOLI: 
 1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
