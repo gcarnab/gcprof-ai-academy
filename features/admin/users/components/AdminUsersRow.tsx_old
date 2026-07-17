@@ -36,9 +36,6 @@ export default function AdminUsersRow({
   onSaveClasses,
   onStatusChange,
 }: AdminUsersRowProps) {
-  // Verifichiamo se l'utente è uno studente esterno
-  const isExternalStudent = (user as any).user_type === "EXTERNAL_STUDENT";
-
   return (
     <tr className="transition-colors hover:bg-muted">
       {/* Nome */}
@@ -56,16 +53,10 @@ export default function AdminUsersRow({
           className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
             user.role === "admin"
               ? "border border-purple-200 bg-purple-50 text-purple-700"
-              : isExternalStudent
-                ? "border border-cyan-200 bg-cyan-50 text-cyan-700" // Stile distintivo per l'utente esterno
-                : "bg-muted text-muted-foreground"
+              : "bg-muted text-muted-foreground"
           }`}
         >
-          {user.role === "admin" 
-            ? "👨‍🏫 Admin" 
-            : isExternalStudent 
-              ? "🌍 Esterno" 
-              : "🎓 Studente"}
+          {user.role === "admin" ? "👨‍🏫 Admin" : "🎓 Studente"}
         </span>
       </td>
 
@@ -86,13 +77,9 @@ export default function AdminUsersRow({
         </span>
       </td>
 
-      {/* Classi (Inibite se l'utente è esterno) */}
+      {/* Classi */}
       <td className="px-6 py-4">
-        {isExternalStudent ? (
-          <span className="text-xs italic text-muted-foreground font-medium">
-            Non applicabile (Studente Esterno)
-          </span>
-        ) : editingClassesUserId === user.id ? (
+        {editingClassesUserId === user.id ? (
           <AdminUsersClassesEditor
             availableClasses={availableClasses}
             selectedClasses={selectedClasses}

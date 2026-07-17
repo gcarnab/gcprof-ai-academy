@@ -25,7 +25,7 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({
-  title = "Impara Informatica con l'AI",
+  title = "Impara l'Informatica con l'AI",
   subtitle = "GCPROF AI Academy unisce corsi strutturati, quiz interattivi, correzione intelligente e dashboard evolute per studenti e docenti, in un'unica piattaforma moderna.",
   primaryAction = {
     label: "Inizia gratuitamente",
@@ -116,11 +116,11 @@ export default function HeroSection({
           <div className="relative">
             <div className="rounded-3xl border bg-card shadow-2xl overflow-hidden">
               <div className="border-b bg-muted/40 px-6 py-4">
-                <h3 className="font-bold text-lg">
+                <h3 className="font-bold text-lg text-right">
                   Dashboard GCPROF AI Academy
                 </h3>
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground text-right">
                   Anteprima della piattaforma
                 </p>
               </div>
@@ -129,19 +129,19 @@ export default function HeroSection({
                 <MockCard title="Quiz AI" value="Mixed" color="bg-blue-500" />
 
                 <MockCard
-                  title="Progresso Corso"
+                  title="Media progressi corsi"
                   value="82%"
                   color="bg-green-500"
                 />
 
                 <MockCard
                   title="Voto Medio"
-                  value="8.7 / 10"
+                  value="8.5 / 10"
                   color="bg-violet-500"
                 />
 
                 <MockCard
-                  title="Tempo di Studio"
+                  title="Tempo di studio medio mensile"
                   value="18h"
                   color="bg-orange-500"
                 />
@@ -161,7 +161,7 @@ export default function HeroSection({
                 Quiz completati
               </div>
 
-              <div className="text-2xl font-bold">1K</div>
+              <div className="text-2xl font-bold">+1K</div>
             </div>
           </div>
         </div>

@@ -9,18 +9,23 @@ export interface AuthUser {
   displayName: string;
   role: "admin" | "student";
   status: "active" | "blocked" | "pending";
+  // 🎯 nuovo campo gestione tipologia account
+  userType?: "SCHOOL_STUDENT" | "EXTERNAL_STUDENT";
   classes: string[];
-  firstName?: string;   // 🎯 NUOVO
-  lastName?: string;    // 🎯 NUOVO
-  avatarUrl?: string;   // 🎯 NUOVO
+  // studenti esterni
+  enrolledCourses?: number[];
+
+  firstName?: string; // 🎯 NUOVO
+  lastName?: string; // 🎯 NUOVO
+  avatarUrl?: string; // 🎯 NUOVO
 }
 
 // 🎯 AGGIORNAMENTO CONTRATTO: Definiamo l'interfaccia esatta esposta dall'hook
 export interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (user: AuthUser) => void;     // 🌟 Mancava questa riga
-  logout: () => Promise<void>;          // 🌟 Assicuriamoci ci sia anche il logout
+  login: (user: AuthUser) => void; // 🌟 Mancava questa riga
+  logout: () => Promise<void>; // 🌟 Assicuriamoci ci sia anche il logout
   refreshSession: () => Promise<void>;
 }
 
@@ -67,7 +72,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshSession }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, login, logout, refreshSession }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -76,7 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth deve essere utilizzato all'interno di un AuthProvider");
+    throw new Error(
+      "useAuth deve essere utilizzato all'interno di un AuthProvider",
+    );
   }
   return context;
 }

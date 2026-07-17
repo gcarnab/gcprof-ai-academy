@@ -39,6 +39,9 @@ GCPROF-AI-ACADEMY
 |   |   +---dashboard
 |   |   |       page.tsx
 |   |   |       
+|   |   +---enrollments
+|   |   |       page.tsx
+|   |   |       
 |   |   \---quiz
 |   |       |   actions.ts
 |   |       |   
@@ -117,6 +120,7 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---register
 |   |       page.tsx
+|   |       page.tsx_old
 |   |       
 |   \---students
 |           page.tsx
@@ -145,13 +149,15 @@ GCPROF-AI-ACADEMY
 |   |   credits.md
 |   |   gcprof-academy_DEV_GUIDE.md
 |   |   HANDOVER_PROMPT.md
-|   |   Python_Practice.md
-|   |   Python_Practice_Full.md
-|   |   Python_Practice_Gem.md
-|   |   Python_Practice_GPT.md
-|   |   Python_Practice_LM.md
 |   |   README-DB.md
 |   |   
+|   +---courses
+|   |       Python_Practice.md
+|   |       Python_Practice_Full.md
+|   |       Python_Practice_Gem.md
+|   |       Python_Practice_GPT.md
+|   |       Python_Practice_LM.md
+|   |       
 |   +---quiz
 |   |       quiz_AI_base_01.md
 |   |       quiz_AI_Fondamenti_ML.md
@@ -166,6 +172,11 @@ GCPROF-AI-ACADEMY
 |           
 +---features
 |   +---admin
+|   |   +---actions
+|   |   |       approveEnrollmentAction.ts
+|   |   |       getActiveExternalEnrollmentsAction.ts
+|   |   |       getPendingEnrollmentsAction.ts
+|   |   |       
 |   |   +---courses
 |   |   |   +---actions
 |   |   |   |       assignCourseClassAction.ts
@@ -192,6 +203,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |       
 |   |   |   \---components
 |   |   |           AdminDashboard.tsx
+|   |   |           AdminDashboard.tsx_old
 |   |   |           AdminHeader.tsx
 |   |   |           QuizAnalyticsDashboard.tsx
 |   |   |           
@@ -263,6 +275,7 @@ GCPROF-AI-ACADEMY
 |   |       |       activityActions.ts
 |   |       |       adminUserActions.ts
 |   |       |       bulkActivateUsersAction.ts
+|   |       |       revokeCourseAccessAction.ts
 |   |       |       seedUsersAction.ts
 |   |       |       
 |   |       +---components
@@ -285,6 +298,7 @@ GCPROF-AI-ACADEMY
 |   |   |       loginAction.ts
 |   |   |       logoutAction.ts
 |   |   |       registerAction.ts
+|   |   |       registerAction.ts_old
 |   |   |       requestPasswordResetAction.ts
 |   |   |       validateResetTokenAction.ts
 |   |   |       
@@ -379,7 +393,6 @@ GCPROF-AI-ACADEMY
 |   |           Footer.tsx
 |   |           Hero.tsx
 |   |           Navbar.tsx
-|   |           Navbar.tsx_old
 |   |           
 |   +---marketing
 |   |   \---components
@@ -512,8 +525,7 @@ GCPROF-AI-ACADEMY
 |           
 \---types
         database.types.ts
-          
-
+        
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
@@ -524,10 +536,10 @@ GCPROF-AI-ACADEMY
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
+| `created_at` | `timestamptz` |  |
 | `slug` | `text` |  Unique |
 | `name` | `text` |  |
 | `description` | `text` |  Nullable |
-| `created_at` | `timestamptz` |  |
 
 ## Table `profiles`
 
@@ -535,6 +547,9 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `avatar_url` | `text` |  Nullable |
+| `user_type` | `varchar` |  |
+| `total_minutes_active` | `int4` |  |
 | `id` | `uuid` | Primary |
 | `first_name` | `varchar` |  Nullable |
 | `last_name` | `varchar` |  Nullable |
@@ -545,8 +560,6 @@ GCPROF-AI-ACADEMY
 | `updated_at` | `timestamptz` |  |
 | `email` | `text` |  Nullable Unique |
 | `password_hash` | `text` |  Nullable |
-| `avatar_url` | `text` |  Nullable |
-| `total_minutes_active` | `int4` |  |
 
 ## Table `profile_classes`
 
@@ -564,10 +577,10 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `slug` | `varchar` |  Unique |
 | `title` | `varchar` |  |
 | `description` | `text` |  Nullable |
+| `id` | `uuid` | Primary |
 | `created_at` | `timestamptz` |  |
 | `updated_at` | `timestamptz` |  |
 | `category` | `varchar` |  Nullable |
@@ -584,9 +597,9 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `course_id` | `uuid` |  Nullable |
 | `title` | `varchar` |  |
+| `id` | `uuid` | Primary |
 | `order_index` | `int4` |  |
 | `created_at` | `timestamptz` |  |
 
@@ -596,12 +609,12 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `module_id` | `uuid` |  Nullable |
 | `title` | `varchar` |  |
 | `slug` | `varchar` |  |
 | `video_url` | `text` |  Nullable |
 | `content` | `text` |  Nullable |
+| `id` | `uuid` | Primary |
 | `order_index` | `int4` |  |
 | `created_at` | `timestamptz` |  |
 | `content_type` | `varchar` |  Nullable |
@@ -625,9 +638,9 @@ GCPROF-AI-ACADEMY
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
+| `created_at` | `timestamptz` |  |
 | `name` | `varchar` |  Unique |
 | `slug` | `varchar` |  Unique |
-| `created_at` | `timestamptz` |  |
 
 ## Table `document_configs`
 
@@ -650,6 +663,10 @@ GCPROF-AI-ACADEMY
 | `profile_id` | `uuid` | Primary |
 | `course_id` | `uuid` | Primary |
 | `enrolled_at` | `timestamptz` |  |
+| `status` | `varchar` |  |
+| `approved_at` | `timestamptz` |  Nullable |
+| `approved_by` | `uuid` |  Nullable |
+| `updated_at` | `timestamptz` |  |
 
 ## Table `mail_settings`
 
@@ -667,18 +684,18 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `template_key` | `text` |  Unique |
 | `name` | `varchar` |  |
 | `description` | `text` |  Nullable |
 | `subject` | `varchar` |  |
 | `title_override` | `varchar` |  Nullable |
 | `body_text_override` | `text` |  Nullable |
+| `updated_by` | `uuid` |  Nullable |
+| `id` | `uuid` | Primary |
 | `enabled` | `bool` |  |
 | `version` | `int4` |  |
 | `created_at` | `timestamptz` |  |
 | `updated_at` | `timestamptz` |  |
-| `updated_by` | `uuid` |  Nullable |
 
 ## Table `mail_logs`
 
@@ -686,14 +703,14 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `template_key` | `text` |  |
 | `recipient` | `text` |  |
 | `subject` | `text` |  |
 | `status` | `text` |  |
-| `provider` | `text` |  |
 | `provider_id` | `text` |  Nullable |
 | `error_message` | `text` |  Nullable |
+| `id` | `uuid` | Primary |
+| `provider` | `text` |  |
 | `created_at` | `timestamptz` |  |
 
 ## Table `password_reset_tokens`
@@ -702,10 +719,10 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `user_id` | `uuid` |  |
 | `token` | `text` |  Unique |
 | `expires_at` | `timestamp` |  |
+| `id` | `uuid` | Primary |
 | `used` | `bool` |  |
 | `created_at` | `timestamp` |  |
 
@@ -729,13 +746,13 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `profile_id` | `uuid` |  |
-| `login_at` | `timestamptz` |  |
 | `logout_at` | `timestamptz` |  Nullable |
 | `session_duration_seconds` | `int4` |  Nullable |
 | `ip_address` | `text` |  Nullable |
 | `user_agent` | `text` |  Nullable |
+| `id` | `uuid` | Primary |
+| `login_at` | `timestamptz` |  |
 | `created_at` | `timestamptz` |  |
 
 ## Table `user_page_views`
@@ -744,11 +761,11 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `profile_id` | `uuid` |  Nullable |
 | `path` | `text` |  |
 | `course_slug` | `text` |  Nullable |
 | `lesson_slug` | `text` |  Nullable |
+| `id` | `uuid` | Primary |
 | `viewed_at` | `timestamptz` |  |
 
 ## Table `quizzes`
@@ -757,17 +774,17 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
+| `passing_score` | `numeric` |  |
 | `title` | `varchar` |  |
 | `description` | `text` |  Nullable |
+| `created_by` | `uuid` |  Nullable |
+| `id` | `uuid` | Primary |
 | `status` | `quiz_status` |  |
 | `penalty_enabled` | `bool` |  |
 | `negative_mark` | `numeric` |  |
 | `max_score` | `numeric` |  |
-| `created_by` | `uuid` |  Nullable |
 | `created_at` | `timestamptz` |  |
 | `updated_at` | `timestamptz` |  |
-| `passing_score` | `numeric` |  |
 
 ## Table `quiz_questions`
 
@@ -775,12 +792,12 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `quiz_id` | `uuid` |  |
 | `type` | `question_type` |  |
 | `order_index` | `int4` |  |
 | `text` | `text` |  |
 | `points` | `numeric` |  |
+| `id` | `uuid` | Primary |
 | `created_at` | `timestamptz` |  |
 
 ## Table `quiz_options`
@@ -789,9 +806,9 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `question_id` | `uuid` |  |
 | `text` | `text` |  |
+| `id` | `uuid` | Primary |
 | `is_correct` | `bool` |  |
 
 ## Table `course_quizzes`
@@ -809,11 +826,11 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `quiz_id` | `uuid` |  |
 | `student_id` | `uuid` |  |
-| `started_at` | `timestamptz` |  |
 | `completed_at` | `timestamptz` |  Nullable |
+| `id` | `uuid` | Primary |
+| `started_at` | `timestamptz` |  |
 | `auto_score` | `numeric` |  |
 | `teacher_score` | `numeric` |  |
 | `final_score` | `numeric` |  |
@@ -826,12 +843,12 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `attempt_id` | `uuid` |  |
 | `question_id` | `uuid` |  |
 | `selected_option_id` | `uuid` |  Nullable |
 | `open_answer_text` | `text` |  Nullable |
 | `is_correct` | `bool` |  Nullable |
+| `id` | `uuid` | Primary |
 | `score` | `numeric` |  |
 | `created_at` | `timestamptz` |  |
 
@@ -841,12 +858,12 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `attempt_id` | `uuid` |  |
 | `teacher_id` | `uuid` |  Nullable |
 | `question_id` | `uuid` |  |
-| `score` | `numeric` |  |
 | `comment` | `text` |  Nullable |
+| `id` | `uuid` | Primary |
+| `score` | `numeric` |  |
 | `reviewed_at` | `timestamptz` |  |
 
 ## Table `lessons`
@@ -855,7 +872,6 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `module_id` | `uuid` |  |
 | `title` | `text` |  |
 | `duration` | `int4` |  |
@@ -863,6 +879,7 @@ GCPROF-AI-ACADEMY
 | `youtube_url` | `text` |  Nullable |
 | `google_drive_url` | `text` |  Nullable |
 | `quiz_id` | `uuid` |  Nullable |
+| `id` | `uuid` | Primary |
 | `sort_order` | `int4` |  |
 | `created_at` | `timestamptz` |  |
 
@@ -872,12 +889,13 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `id` | `uuid` | Primary |
 | `quiz_id` | `uuid` |  |
 | `course_id` | `uuid` |  |
-| `assigned_at` | `timestamptz` |  |
 | `due_at` | `timestamptz` |  Nullable |
+| `id` | `uuid` | Primary |
+| `assigned_at` | `timestamptz` |  |
 | `is_visible` | `bool` |  |
+
 
 
 
@@ -890,12 +908,14 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-verificare che l'admin che ha la mail gcarnab74@gmail.com venga notificato per mail per i seguenti eventi :
-1. registrazione nuovo studente/utente del sito
-2. utilizzare il sistema di invio email già funzionante della piattaforma
+la nostra piattaforma sarà bifronte sarà utilizzata la me unico admin e prof per la didattica nelle scuole superiori
+ma sarà in futuro predisposta per accettare utenti esterni alla scuola anche paganti che possono imbattersi nella piattaforna
+selezionare uno o più corsi ed essere abilitati da me a poterne fruire.
+
 
 SITUAZIONE ATTUALE :
-1. la nuova feature è in fase di sviluppo
+1. feature già parzialmente sviluppata 
+2. ma devo poter revocare l'abilitazione al corso dello studente esterno in qualsiasi momento adesso una volta abilitato sparisce dalla lista presenta nella sezione Richieste della dashboard admin che deve concentrare tutto quello riguardante gli studenti esterni compreso il back office per gestire le richieste
 
 VINCOLI: 
 1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 

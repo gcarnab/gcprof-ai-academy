@@ -3,7 +3,6 @@ import { IUserRepository } from "../ports/IUserRepository";
 import { StudentUser } from "../domain/user";
 import { randomUUID } from "crypto";
 
-
 interface SupabaseProfileRow {
   id: string;
   email: string;
@@ -11,6 +10,8 @@ interface SupabaseProfileRow {
   role: "admin" | "student";
   display_name: string;
   status: "pending" | "active" | "blocked";
+  user_type: "SCHOOL_STUDENT" | "EXTERNAL_STUDENT" | null;
+
   first_name: string | null; // 🎯 NUOVO
   last_name: string | null; // 🎯 NUOVO
   avatar_url: string | null; // 🎯 NUOVO
