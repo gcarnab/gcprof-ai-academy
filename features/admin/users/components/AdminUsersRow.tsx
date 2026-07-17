@@ -7,21 +7,21 @@ import AdminUsersClassesEditor from "./AdminUsersClassesEditor";
 interface AdminUsersRowProps {
   user: AdminUserRow;
   availableClasses: string[];
-
   editingClassesUserId: string | null;
   selectedClasses: string[];
-
   isPending: boolean;
-
   onStartEditingClasses: (user: AdminUserRow) => void;
   onToggleClass: (className: string) => void;
   onCancelEditing: () => void;
   onSaveClasses: (userId: string) => void;
-
   onStatusChange: (
     userId: string,
     newStatus: "active" | "blocked" | "pending",
   ) => void;
+  
+  // 🆕 PROPS AGGIUNTE PER LA SELEZIONE MASSIVA
+  isChecked: boolean;
+  onToggleSelect: () => void;
 }
 
 export default function AdminUsersRow({
@@ -35,18 +35,30 @@ export default function AdminUsersRow({
   onCancelEditing,
   onSaveClasses,
   onStatusChange,
+  // 🆕 NEW
+  isChecked,
+  onToggleSelect,
 }: AdminUsersRowProps) {
-  // Verifichiamo se l'utente è uno studente esterno
   const isExternalStudent = (user as any).user_type === "EXTERNAL_STUDENT";
 
   return (
-    <tr className="transition-colors hover:bg-muted">
+    <tr className={`transition-colors hover:bg-muted ${isChecked ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
+      
+      {/* 🆕 Cella Checkbox */}
+      <td className="px-6 py-4 text-center w-[50px]">
+        <input
+          type="checkbox"
+          checked={isChecked}
+          onChange={onToggleSelect}
+          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+        />
+      </td>
+
       {/* Nome */}
       <td className="px-6 py-4 font-medium text-foreground">
         <div className="font-semibold">
           {user.display_name || "Utente Senza Nome"}
         </div>
-
         <div className="mt-0.5 font-mono text-xs text-muted-foreground">{user.id}</div>
       </td>
 
@@ -57,7 +69,7 @@ export default function AdminUsersRow({
             user.role === "admin"
               ? "border border-purple-200 bg-purple-50 text-purple-700"
               : isExternalStudent
-                ? "border border-cyan-200 bg-cyan-50 text-cyan-700" // Stile distintivo per l'utente esterno
+                ? "border border-cyan-200 bg-cyan-50 text-cyan-700"
                 : "bg-muted text-muted-foreground"
           }`}
         >
@@ -86,7 +98,7 @@ export default function AdminUsersRow({
         </span>
       </td>
 
-      {/* Classi (Inibite se l'utente è esterno) */}
+      {/* Classi */}
       <td className="px-6 py-4">
         {isExternalStudent ? (
           <span className="text-xs italic text-muted-foreground font-medium">
@@ -116,7 +128,6 @@ export default function AdminUsersRow({
                 Nessuna classe
               </span>
             )}
-
             <button
               onClick={() => onStartEditingClasses(user)}
               className="ml-1 text-xs font-medium text-blue-500 underline hover:text-blue-700"
@@ -139,7 +150,6 @@ export default function AdminUsersRow({
             Abilita
           </Button>
         )}
-
         {user.status !== "blocked" && (
           <Button
             size="sm"

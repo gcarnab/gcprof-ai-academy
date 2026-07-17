@@ -86,6 +86,8 @@ export default function CoursesTab({ stats }: Props) {
         <ActiveAssociationsList
           associations={activeAssociations}
           onRefresh={refreshAllData}
+          allClasses={(stats?.raw?.classes || []).map((c: any) => c.name)}
+          allCourses={(stats?.raw?.courses || []).map((c: any) => c.title)}
         />
       </div>
     </div>
