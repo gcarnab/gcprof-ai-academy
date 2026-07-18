@@ -8,6 +8,7 @@ export const RESOURCE_TYPES = [
   "Didattica",
   "Finance",
   "Programming",
+  "Tools",
   "Video",
 ] as const;
 

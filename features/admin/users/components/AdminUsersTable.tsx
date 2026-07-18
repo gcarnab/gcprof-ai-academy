@@ -253,6 +253,7 @@ export default function AdminUsersTable({
                 />
               </th>
               <th className="px-6 py-4">Studente / Nome Completo</th>
+              <th className="px-6 py-4">Email</th>
               <th className="px-6 py-4">Ruolo</th>
               <th className="px-6 py-4">Stato</th>
               <th className="px-6 py-4">Classi Assegnate</th>
@@ -263,7 +264,7 @@ export default function AdminUsersTable({
           <tbody className="divide-y divide-gray-200 bg-background">
             {users.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center italic text-muted-foreground">
+                <td colSpan={7} className="px-6 py-10 text-center italic text-muted-foreground">
                   Nessun utente trovato corrispondente ai criteri di ricerca.
                 </td>
               </tr>

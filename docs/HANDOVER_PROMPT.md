@@ -465,17 +465,14 @@ GCPROF-AI-ACADEMY
 |   +---resources
 |   |   +---actions
 |   |   |       createResourceAction.ts
+|   |   |       deleteResourceAction.ts
 |   |   |       resourcesActions.ts
+|   |   |       updateResourceAction.ts
 |   |   |       
 |   |   +---components
 |   |   |       ResourceAdminTable.tsx
-|   |   |       ResourceAdminTable.tsx_MOCK
 |   |   |       ResourceCreateForm.tsx
 |   |   |       ResourceDashboard.tsx
-|   |   |       ResourceDashboard.tsx_MOCK
-|   |   |       
-|   |   +---data
-|   |   |       resources.ts
 |   |   |       
 |   |   +---schemas
 |   |   |       resourceSchema.ts
@@ -559,7 +556,7 @@ GCPROF-AI-ACADEMY
 |           
 \---types
         database.types.ts
-        
+             
    
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)

@@ -18,7 +18,7 @@ interface AdminUsersRowProps {
     userId: string,
     newStatus: "active" | "blocked" | "pending",
   ) => void;
-  
+
   // 🆕 PROPS AGGIUNTE PER LA SELEZIONE MASSIVA
   isChecked: boolean;
   onToggleSelect: () => void;
@@ -42,8 +42,9 @@ export default function AdminUsersRow({
   const isExternalStudent = (user as any).user_type === "EXTERNAL_STUDENT";
 
   return (
-    <tr className={`transition-colors hover:bg-muted ${isChecked ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
-      
+    <tr
+      className={`transition-colors hover:bg-muted ${isChecked ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}
+    >
       {/* 🆕 Cella Checkbox */}
       <td className="px-6 py-4 text-center w-[50px]">
         <input
@@ -59,8 +60,13 @@ export default function AdminUsersRow({
         <div className="font-semibold">
           {user.display_name || "Utente Senza Nome"}
         </div>
-        <div className="mt-0.5 font-mono text-xs text-muted-foreground">{user.id}</div>
+        <div className="mt-0.5 font-mono text-xs text-muted-foreground">
+          {user.id}
+        </div>
       </td>
+
+      {/* Email */}
+      <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
 
       {/* Ruolo */}
       <td className="px-6 py-4">
@@ -73,10 +79,10 @@ export default function AdminUsersRow({
                 : "bg-muted text-muted-foreground"
           }`}
         >
-          {user.role === "admin" 
-            ? "👨‍🏫 Admin" 
-            : isExternalStudent 
-              ? "🌍 Esterno" 
+          {user.role === "admin"
+            ? "👨‍🏫 Admin"
+            : isExternalStudent
+              ? "🌍 Esterno"
               : "🎓 Studente"}
         </span>
       </td>

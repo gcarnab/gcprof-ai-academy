@@ -346,7 +346,7 @@ export default function RegisterPage() {
             </div>
 
             <p className="text-center text-[11px] text-muted-foreground pt-4 font-mono uppercase tracking-wider">
-              Enterprise Decoupled Architecture v2
+              GCPROF-ACADEMY.COM
             </p>
           </form>
         </CardContent>

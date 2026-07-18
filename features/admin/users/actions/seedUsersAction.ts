@@ -51,7 +51,7 @@ export async function seedBulkUsersAction(
 
     // Recuperiamo un hash di default dall'ambiente o usiamo un placeholder sicuro per i test
     // ⚠️ Spostare SEED_DEFAULT_PASSWORD_HASH nel file .env.local se si desidera simulare anche i login dei test user
-    const defaultPasswordHash = process.env.SEED_DEFAULT_PASSWORD_HASH || "$2a$10$MockHashPlaceholderForTestingPurposesOnly";
+    const defaultPasswordHash = process.env.SEED_DEFAULT_PASSWORD_HASH || "$2a$12$gawqtXsKhlnJDqGldNAJYuyWKXHv8UWkwHElKKF8tG8lB1cyHUDTa";
 
     // 2. Generazione dei dati in memoria
     for (let i = 0; i < count; i++) {

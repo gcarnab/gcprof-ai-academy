@@ -165,7 +165,7 @@ export async function getLiveCourses( role?: "admin" | "student"): Promise<Cours
           "Prof. G. Carnabuci",
         estimatedHours: dbCourse.estimated_hours || 0,
         coverImage:
-          dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_info_01.png",
+          dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_01.png",
         published: dbCourse.published ?? true,
         allowedClasses: allowedClassesNames,
 
