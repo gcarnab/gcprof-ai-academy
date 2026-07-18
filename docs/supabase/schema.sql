@@ -45,19 +45,46 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE TYPE "public"."attempt_status" AS ENUM (
+    'submitted',
+    'graded'
+);
+
+
+ALTER TYPE "public"."attempt_status" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."question_type" AS ENUM (
+    'multiple_choice',
+    'open_ended'
+);
+
+
+ALTER TYPE "public"."question_type" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."quiz_status" AS ENUM (
+    'draft',
+    'active'
+);
+
+
+ALTER TYPE "public"."quiz_status" OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."handle_auto_enrollment_on_new_course"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
-    AS $$
-BEGIN
+    AS $$BEGIN
   INSERT INTO public.profile_courses (profile_id, course_id)
   SELECT pc.profile_id, NEW.course_id
   FROM public.profile_classes pc
   JOIN public.profiles p ON pc.profile_id = p.id
   WHERE pc.class_id = NEW.class_id
-    AND p.status = 'active'; -- 🌟 Filtra: solo utenti abilitati (es. 'active')
+    AND p.status = 'active' -- 🌟 Filtra: solo utenti abilitati (es. 'active')
+  ON CONFLICT (profile_id, course_id) DO NOTHING; -- 🛡️ Safe guard: ignora chi è già iscritto senza far fallire l'azione
+
   RETURN NEW;
-END;
-$$;
+END;$$;
 
 
 ALTER FUNCTION "public"."handle_auto_enrollment_on_new_course"() OWNER TO "postgres";
@@ -226,6 +253,15 @@ CREATE TABLE IF NOT EXISTS "public"."course_modules" (
 ALTER TABLE "public"."course_modules" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."course_quizzes" (
+    "course_id" "uuid" NOT NULL,
+    "quiz_id" "uuid" NOT NULL
+);
+
+
+ALTER TABLE "public"."course_quizzes" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."courses" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "slug" character varying(255) NOT NULL,
@@ -238,7 +274,8 @@ CREATE TABLE IF NOT EXISTS "public"."courses" (
     "teacher" character varying(255) DEFAULT 'Prof. G. Carnabuci'::character varying,
     "estimated_hours" integer DEFAULT 50,
     "cover_image" "text",
-    "published" boolean DEFAULT true
+    "published" boolean DEFAULT true,
+    "allowed_classes" "text"[] DEFAULT '{}'::"text"[] NOT NULL
 );
 
 
@@ -255,6 +292,24 @@ CREATE TABLE IF NOT EXISTS "public"."document_configs" (
 
 
 ALTER TABLE "public"."document_configs" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."lessons" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "module_id" "uuid" NOT NULL,
+    "title" "text" NOT NULL,
+    "duration" integer NOT NULL,
+    "content_type" "text" NOT NULL,
+    "youtube_url" "text",
+    "google_drive_url" "text",
+    "quiz_id" "uuid",
+    "sort_order" integer DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+    CONSTRAINT "lessons_content_type_check" CHECK (("content_type" = ANY (ARRAY['video'::"text", 'document'::"text", 'mixed'::"text"])))
+);
+
+
+ALTER TABLE "public"."lessons" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."mail_logs" (
@@ -328,7 +383,11 @@ ALTER TABLE "public"."profile_classes" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."profile_courses" (
     "profile_id" "uuid" NOT NULL,
     "course_id" "uuid" NOT NULL,
-    "enrolled_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
+    "enrolled_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+    "status" character varying DEFAULT 'pending'::character varying NOT NULL,
+    "approved_at" timestamp with time zone,
+    "approved_by" "uuid",
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
 );
 
 
@@ -362,12 +421,116 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "password_hash" "text",
     "avatar_url" "text",
     "total_minutes_active" integer DEFAULT 0 NOT NULL,
+    "user_type" character varying DEFAULT 'SCHOOL_STUDENT'::character varying NOT NULL,
     CONSTRAINT "check_role" CHECK ((("role")::"text" = ANY ((ARRAY['admin'::character varying, 'student'::character varying])::"text"[]))),
-    CONSTRAINT "check_status" CHECK ((("status")::"text" = ANY ((ARRAY['pending'::character varying, 'active'::character varying, 'blocked'::character varying])::"text"[])))
+    CONSTRAINT "check_status" CHECK ((("status")::"text" = ANY ((ARRAY['pending'::character varying, 'active'::character varying, 'blocked'::character varying])::"text"[]))),
+    CONSTRAINT "check_user_type" CHECK ((("user_type")::"text" = ANY ((ARRAY['SCHOOL_STUDENT'::character varying, 'EXTERNAL_STUDENT'::character varying, 'TEACHER'::character varying, 'ADMIN'::character varying])::"text"[])))
 );
 
 
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."quiz_answers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "attempt_id" "uuid" NOT NULL,
+    "question_id" "uuid" NOT NULL,
+    "selected_option_id" "uuid",
+    "open_answer_text" "text",
+    "is_correct" boolean,
+    "score" numeric(4,2) DEFAULT 0.00 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."quiz_answers" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."quiz_assignments" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "quiz_id" "uuid" NOT NULL,
+    "course_id" "uuid" NOT NULL,
+    "assigned_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "due_at" timestamp with time zone,
+    "is_visible" boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE "public"."quiz_assignments" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."quiz_attempts" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "quiz_id" "uuid" NOT NULL,
+    "student_id" "uuid" NOT NULL,
+    "started_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "completed_at" timestamp with time zone,
+    "auto_score" numeric(4,2) DEFAULT 0.00 NOT NULL,
+    "teacher_score" numeric(3,1) DEFAULT 0.00 NOT NULL,
+    "final_score" numeric(4,2) DEFAULT 0.00 NOT NULL,
+    "status" "public"."attempt_status" DEFAULT 'submitted'::"public"."attempt_status" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."quiz_attempts" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."quiz_options" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "question_id" "uuid" NOT NULL,
+    "text" "text" NOT NULL,
+    "is_correct" boolean DEFAULT false NOT NULL
+);
+
+
+ALTER TABLE "public"."quiz_options" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."quiz_questions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "quiz_id" "uuid" NOT NULL,
+    "type" "public"."question_type" NOT NULL,
+    "order_index" integer NOT NULL,
+    "text" "text" NOT NULL,
+    "points" numeric(3,2) NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."quiz_questions" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."quiz_reviews" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "attempt_id" "uuid" NOT NULL,
+    "teacher_id" "uuid",
+    "question_id" "uuid" NOT NULL,
+    "score" numeric(3,1) DEFAULT 0.0 NOT NULL,
+    "comment" "text",
+    "reviewed_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."quiz_reviews" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."quizzes" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "title" character varying(255) NOT NULL,
+    "description" "text",
+    "status" "public"."quiz_status" DEFAULT 'draft'::"public"."quiz_status" NOT NULL,
+    "penalty_enabled" boolean DEFAULT false NOT NULL,
+    "negative_mark" numeric(3,2) DEFAULT 0.25 NOT NULL,
+    "max_score" numeric(4,2) DEFAULT 10.00 NOT NULL,
+    "created_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "passing_score" numeric(5,2) DEFAULT 60.00 NOT NULL
+);
+
+
+ALTER TABLE "public"."quizzes" OWNER TO "postgres";
 
 
 CREATE OR REPLACE VIEW "public"."student_courses" WITH ("security_invoker"='true') AS
@@ -462,6 +625,16 @@ ALTER TABLE ONLY "public"."course_modules"
 
 
 
+ALTER TABLE ONLY "public"."course_modules"
+    ADD CONSTRAINT "course_modules_unique_title" UNIQUE ("course_id", "title");
+
+
+
+ALTER TABLE ONLY "public"."course_quizzes"
+    ADD CONSTRAINT "course_quizzes_pkey" PRIMARY KEY ("course_id", "quiz_id");
+
+
+
 ALTER TABLE ONLY "public"."courses"
     ADD CONSTRAINT "courses_pkey" PRIMARY KEY ("id");
 
@@ -474,6 +647,21 @@ ALTER TABLE ONLY "public"."courses"
 
 ALTER TABLE ONLY "public"."document_configs"
     ADD CONSTRAINT "document_configs_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."lessons"
+    ADD CONSTRAINT "lessons_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."lessons"
+    ADD CONSTRAINT "lessons_unique_sort" UNIQUE ("module_id", "sort_order");
+
+
+
+ALTER TABLE ONLY "public"."lessons"
+    ADD CONSTRAINT "lessons_unique_title" UNIQUE ("module_id", "title");
 
 
 
@@ -532,6 +720,46 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."quiz_answers"
+    ADD CONSTRAINT "quiz_answers_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quiz_assignments"
+    ADD CONSTRAINT "quiz_assignments_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quiz_attempts"
+    ADD CONSTRAINT "quiz_attempts_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quiz_options"
+    ADD CONSTRAINT "quiz_options_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quiz_questions"
+    ADD CONSTRAINT "quiz_questions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quiz_assignments"
+    ADD CONSTRAINT "quiz_quiz_course_unique" UNIQUE ("quiz_id", "course_id");
+
+
+
+ALTER TABLE ONLY "public"."quiz_reviews"
+    ADD CONSTRAINT "quiz_reviews_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quizzes"
+    ADD CONSTRAINT "quizzes_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."user_page_views"
     ADD CONSTRAINT "user_page_views_pkey" PRIMARY KEY ("id");
 
@@ -539,6 +767,46 @@ ALTER TABLE ONLY "public"."user_page_views"
 
 ALTER TABLE ONLY "public"."user_sessions"
     ADD CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "idx_answers_attempt" ON "public"."quiz_answers" USING "btree" ("attempt_id");
+
+
+
+CREATE INDEX "idx_answers_question" ON "public"."quiz_answers" USING "btree" ("question_id");
+
+
+
+CREATE INDEX "idx_attempt_quiz" ON "public"."quiz_attempts" USING "btree" ("quiz_id");
+
+
+
+CREATE INDEX "idx_attempt_student" ON "public"."quiz_attempts" USING "btree" ("student_id");
+
+
+
+CREATE INDEX "idx_course_modules_course" ON "public"."course_modules" USING "btree" ("course_id");
+
+
+
+CREATE INDEX "idx_course_quizzes_course" ON "public"."course_quizzes" USING "btree" ("course_id");
+
+
+
+CREATE INDEX "idx_course_quizzes_quiz" ON "public"."course_quizzes" USING "btree" ("quiz_id");
+
+
+
+CREATE INDEX "idx_courses_slug" ON "public"."courses" USING "btree" ("slug");
+
+
+
+CREATE INDEX "idx_lessons_module" ON "public"."lessons" USING "btree" ("module_id");
+
+
+
+CREATE INDEX "idx_lessons_quiz" ON "public"."lessons" USING "btree" ("quiz_id");
 
 
 
@@ -586,6 +854,14 @@ CREATE INDEX "idx_profile_progress_last_accessed" ON "public"."profile_lessons_p
 
 
 
+CREATE INDEX "idx_quiz_options_question" ON "public"."quiz_options" USING "btree" ("question_id");
+
+
+
+CREATE INDEX "idx_quiz_questions_quiz" ON "public"."quiz_questions" USING "btree" ("quiz_id");
+
+
+
 CREATE INDEX "idx_user_sessions_login" ON "public"."user_sessions" USING "btree" ("login_at");
 
 
@@ -595,6 +871,10 @@ CREATE INDEX "idx_user_sessions_logout" ON "public"."user_sessions" USING "btree
 
 
 CREATE INDEX "idx_user_sessions_profile" ON "public"."user_sessions" USING "btree" ("profile_id");
+
+
+
+CREATE OR REPLACE TRIGGER "trg_courses_updated_at" BEFORE UPDATE ON "public"."courses" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
 
 
@@ -634,6 +914,26 @@ ALTER TABLE ONLY "public"."course_modules"
 
 
 
+ALTER TABLE ONLY "public"."course_quizzes"
+    ADD CONSTRAINT "course_quizzes_course_id_fkey" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."course_quizzes"
+    ADD CONSTRAINT "course_quizzes_quiz_id_fkey" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."lessons"
+    ADD CONSTRAINT "lessons_module_id_fkey" FOREIGN KEY ("module_id") REFERENCES "public"."course_modules"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."lessons"
+    ADD CONSTRAINT "lessons_quiz_id_fkey" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."mail_templates"
     ADD CONSTRAINT "mail_templates_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
@@ -651,6 +951,11 @@ ALTER TABLE ONLY "public"."profile_classes"
 
 ALTER TABLE ONLY "public"."profile_classes"
     ADD CONSTRAINT "profile_classes_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."profile_courses"
+    ADD CONSTRAINT "profile_courses_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "public"."profiles"("id");
 
 
 
@@ -676,6 +981,66 @@ ALTER TABLE ONLY "public"."profile_lessons_progress"
 
 ALTER TABLE ONLY "public"."profile_lessons_progress"
     ADD CONSTRAINT "profile_lessons_progress_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_answers"
+    ADD CONSTRAINT "quiz_answers_attempt_id_fkey" FOREIGN KEY ("attempt_id") REFERENCES "public"."quiz_attempts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_answers"
+    ADD CONSTRAINT "quiz_answers_question_id_fkey" FOREIGN KEY ("question_id") REFERENCES "public"."quiz_questions"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_answers"
+    ADD CONSTRAINT "quiz_answers_selected_option_id_fkey" FOREIGN KEY ("selected_option_id") REFERENCES "public"."quiz_options"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."quiz_assignments"
+    ADD CONSTRAINT "quiz_assignments_quiz_id_fkey" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_attempts"
+    ADD CONSTRAINT "quiz_attempts_quiz_id_fkey" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_attempts"
+    ADD CONSTRAINT "quiz_attempts_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_options"
+    ADD CONSTRAINT "quiz_options_question_id_fkey" FOREIGN KEY ("question_id") REFERENCES "public"."quiz_questions"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_questions"
+    ADD CONSTRAINT "quiz_questions_quiz_id_fkey" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_reviews"
+    ADD CONSTRAINT "quiz_reviews_attempt_id_fkey" FOREIGN KEY ("attempt_id") REFERENCES "public"."quiz_attempts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_reviews"
+    ADD CONSTRAINT "quiz_reviews_question_id_fkey" FOREIGN KEY ("question_id") REFERENCES "public"."quiz_questions"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_reviews"
+    ADD CONSTRAINT "quiz_reviews_teacher_id_fkey" FOREIGN KEY ("teacher_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."quizzes"
+    ADD CONSTRAINT "quizzes_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -764,10 +1129,16 @@ ALTER TABLE "public"."course_lessons" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."course_modules" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."course_quizzes" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."courses" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."document_configs" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."lessons" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."mail_logs" ENABLE ROW LEVEL SECURITY;
@@ -792,6 +1163,27 @@ ALTER TABLE "public"."profile_lessons_progress" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."quiz_answers" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."quiz_assignments" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."quiz_attempts" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."quiz_options" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."quiz_questions" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."quiz_reviews" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."quizzes" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."user_page_views" ENABLE ROW LEVEL SECURITY;
@@ -1046,6 +1438,12 @@ GRANT ALL ON TABLE "public"."course_modules" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."course_quizzes" TO "anon";
+GRANT ALL ON TABLE "public"."course_quizzes" TO "authenticated";
+GRANT ALL ON TABLE "public"."course_quizzes" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."courses" TO "anon";
 GRANT ALL ON TABLE "public"."courses" TO "authenticated";
 GRANT ALL ON TABLE "public"."courses" TO "service_role";
@@ -1055,6 +1453,12 @@ GRANT ALL ON TABLE "public"."courses" TO "service_role";
 GRANT ALL ON TABLE "public"."document_configs" TO "anon";
 GRANT ALL ON TABLE "public"."document_configs" TO "authenticated";
 GRANT ALL ON TABLE "public"."document_configs" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."lessons" TO "anon";
+GRANT ALL ON TABLE "public"."lessons" TO "authenticated";
+GRANT ALL ON TABLE "public"."lessons" TO "service_role";
 
 
 
@@ -1103,6 +1507,48 @@ GRANT ALL ON TABLE "public"."profile_lessons_progress" TO "service_role";
 GRANT ALL ON TABLE "public"."profiles" TO "anon";
 GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."profiles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quiz_answers" TO "anon";
+GRANT ALL ON TABLE "public"."quiz_answers" TO "authenticated";
+GRANT ALL ON TABLE "public"."quiz_answers" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quiz_assignments" TO "anon";
+GRANT ALL ON TABLE "public"."quiz_assignments" TO "authenticated";
+GRANT ALL ON TABLE "public"."quiz_assignments" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quiz_attempts" TO "anon";
+GRANT ALL ON TABLE "public"."quiz_attempts" TO "authenticated";
+GRANT ALL ON TABLE "public"."quiz_attempts" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quiz_options" TO "anon";
+GRANT ALL ON TABLE "public"."quiz_options" TO "authenticated";
+GRANT ALL ON TABLE "public"."quiz_options" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quiz_questions" TO "anon";
+GRANT ALL ON TABLE "public"."quiz_questions" TO "authenticated";
+GRANT ALL ON TABLE "public"."quiz_questions" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quiz_reviews" TO "anon";
+GRANT ALL ON TABLE "public"."quiz_reviews" TO "authenticated";
+GRANT ALL ON TABLE "public"."quiz_reviews" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quizzes" TO "anon";
+GRANT ALL ON TABLE "public"."quizzes" TO "authenticated";
+GRANT ALL ON TABLE "public"."quizzes" TO "service_role";
 
 
 

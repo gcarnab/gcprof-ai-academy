@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-
 import CoursesTab from "../../courses/components/CoursesTab";
 import UsersTab from "../../users/components/UsersTab";
 import MailTab from "../../mail/components/MailTab";
@@ -9,11 +8,14 @@ import StatsTab from "../../stats/components/StatsTab";
 import TrackingTab from "../../tracking/components/TrackingTab";
 import RequestsTab from "./RequestsTab";
 import QuizzesTab from "./QuizzesTab";
+import ResourceAdminTable from "@/features/resources/components/ResourceAdminTable";
+import { Resource } from "@/features/resources/types/Resource";
 
 interface Props {
   stats: any;
   currentTab: string;
   trackingStats: any;
+  initialResources: Resource[]; // <-- Prop aggiunta
 }
 
 const tabs = [
@@ -24,12 +26,15 @@ const tabs = [
   { id: "mail", label: "📧 Mail" },
   { id: "stats", label: "📊 Stats" },
   { id: "tracking", label: "🛰 Tracking" },
+  // STEP 6: Aggiunto nuovo tab per il Knowledge Hub
+  { id: "resources", label: "🔗 Risorse" },
 ];
 
 export default function AdminDashboard({
   stats,
   currentTab,
   trackingStats,
+  initialResources, // <-- Estratta dalle props
 }: Props) {
   const router = useRouter();
 
@@ -108,6 +113,10 @@ export default function AdminDashboard({
           {currentTab === "tracking" && (
             <TrackingTab trackingStats={trackingStats} />
           )}
+
+          {/* RESOURCES (STEP 6) */}
+          {/* Passaggio delle resources alla tabella */}
+          {currentTab === "resources" && <ResourceAdminTable resources={initialResources} />}
         </div>
       </div>
     </>

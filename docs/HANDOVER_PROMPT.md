@@ -93,6 +93,7 @@ GCPROF-AI-ACADEMY
 |   |   |   
 |   |   \---[slug]
 |   |       |   page.tsx
+|   |       |   page.tsx_old
 |   |       |   
 |   |       +---modules
 |   |       |   \---[moduleId]
@@ -122,6 +123,9 @@ GCPROF-AI-ACADEMY
 |   |       page.tsx
 |   |       page.tsx_old
 |   |       
+|   +---resources
+|   |       page.tsx
+|   |       
 |   \---students
 |           page.tsx
 |           
@@ -136,6 +140,7 @@ GCPROF-AI-ACADEMY
 |           checkbox.tsx
 |           dialog.tsx
 |           dropdown-menu.tsx
+|           form.tsx
 |           input.tsx
 |           label.tsx
 |           progress.tsx
@@ -176,10 +181,13 @@ GCPROF-AI-ACADEMY
 |   |   |       approveEnrollmentAction.ts
 |   |   |       getActiveExternalEnrollmentsAction.ts
 |   |   |       getPendingEnrollmentsAction.ts
+|   |   |       getRevokedExternalEnrollmentsAction.ts
+|   |   |       reactivateExternalEnrollmentAction.ts
 |   |   |       
 |   |   +---courses
 |   |   |   +---actions
 |   |   |   |       assignCourseClassAction.ts
+|   |   |   |       bulkDissociateAction.ts
 |   |   |   |       classActions.ts
 |   |   |   |       courseActions.ts
 |   |   |   |       structureActions.ts
@@ -203,9 +211,10 @@ GCPROF-AI-ACADEMY
 |   |   |   |       
 |   |   |   \---components
 |   |   |           AdminDashboard.tsx
-|   |   |           AdminDashboard.tsx_old
 |   |   |           AdminHeader.tsx
 |   |   |           QuizAnalyticsDashboard.tsx
+|   |   |           QuizzesTab.tsx
+|   |   |           RequestsTab.tsx
 |   |   |           
 |   |   +---mail
 |   |   |   +---actions
@@ -259,11 +268,13 @@ GCPROF-AI-ACADEMY
 |   |   |           
 |   |   +---tracking
 |   |   |   +---actions
+|   |   |   |       trackingActions.ts
 |   |   |   |       trackPageViewAction.ts
 |   |   |   |       
 |   |   |   +---components
 |   |   |   |       PageTracker.tsx
 |   |   |   |       TrackingDashboard.tsx
+|   |   |   |       TrackingDashboard.tsx_old
 |   |   |   |       TrackingTab.tsx
 |   |   |   |       
 |   |   |   \---services
@@ -275,6 +286,7 @@ GCPROF-AI-ACADEMY
 |   |       |       activityActions.ts
 |   |       |       adminUserActions.ts
 |   |       |       bulkActivateUsersAction.ts
+|   |       |       bulkUpdateUsersClassAction.ts
 |   |       |       revokeCourseAccessAction.ts
 |   |       |       seedUsersAction.ts
 |   |       |       
@@ -289,6 +301,7 @@ GCPROF-AI-ACADEMY
 |   |       |       
 |   |       \---services
 |   |               adminService.ts
+|   |               adminService.ts_old
 |   |               
 |   +---auth
 |   |   +---actions
@@ -380,6 +393,7 @@ GCPROF-AI-ACADEMY
 |   |   |       SupabaseCourseRepository.ts
 |   |   |       
 |   |   +---services
+|   |   |       checkExternalCourseAccessAction.ts
 |   |   |       courseActions.ts
 |   |   |       courseService.ts
 |   |   |       
@@ -448,6 +462,27 @@ GCPROF-AI-ACADEMY
 |   |   \---validators
 |   |           quizValidators.ts
 |   |           
+|   +---resources
+|   |   +---actions
+|   |   |       createResourceAction.ts
+|   |   |       resourcesActions.ts
+|   |   |       
+|   |   +---components
+|   |   |       ResourceAdminTable.tsx
+|   |   |       ResourceAdminTable.tsx_MOCK
+|   |   |       ResourceCreateForm.tsx
+|   |   |       ResourceDashboard.tsx
+|   |   |       ResourceDashboard.tsx_MOCK
+|   |   |       
+|   |   +---data
+|   |   |       resources.ts
+|   |   |       
+|   |   +---schemas
+|   |   |       resourceSchema.ts
+|   |   |       
+|   |   \---types
+|   |           Resource.ts
+|   |           
 |   \---theme
 |       +---components
 |       |       ThemeToggle.tsx
@@ -462,8 +497,7 @@ GCPROF-AI-ACADEMY
 |       
 +---logs
 |       app.log
-|       
-|           
+|             
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -526,6 +560,7 @@ GCPROF-AI-ACADEMY
 \---types
         database.types.ts
         
+   
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
@@ -896,6 +931,100 @@ GCPROF-AI-ACADEMY
 | `assigned_at` | `timestamptz` |  |
 | `is_visible` | `bool` |  |
 
+## Table `resources`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `text` |  |
+| `description` | `text` |  |
+| `url` | `text` |  |
+| `provider` | `text` |  |
+| `type` | `text` |  |
+| `typeVariant` | `text` |  |
+| `rating` | `int2` |  |
+| `tags` | `_text` |  |
+| `language` | `text` |  |
+| `is_visible` | `bool` |  |
+| `created_at` | `timestamptz` |  |
+
+## Custom Types / Enums
+
+### `quiz_status`
+
+`draft` | `active`
+
+### `question_type`
+
+`multiple_choice` | `open_ended`
+
+### `attempt_status`
+
+`submitted` | `graded`
+
+## RLS Policies
+
+### `courses`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Corsi leggibili da autenticati` | SELECT | authenticated | PERMISSIVE | `true` | — |
+| `Admin controllo totale corsi` | ALL | authenticated | PERMISSIVE | `((auth.jwt() ->> 'role'::text) = 'admin'::text)` | — |
+
+### `course_modules`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Moduli leggibili da autenticati` | SELECT | authenticated | PERMISSIVE | `true` | — |
+| `Admin controllo totale moduli` | ALL | authenticated | PERMISSIVE | `((auth.jwt() ->> 'role'::text) = 'admin'::text)` | — |
+
+### `course_lessons`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Lezioni leggibili da autenticati` | SELECT | authenticated | PERMISSIVE | `true` | — |
+| `Admin controllo totale lezioni` | ALL | authenticated | PERMISSIVE | `((auth.jwt() ->> 'role'::text) = 'admin'::text)` | — |
+
+### `course_classes`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Assegnazioni leggibili da autenticati` | SELECT | authenticated | PERMISSIVE | `true` | — |
+| `Admin controllo totale assegnazioni` | ALL | authenticated | PERMISSIVE | `((auth.jwt() ->> 'role'::text) = 'admin'::text)` | — |
+
+### `mail_settings`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Admin Full Access Mail Settings` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND ((profiles.role)::text = 'admin'::text))))` | — |
+
+### `mail_templates`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Admin Full Access Mail Templates` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND ((profiles.role)::text = 'admin'::text))))` | — |
+
+### `mail_logs`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Admin Full Access Mail Logs` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND ((profiles.role)::text = 'admin'::text))))` | — |
+
+### `user_page_views`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Gli utenti iscritti possono tracciare le proprie visite` | INSERT | public | PERMISSIVE | — | `(auth.uid() = profile_id)` |
+| `Gli Admin possono leggere tutte le metriche` | SELECT | public | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND ((profiles.role)::text = 'admin'::text))))` | — |
+
+### `resources`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public profiles are viewable by everyone.` | SELECT | public | PERMISSIVE | `(is_visible = true)` | — |
+| `Admins can do everything` | ALL | public | PERMISSIVE | `((auth.jwt() ->> 'role'::text) = 'admin'::text)` | — |
 
 
 
@@ -908,14 +1037,11 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-la nostra piattaforma sarà bifronte sarà utilizzata la me unico admin e prof per la didattica nelle scuole superiori
-ma sarà in futuro predisposta per accettare utenti esterni alla scuola anche paganti che possono imbattersi nella piattaforna
-selezionare uno o più corsi ed essere abilitati da me a poterne fruire.
+1. all'interno della sezione Risorse della admin dashboard dobbiamo implementare la logica per inserire nuove risorse.
 
 
 SITUAZIONE ATTUALE :
-1. feature già parzialmente sviluppata 
-2. ma devo poter revocare l'abilitazione al corso dello studente esterno in qualsiasi momento adesso una volta abilitato sparisce dalla lista presenta nella sezione Richieste della dashboard admin che deve concentrare tutto quello riguardante gli studenti esterni compreso il back office per gestire le richieste
+1. feature in fase di svilippo (app stabile) 
 
 VINCOLI: 
 1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 

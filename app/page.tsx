@@ -25,7 +25,7 @@ export default function HomePage() {
       <HeroSection/>
       <WhyChoose id="why-choose"/>
       <HowItWorks id="how-it-works"/>
-      <StudentFeatures/>
+      {/* <StudentFeatures/> */}
     </PublicLayout>
   );
 }

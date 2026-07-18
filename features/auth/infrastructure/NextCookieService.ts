@@ -1,39 +1,47 @@
-import { ICookieService } from "../ports/ICookieService";
 import { cookies } from "next/headers";
 
-// Definiamo il nome definitivo e centralizzato per evitare disallineamenti infrastrutturali
-const AUTH_TOKEN_NAME = "auth_token";
-const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
+import { COOKIE_CONSTANTS } from "../constants/CookieConstants";
+import { ICookieService } from "../ports/ICookieService";
 
+/**
+ * Adapter Next.js per la gestione del cookie di autenticazione.
+ *
+ * Incapsula completamente l'API `cookies()` di Next.js mantenendo
+ * l'applicazione indipendente dai dettagli dell'infrastruttura.
+ */
 export class NextCookieService implements ICookieService {
   /**
-   * 🎯 Salva il token emesso in un cookie HttpOnly cifrato lato server
+   * Salva il JWT in un cookie HttpOnly.
    */
   async setSession(token: string): Promise<void> {
     const cookieStore = await cookies();
-    cookieStore.set(AUTH_TOKEN_NAME, token, {
-      httpOnly: true, // Protezione totale da XSS (JavaScript non può leggerlo)
-      secure: process.env.NODE_ENV === "production", // Viaggia solo su HTTPS in produzione
+
+    cookieStore.set(COOKIE_CONSTANTS.SESSION_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: ONE_WEEK_SECONDS,
-      path: "/",
+      maxAge: COOKIE_CONSTANTS.MAX_AGE_SECONDS,
+      path: COOKIE_CONSTANTS.PATH,
     });
   }
 
   /**
-   * 🔍 Recupera il valore del token direttamente dalle intestazioni della richiesta
+   * Restituisce il JWT memorizzato nel cookie di sessione.
    */
   async getSession(): Promise<string | null> {
     const cookieStore = await cookies();
-    const cookie = cookieStore.get(AUTH_TOKEN_NAME);
-    return cookie ? cookie.value : null;
+
+    const cookie = cookieStore.get(COOKIE_CONSTANTS.SESSION_NAME);
+
+    return cookie?.value ?? null;
   }
 
   /**
-   * 🚪 Rimuove fisicamente il cookie invalidando la sessione client-server
+   * Elimina il cookie di sessione.
    */
   async clearSession(): Promise<void> {
     const cookieStore = await cookies();
-    cookieStore.delete(AUTH_TOKEN_NAME);
+
+    cookieStore.delete(COOKIE_CONSTANTS.SESSION_NAME);
   }
 }
