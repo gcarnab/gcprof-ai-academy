@@ -39,7 +39,7 @@ export default function StudentFeatures() {
               Impara, migliora e costruisci le tue competenze digitali.
             </h2>
             <p className="mt-6 text-lg text-muted-foreground">
-              GCPROF AI Academy trasforma lo studio in un'esperienza
+              GCPROF Academy trasforma lo studio in un'esperienza
               interattiva. Supera lo studio passivo e costruisci competenze
               attraverso esercizi, progetti e feedback continui.
             </p>

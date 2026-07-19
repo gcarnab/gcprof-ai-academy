@@ -63,7 +63,7 @@ export default function WhyChoose({ id }: WhyChooseProps) {
       <PageContainer>
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Perché scegliere GCPROF AI Academy
+            Perché scegliere GCPROF Academy
           </h2>
           <p className="mt-4 text-muted-foreground">
             Non una semplice piattaforma di lezioni, ma un ecosistema completo

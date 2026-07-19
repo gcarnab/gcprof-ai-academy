@@ -1,6 +1,6 @@
-# 📘 Documentazione Database: GCPROF AI Academy (V2)
+# 📘 Documentazione Database: GCPROF Academy
 
-Il database di **GCPROF AI Academy** è ospitato su PostgreSQL tramite l'infrastruttura **Supabase**. Lo schema si basa su un'architettura ibrida: autenticazione centralizzata accoppiata a un sistema di permessi basato su Classi Relazionali e Stati Approvativi (`pending`, `active`, `blocked`).
+Il database di **GCPROF Academy** è ospitato su PostgreSQL tramite l'infrastruttura **Supabase**. Lo schema si basa su un'architettura ibrida: autenticazione centralizzata accoppiata a un sistema di permessi basato su Classi Relazionali e Stati Approvativi (`pending`, `active`, `blocked`).
 
 ---
 

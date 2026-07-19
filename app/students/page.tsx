@@ -11,7 +11,7 @@ import { siteConfig } from "@/shared/config/site";
 export const metadata: Metadata = {
   title: "Studenti",
   description:
-    "Scopri come GCPROF AI Academy aiuta gli studenti delle superiori a imparare Informatica, programmazione e Intelligenza Artificiale.",
+    "Scopri come GCPROF Academy aiuta gli studenti delle superiori a imparare Informatica, programmazione e Intelligenza Artificiale.",
 };
 
 

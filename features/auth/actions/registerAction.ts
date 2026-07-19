@@ -249,7 +249,7 @@ async function startEmailDispatches(params: {
           <h2 style="color: #7c3aed; margin-bottom: 16px;">${title}</h2>
           <div style="color: #334155; line-height: 1.6;">${body}</div>
           <hr style="margin: 24px 0; border: 0; border-top: 1px solid #e2e8f0;" />
-          <p style="font-size: 12px; color: #64748b;">GCPROF AI Academy Backoffice</p>
+          <p style="font-size: 12px; color: #64748b;">GCPROF Academy Backoffice</p>
         </div>
       `;
       const adminRecipient = process.env.GMAIL_SMTP_USER || "gcarnab74@gmail.com";
