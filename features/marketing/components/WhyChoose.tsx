@@ -57,13 +57,15 @@ interface WhyChooseProps {
   id?: string;
 }
 
+const appName = process.env.NEXT_PUBLIC_SITE_NAME || "GCPROF Academy";
+
 export default function WhyChoose({ id }: WhyChooseProps) {
   return (
     <section id={id} className="bg-muted/30 py-24">
       <PageContainer>
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Perché scegliere GCPROF Academy
+            Perché scegliere {appName}
           </h2>
           <p className="mt-4 text-muted-foreground">
             Non una semplice piattaforma di lezioni, ma un ecosistema completo

@@ -25,8 +25,10 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({
-  title = "Impara l'Informatica con l'AI",
-  subtitle = "GCPROF Academy unisce corsi strutturati, quiz interattivi, correzione intelligente e dashboard evolute per studenti e docenti, in un'unica piattaforma moderna.",
+  title = process.env.NEXT_PUBLIC_HERO_TITLE ||
+    "L'Intelligenza Artificiale al servizio del tuo apprendimento.",
+  subtitle = process.env.NEXT_PUBLIC_HERO_SUBTITLE ||
+    "GCPROF Academy vuole essere una nuova esperienza di apprendimento che combina didattica tradizionale e Intelligenza Artificiale.",
   primaryAction = {
     label: "Inizia gratuitamente",
     href: "/register",
@@ -36,6 +38,9 @@ export default function HeroSection({
     href: "/courses",
   },
 }: HeroSectionProps) {
+
+  const appName = process.env.NEXT_PUBLIC_SITE_NAME || "GCPROF Academy";
+
   return (
     <section className="relative overflow-hidden bg-background">
       {/* Background */}
@@ -117,7 +122,7 @@ export default function HeroSection({
             <div className="rounded-3xl border bg-card shadow-2xl overflow-hidden">
               <div className="border-b bg-muted/40 px-6 py-4">
                 <h3 className="font-bold text-lg text-right">
-                  Dashboard GCPROF Academy
+                  Dashboard {appName}
                 </h3>
 
                 <p className="text-sm text-muted-foreground text-right">

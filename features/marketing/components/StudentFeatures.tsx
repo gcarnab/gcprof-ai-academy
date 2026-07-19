@@ -28,6 +28,8 @@ const studentBenefits = [
   },
 ];
 
+const appName = process.env.NEXT_PUBLIC_SITE_NAME || "GCPROF Academy";
+
 export default function StudentFeatures() {
   return (
     <section className="py-24 bg-background">
@@ -39,7 +41,7 @@ export default function StudentFeatures() {
               Impara, migliora e costruisci le tue competenze digitali.
             </h2>
             <p className="mt-6 text-lg text-muted-foreground">
-              GCPROF Academy trasforma lo studio in un'esperienza
+              {appName} trasforma lo studio in un'esperienza
               interattiva. Supera lo studio passivo e costruisci competenze
               attraverso esercizi, progetti e feedback continui.
             </p>
