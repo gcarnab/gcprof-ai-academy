@@ -10,6 +10,11 @@
 !.yarn/releases
 !.yarn/versions
 
+# test
+/e2e
+/tests
+/tests-results
+
 # logs
 /logs
 *.log

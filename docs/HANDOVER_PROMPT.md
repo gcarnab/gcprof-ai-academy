@@ -23,6 +23,7 @@ GCPROF-AI-ACADEMY
 |   README.md
 |   tree.txt
 |   tsconfig.json
+|   vitest.config.ts
 |   
 +---app
 |   |   favicon.ico
@@ -121,7 +122,6 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---register
 |   |       page.tsx
-|   |       page.tsx_old
 |   |       
 |   +---resources
 |   |       page.tsx
@@ -153,6 +153,8 @@ GCPROF-AI-ACADEMY
 +---docs
 |   |   credits.md
 |   |   gcprof-academy_DEV_GUIDE.md
+|   |   gcprof-academy_index_gem.md
+|   |   gcprof-academy_index_gpt.md
 |   |   HANDOVER_PROMPT.md
 |   |   README-DB.md
 |   |   
@@ -168,6 +170,7 @@ GCPROF-AI-ACADEMY
 |   |       quiz_AI_Fondamenti_ML.md
 |   |       quiz_DB_Fondamenti_DB_SQL_01.md
 |   |       quiz_FINANCE_base_01.md
+|   |       quiz_INFO_Sheets_01.md
 |   |       quiz_Python_base_01.md
 |   |       
 |   \---supabase
@@ -175,11 +178,19 @@ GCPROF-AI-ACADEMY
 |           roles.sql
 |           schema.sql
 |           
++---e2e
+|   +---admin
+|   +---auth
+|   |       adminGuard.spec.ts
+|   |       
+|   +---courses
+|   \---quiz
 +---features
 |   +---admin
 |   |   +---actions
 |   |   |       approveEnrollmentAction.ts
 |   |   |       getActiveExternalEnrollmentsAction.ts
+|   |   |       getCoursesForEnrollmentAction.ts
 |   |   |       getPendingEnrollmentsAction.ts
 |   |   |       getRevokedExternalEnrollmentsAction.ts
 |   |   |       reactivateExternalEnrollmentAction.ts
@@ -200,6 +211,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |       CreateClassForm.tsx
 |   |   |   |       CreateCourseForm.tsx
 |   |   |   |       ManageCategoriesForm.tsx
+|   |   |   |       ManageCoursesModal.tsx
 |   |   |   |       
 |   |   |   \---services
 |   |   |           adminCourseService.ts
@@ -494,7 +506,7 @@ GCPROF-AI-ACADEMY
 |       
 +---logs
 |       app.log
-|             
+|            
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -505,6 +517,7 @@ GCPROF-AI-ACADEMY
 |   |   window.svg
 |   |   
 |   +---courses
+|   |       gcprof-ai-academy_logo_01.png
 |   |       gcprof-ai-academy_logo_info_01.png
 |   |       gcprof-ai-academy_logo_info_02.png
 |   |       gcprof-ai-academy_logo_info_03.png
@@ -554,10 +567,30 @@ GCPROF-AI-ACADEMY
 |           storage-migration
 |           storage-version
 |           
++---test-results
+|   \---e2e-auth-adminGuard-Auth-G-641ce-tando-di-accedere-all-admin
+|           error-context.md
+|           trace.zip
+|           
++---tests
+|   |   setupTests.ts
+|   |   
+|   +---admin
+|   +---auth
+|   +---courses
+|   +---mail
+|   +---quiz
+|   |       quizParser.test.ts
+|   |       
+|   +---resources
+|   +---shared
+|   |       smoke.test.ts
+|   |       
+|   \---tracking
 \---types
         database.types.ts
-             
-   
+        
+
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
@@ -1034,7 +1067,9 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-1. all'interno della sezione Risorse della admin dashboard dobbiamo implementare la logica per inserire nuove risorse.
+attualmente se fa login un utente esterno di tipo EXTERNAL_STUDENT in fase di registrazione sceglie 
+un solo corso a cui iscriversi ma la piattaforma deve consentire di associare più di un corso 
+all'utente tramite la sezione dedicata della admin dashboard "Richieste Esterni"
 
 
 SITUAZIONE ATTUALE :

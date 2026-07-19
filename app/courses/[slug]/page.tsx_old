@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, notFound, useRouter } from "next/navigation";
-import { hasCourseAccess} from "@/features/courses/services/courseService";
+import { hasCourseAccess } from "@/features/courses/services/courseService";
 import type { Course, Module, Lesson } from "@/features/courses/types/course"; 
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
@@ -10,8 +10,9 @@ import LoginDialog from "@/features/auth/components/LoginDialog";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
 import { getLiveCourses } from "@/features/courses/services/courseActions";
+// Importiamo la nuova action di controllo
+import { checkExternalCourseAccessAction } from "@/features/courses/services/checkExternalCourseAccessAction";
 
-// Mappa di configurazione dei contenuti per gestire i Quiz e gli altri formati
 const CONTENT_TYPES: Record<string, { icon: string; label: string; textStyle: string; badgeStyle: string }> = {
   video: {
     icon: "📺",
@@ -47,6 +48,8 @@ export default function CourseDetailPage() {
 
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Nuovo stato per gestire l'autorizzazione sia da Classe che da Iscrizione Diretta
+  const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
     async function loadCourseDetail() {
@@ -55,16 +58,37 @@ export default function CourseDetailPage() {
         const allCourses = await getLiveCourses(user?.role === "admin" ? "admin" : "student");
         const currentCourse = allCourses.find((c: Course) => c.slug === slug);
         setCourse(currentCourse || null);
+
+        if (currentCourse) {
+          // 1. Gli Admin passano sempre
+          if (user?.role === "admin") {
+            setHasAccess(true);
+          } 
+          // 2. Controllo Via Classe Interna (Modello Scuola)
+          else if (hasCourseAccess(currentCourse, user)) {
+            setHasAccess(true);
+          } 
+          // 3. Controllo Via Iscrizione Singola (Modello Esterni)
+          else if (user?.id) {
+            const hasExternalAccess = await checkExternalCourseAccessAction(String(currentCourse.id), user.id);
+            setHasAccess(hasExternalAccess);
+          } 
+          // 4. Utente non autenticato o non autorizzato
+          else {
+            setHasAccess(false);
+          }
+        }
       } catch (err) {
         console.error("Errore nel caricamento del corso:", err);
       } finally {
         setIsLoading(false);
       }
     }
+    
     if (slug) {
       loadCourseDetail();
     }
-  }, [slug]);
+  }, [slug, user]); // Ricarica la logica se l'utente esegue il login/cambia stato
 
   if (isLoading) {
     return (
@@ -84,10 +108,7 @@ export default function CourseDetailPage() {
     notFound();
   }
 
-  const isClassAuthorized = hasCourseAccess(course, user);
   const isPendingUser = user && user.status === "pending" && user.role !== "admin";
-
-  // Estraiamo in modo sicuro l'array dei quiz a livello di corso
   const courseQuizzes = (course as any).quiz_assignments || [];
 
   return (
@@ -96,7 +117,6 @@ export default function CourseDetailPage() {
       <Navbar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-12">
-        {/* INTESTAZIONE DEL CORSO */}
         <div className="flex flex-col gap-6 md:flex-row md:items-center border-b border-border pb-8">
           <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-xl border border-border bg-background p-2 shadow-sm flex items-center justify-center text-4xl">
             {course.coverImage ? (
@@ -125,7 +145,6 @@ export default function CourseDetailPage() {
           </div>
         </div>
 
-        {/* CORPO CONTENUTI */}
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
 
@@ -152,7 +171,8 @@ export default function CourseDetailPage() {
                   Il tuo account è attualmente in attesa di attivazione da parte dello staff.
                 </p>
               </div>
-            ) : !isClassAuthorized ? (
+            // Sostituito il vecchio controllo rigido con il nuovo stato cumulativo "hasAccess"
+            ) : !hasAccess ? (
               <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center shadow-sm">
                 <span className="text-3xl">🚫</span>
                 <h3 className="text-lg font-bold text-red-800 mt-2">
@@ -165,7 +185,6 @@ export default function CourseDetailPage() {
             ) : (
               <div className="space-y-6">
                 
-                {/* SEZIONE: QUIZ DIRETTI DEL CORSO */}
                 {courseQuizzes.length > 0 && (
                   <div className="space-y-3">
                     <h2 className="text-xl font-bold text-foreground">
@@ -203,7 +222,6 @@ export default function CourseDetailPage() {
                   </div>
                 )}
 
-                {/* SEZIONE: MODULI E LEZIONI */}
                 <div className="space-y-3">
                   <h2 className="text-xl font-bold text-foreground">
                     Moduli del corso
@@ -267,7 +285,6 @@ export default function CourseDetailPage() {
             )}
           </div>
 
-          {/* COLONNA INFO LATERALE */}
           <div className="space-y-4 rounded-xl border bg-background p-5 shadow-sm h-fit">
             <h3 className="font-bold text-foreground border-b pb-2">
               Informazioni Corso
