@@ -14,12 +14,17 @@ import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
 import { MarkdownPreview } from "@/features/courses/components/MarkdownPreview";
 import { logger } from "@/lib/logger";
 
-
 export default function LessonPage() {
   const params = useParams();
 
-  logger.info("gcprof-ai-academy\app\courses\[slug]\modules\[moduleId]\lessons\[lessonId]\page.tsx Componente avviato. Params correnti:", params);
-  console.log("gcprof-ai-academy\app\courses\[slug]\modules\[moduleId]\lessons\[lessonId]\page.tsx Componente avviato. Params correnti:", params);
+  logger.info(
+    "gcprof-ai-academy\\app\\courses\\[slug]\\modules\\[moduleId]\\lessons\\[lessonId]\\page.tsx Componente avviato. Params correnti:",
+    params
+  );
+  console.log(
+    "gcprof-ai-academy\\app\\courses\\[slug]\\modules\\[moduleId]\\lessons\\[lessonId]\\page.tsx Componente avviato. Params correnti:",
+    params
+  );
 
   const slug = params?.slug as string;
   const moduleId = params?.moduleId as string;
@@ -46,7 +51,7 @@ export default function LessonPage() {
         // 🔴 CHECKPOINT 3: I corsi live sono arrivati?
         logger.warn(
           "=== [CHECKPOINT 3] Corsi scaricati dal service. Totale corsi:",
-          liveCourses?.length,
+          liveCourses?.length
         );
 
         const course = liveCourses.find((c) => c.slug === slug);
@@ -63,12 +68,12 @@ export default function LessonPage() {
         if (course && module && lesson) {
           logger.warn(
             "=== [CHECKPOINT 4-OK] Lezione trovata con successo:",
-            lesson,
+            lesson
           );
           setData({ course, module, lesson });
         } else {
           logger.warn(
-            "=== [CHECKPOINT 4-FAIL] Impossibile trovare la tripletta nei dati!",
+            "=== [CHECKPOINT 4-FAIL] Impossibile trovare la tripletta nei dati!"
           );
           setData(null);
         }
@@ -113,7 +118,7 @@ export default function LessonPage() {
   if (!data) {
     // 🔴 CHECKPOINT 6: Deviazione verso il 404
     logger.warn(
-      "=== [CHECKPOINT 6] Dati assenti. Innesco notFound() di Next.js",
+      "=== [CHECKPOINT 6] Dati assenti. Innesco notFound() di Next.js"
     );
     notFound();
     return null;
@@ -147,13 +152,12 @@ export default function LessonPage() {
   // 🔴 CHECKPOINT 7: Arrivo al traguardo del rendering del Player
   logger.warn(
     "=== [CHECKPOINT 7] Dati pronti per il Player:",
-    formattedContents,
+    formattedContents
   );
 
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen flex-col bg-muted">
-        
         {/* 🎯 PASSO 1: Passiamo gli identificativi reali del corso e della lezione al tracker */}
         <ActivityTracker
           courseId={course.id || course.course_id}

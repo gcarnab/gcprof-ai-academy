@@ -11,13 +11,18 @@ type Props = {
 };
 
 export default function AdminStatsDashboard({ stats }: Props) {
+  // Calcolo della densità contenuti (lezioni per modulo)
   const avgLessonsPerModule =
-    stats.totals.modules > 0
+    stats?.totals?.modules > 0
       ? (stats.totals.lessons / stats.totals.modules).toFixed(1)
       : "0";
 
-  // 🆕 Ottimizzazione preventiva dei dati di engagement degli studenti
-  const refinedStudentEngagement = (stats.charts.studentEngagement || []).map(
+  // Estrazione e ripartizione sicura dei KPI di completamento e drop-off
+  const completionRate = stats?.totals?.completionRate ?? 0;
+  const dropOffRate = stats?.totals?.dropOffRate ?? 0;
+
+  // Ottimizzazione preventiva dei dati di engagement degli studenti
+  const refinedStudentEngagement = (stats?.charts?.studentEngagement || []).map(
     (student: any) => ({
       name: student.name,
       hours: student.hours,
@@ -27,20 +32,44 @@ export default function AdminStatsDashboard({ stats }: Props) {
 
   return (
     <div className="space-y-10 p-6">
-      {/* KPI */}
+      {/* ==========================================
+          📊 SEZIONE KPI PRINCIPALI & METRICHE RAPIDE
+          ========================================== */}
       <div className="relative">
         <StatsKpiCards
-          totalUsers={stats.totals.users}
-          totalCourses={stats.totals.courses}
-          totalModules={stats.totals.modules}
-          totalLessons={stats.totals.lessons}
+          totalUsers={stats?.totals?.users || 0}
+          totalCourses={stats?.totals?.courses || 0}
+          totalModules={stats?.totals?.modules || 0}
+          totalLessons={stats?.totals?.lessons || 0}
         />
-        <div className="absolute top-2 right-2 hidden md:block text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded border border-border">
-          📚 Densità contenuti:{" "}
-          <span className="font-semibold text-blue-600">
-            {avgLessonsPerModule}
-          </span>{" "}
-          lezioni/modulo avg
+        
+        {/* Badge Informativi e KPI Aggiuntivi (Densità & Completamento) */}
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-3 text-xs font-medium">
+          <div className="text-muted-foreground bg-muted px-3 py-1.5 rounded-md border border-border shadow-sm">
+            📚 Densità contenuti:{" "}
+            <span className="font-semibold text-blue-600 dark:text-blue-400">
+              {avgLessonsPerModule}
+            </span>{" "}
+            lezioni/modulo avg
+          </div>
+
+          {completionRate > 0 && (
+            <div className="text-muted-foreground bg-muted px-3 py-1.5 rounded-md border border-border shadow-sm">
+              🎯 Tasso di Completamento:{" "}
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                {completionRate}%
+              </span>
+            </div>
+          )}
+
+          {dropOffRate > 0 && (
+            <div className="text-muted-foreground bg-muted px-3 py-1.5 rounded-md border border-border shadow-sm">
+              📉 Drop-off Rate:{" "}
+              <span className="font-semibold text-amber-600 dark:text-amber-400">
+                {dropOffRate}%
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -61,15 +90,15 @@ export default function AdminStatsDashboard({ stats }: Props) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <PieChartCard
             title="Utenti per Ruolo"
-            data={stats.charts.usersByRole}
+            data={stats?.charts?.usersByRole || {}}
           />
           <BarChartCard
             title="Utenti per Stato"
-            data={stats.charts.usersByStatus}
+            data={stats?.charts?.usersByStatus || {}}
           />
           <PieChartCard
             title="Studenti per Classe"
-            data={stats.charts.studentsByClass}
+            data={stats?.charts?.studentsByClass || {}}
           />
         </div>
 
@@ -98,11 +127,11 @@ export default function AdminStatsDashboard({ stats }: Props) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <BarChartCard
             title="Corsi per Categoria"
-            data={stats.charts.coursesByCategory}
+            data={stats?.charts?.coursesByCategory || {}}
           />
           <DonutChartCard
             title="Stato Pubblicazione Corsi"
-            data={stats.charts.publishedCourses}
+            data={stats?.charts?.publishedCourses || {}}
           />
         </div>
 
@@ -110,7 +139,7 @@ export default function AdminStatsDashboard({ stats }: Props) {
           <BarChartCard
             title="Top Corsi per Moduli"
             data={Object.fromEntries(
-              stats.charts.modulesPerCourse.map((c: any) => [
+              (stats?.charts?.modulesPerCourse || []).map((c: any) => [
                 c.title,
                 c.modules,
               ]),
@@ -119,7 +148,7 @@ export default function AdminStatsDashboard({ stats }: Props) {
           <BarChartCard
             title="Top Corsi per Lezioni"
             data={Object.fromEntries(
-              stats.charts.lessonsPerCourse.map((c: any) => [
+              (stats?.charts?.lessonsPerCourse || []).map((c: any) => [
                 c.title,
                 c.lessons,
               ]),
@@ -127,7 +156,7 @@ export default function AdminStatsDashboard({ stats }: Props) {
           />
           <PieChartCard
             title="Complessità dei Corsi"
-            data={stats.charts.courseComplexity}
+            data={stats?.charts?.courseComplexity || {}}
           />
         </div>
       </div>
@@ -146,37 +175,37 @@ export default function AdminStatsDashboard({ stats }: Props) {
           </p>
         </div>
 
-        {/* Prima riga di grafici sul traffico temporale */}
+        {/* Traffico Orario e Trend Giornaliero */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <BarChartCard
             title="Distribuzione Oraria dei Login (Fasce 00-23)"
-            data={stats.charts.hourlyTraffic || {}}
+            data={stats?.charts?.hourlyTraffic || {}}
           />
           <BarChartCard
             title="Trend Accessi Ultimi 7 Giorni"
-            data={stats.charts.dailyTrend || {}}
+            data={stats?.charts?.dailyTrend || {}}
           />
         </div>
 
+        {/* Durata Sessioni, Dispositivi e Contenuti Più Visti */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <DonutChartCard
             title="Profili di Durata delle Sessioni"
-            data={stats.charts.sessionDurationDist || {}}
+            data={stats?.charts?.sessionDurationDist || {}}
           />
           <DonutChartCard
             title="Dispositivi & Browser Utilizzati"
-            data={stats.charts.deviceDistribution || {}}
+            data={stats?.charts?.deviceDistribution || {}}
           />
           <DonutChartCard
             title="Classifica Corsi Più Visualizzati"
-            data={stats.charts.mostViewedCourses || []}
+            data={stats?.charts?.mostViewedCourses || {}}
           />
-          {/* 
-          <PieChartCard
+          {/* Riattivata la classifica delle lezioni più viste */}
+          <BarChartCard
             title="Lezioni Con Maggior Frequenza di Click"
-            data={stats.charts.mostViewedLessons || []}
+            data={stats?.charts?.mostViewedLessons || {}}
           />
-          */}
         </div>
       </div>
     </div>

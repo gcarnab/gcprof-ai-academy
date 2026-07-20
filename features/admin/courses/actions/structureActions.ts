@@ -9,9 +9,8 @@ const supabaseAdmin = getSupabaseAdmin();
 export type ExtendedLessonContentType =
   | "video"
   | "document"
-  | "colab"
   | "markdown"
-  | "sandbox";
+  | "link";
 
 export async function getCourseStructureAction(courseId: string) {
   try {

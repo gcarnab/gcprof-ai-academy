@@ -47,7 +47,7 @@ export default function ContactsPage() {
                 Parliamo del tuo <span className="text-blue-600">Futuro Digitale</span>
               </h1>
               <p className="mt-4 text-lg text-muted-foreground">
-                Hai domande sui nostri corsi? Vuoi proporre una collaborazione o chiedere supporto didattico? Scrivimi direttamente tramite il modulo o connettiti sui social.
+                Hai domande sui nostri corsi? Vuoi proporre una collaborazione, chiedere supporto didattico o segnalare un bug? Scrivimi direttamente tramite il modulo o connettiti sui social.
               </p>
             </div>
 

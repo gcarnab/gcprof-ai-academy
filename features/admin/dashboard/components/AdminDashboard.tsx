@@ -15,7 +15,7 @@ interface Props {
   stats: any;
   currentTab: string;
   trackingStats: any;
-  initialResources: Resource[]; // <-- Prop aggiunta
+  initialResources: Resource[];
 }
 
 const tabs = [
@@ -26,7 +26,6 @@ const tabs = [
   { id: "mail", label: "📧 Mail" },
   { id: "stats", label: "📊 Stats" },
   { id: "tracking", label: "🛰 Tracking" },
-  // STEP 6: Aggiunto nuovo tab per il Knowledge Hub
   { id: "resources", label: "🔗 Risorse" },
 ];
 
@@ -34,7 +33,7 @@ export default function AdminDashboard({
   stats,
   currentTab,
   trackingStats,
-  initialResources, // <-- Estratta dalle props
+  initialResources,
 }: Props) {
   const router = useRouter();
 
@@ -48,40 +47,51 @@ export default function AdminDashboard({
   }
 
   return (
-    <>
+    <div className="space-y-6">
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
           Pannello Amministratore
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground max-w-3xl">
           Gestisci la struttura dei corsi, gli utenti, i quiz di sbarramento e
           tutte le funzionalità amministrative della piattaforma.
         </p>
       </div>
 
-      {/* TAB BAR */}
-      <div className="rounded-xl border bg-background shadow mt-6">
-        <div className="flex flex-wrap border-b">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => changeTab(tab.id)}
-              className={`
-                px-6 py-4 text-sm font-medium transition-colors
-                ${
-                  currentTab === tab.id
-                    ? "border-b-2 border-blue-600 dark:border-violet-500 text-blue-600 dark:text-violet-400"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }
-              `}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* TAB BAR E CONTENUTO */}
+      <div className="rounded-xl border bg-card text-card-foreground shadow-sm">
+        {/* Scroll orizzontale su mobile per evitare il collasso visivo delle tab */}
+        <div className="flex overflow-x-auto border-b no-scrollbar">
+          {tabs.map((tab) => {
+            const isActive = currentTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => changeTab(tab.id)}
+                className={`
+                  whitespace-nowrap px-6 py-4 text-sm font-medium transition-all duration-200 border-b-2
+                  ${
+                    isActive
+                      ? "border-blue-600 dark:border-violet-500 text-blue-600 dark:text-violet-400 bg-blue-50/50 dark:bg-violet-500/10"
+                      : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:border-border"
+                  }
+                `}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="p-6">
+        {/* 
+          Area Contenuto con animazione fade-in allo switch delle tab.
+          La key={currentTab} forza il re-render dell'animazione quando cambi tab.
+        */}
+        <div 
+          key={currentTab} 
+          className="p-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
+        >
           {/* COURSES */}
           {currentTab === "courses" && <CoursesTab stats={stats} />}
 
@@ -114,11 +124,12 @@ export default function AdminDashboard({
             <TrackingTab trackingStats={trackingStats} />
           )}
 
-          {/* RESOURCES (STEP 6) */}
-          {/* Passaggio delle resources alla tabella */}
-          {currentTab === "resources" && <ResourceAdminTable resources={initialResources} />}
+          {/* RESOURCES */}
+          {currentTab === "resources" && (
+            <ResourceAdminTable resources={initialResources} />
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

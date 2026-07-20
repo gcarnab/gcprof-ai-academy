@@ -50,9 +50,6 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
 
   const [isPending, startTransition] = useTransition();
 
-  // Helper per capire se il tipo richiede testo (Markdown) o URL
-  const isTextBasedContent = (type: string) => type === "markdown";
-
   const loadCourseStructureFromDB = async (courseId: string) => {
     if (!courseId) return;
     setDbStatus({ status: "loading", msg: "Recupero struttura dal DB..." });
@@ -84,8 +81,8 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
 
   const handleAddLesson = (moduleId: string) => {
     if (!lessonTitle.trim()) return;
-    if (!isTextBasedContent(contentType) && !externalUrl.trim()) return;
-    if (isTextBasedContent(contentType) && !lessonContent.trim()) return;
+    if (contentType !== "markdown" && !externalUrl.trim()) return;
+    if (contentType === "markdown" && !lessonContent.trim()) return;
 
     startTransition(async () => {
       const targetModule = courseStructure?.course_modules?.find(
@@ -96,8 +93,8 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
       const res = await addLesson(moduleId, {
         title: lessonTitle.trim(),
         content_type: contentType,
-        external_url: isTextBasedContent(contentType) ? "" : externalUrl.trim(),
-        content: isTextBasedContent(contentType) ? lessonContent.trim() : "",
+        external_url: contentType === "markdown" ? "" : externalUrl.trim(),
+        content: contentType === "markdown" ? lessonContent.trim() : "",
         order_index: nextOrder,
       });
 
@@ -139,14 +136,17 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
     currentLesson: any,
   ) => {
     if (!editingLessonTitle.trim()) return;
-    
-    const needsText = isTextBasedContent(currentLesson.content_type);
-    
-    if (needsText && !editingLessonContent.trim()) {
-      alert("Il contenuto in testo/markdown non può essere vuoto.");
+    if (
+      currentLesson.content_type === "markdown" &&
+      !editingLessonContent.trim()
+    ) {
+      alert("Il contenuto in Markdown non può essere vuoto.");
       return;
     }
-    if (!needsText && !editingLessonExternalUrl.trim()) {
+    if (
+      currentLesson.content_type !== "markdown" &&
+      !editingLessonExternalUrl.trim()
+    ) {
       alert("L'URL della lezione è obbligatorio.");
       return;
     }
@@ -157,8 +157,14 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
           id: lessonId,
           title: editingLessonTitle.trim(),
           contentType: currentLesson.content_type,
-          externalUrl: needsText ? "" : editingLessonExternalUrl.trim(),
-          content: needsText ? editingLessonContent.trim() : "",
+          externalUrl:
+            currentLesson.content_type === "markdown"
+              ? ""
+              : editingLessonExternalUrl.trim(),
+          content:
+            currentLesson.content_type === "markdown"
+              ? editingLessonContent.trim()
+              : "",
           orderIndex: currentLesson.order_index || 1,
           duration: currentLesson.duration ?? 15,
         });
@@ -201,9 +207,13 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
   };
 
   const getUrlPlaceholder = (type: string) => {
-    if (type === "video") return "URL YouTube o Vimeo (es: https://www.youtube.com/watch?v=...)";
+    if (type === "video")
+      return "URL YouTube o Vimeo (es: https://www.youtube.com/watch?v=...)";
+    if (type === "colab")
+      return "URL Google Colab (es: https://colab.research.google.com/drive/...)";
     if (type === "document") return "URL Google Drive o link diretto al PDF";
-    if (type === "link") return "URL risorsa esterna (es: Documentazione ufficiale)";
+    if (type === "sandbox")
+      return "URL Embed CodeSandbox / Replit / StackBlitz";
     return "URL Esterno";
   };
 
@@ -346,8 +356,9 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                       {[
                         "video",
                         "document",
+                        "colab",
                         "markdown",
-                        "link",
+                        "sandbox",
                       ].map((type) => (
                         <label
                           key={type}
@@ -364,7 +375,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                       ))}
                     </div>
 
-                    {isTextBasedContent(contentType) ? (
+                    {contentType === "markdown" ? (
                       <textarea
                         placeholder="Scrivi in Markdown..."
                         value={lessonContent}
@@ -411,7 +422,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                             }
                             className="border rounded p-1 text-xs text-foreground bg-background"
                           />
-                          {isTextBasedContent(les.content_type) ? (
+                          {les.content_type === "markdown" ? (
                             <textarea
                               value={editingLessonContent}
                               onChange={(e) =>
@@ -453,9 +464,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                             <span className="font-medium text-foreground truncate">
                               {les.title}
                             </span>
-                            <span className="text-[10px] uppercase bg-gray-200 dark:bg-gray-800 px-1 rounded text-gray-500">
-                              {les.content_type}
-                            </span>
+
                             <button
                               onClick={() => {
                                 setEditingLessonId(les.id);

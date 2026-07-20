@@ -79,11 +79,11 @@ export default function BarChartCard({ title, data }: Props) {
                 }}
               />
 
-              {/* Barra principale con colore di brand dell'Academy */}
+              {/* Barra principale con il colore dinamico dei grafici Shadcn */}
               <Bar 
                 name={title}
                 dataKey="value" 
-                fill="#3b82f6" 
+                fill="#6366f1"
                 radius={[4, 4, 0, 0]} 
               />
             </BarChart>

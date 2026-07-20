@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useTransition, useMemo, useCallback } from "react";
+import { useState, useEffect, useTransition, useCallback } from "react";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { MarkdownPreview } from "@/features/courses/components/MarkdownPreview";
 
 interface DocConfig {
   id: string;
@@ -12,29 +13,6 @@ interface DocConfig {
 interface Props {
   initialMarkdown: string;
 }
-
-// OPTIMIZATION 4: Estrazione della funzione pura fuori dal ciclo di render del componente
-const renderSafeText = (text: string) => {
-  const cleanText = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-  const withBold = cleanText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-  const withCode = withBold.replace(
-    /`(.*?)`/g,
-    '<code class="bg-muted text-primary px-1 py-0.5 rounded border font-mono text-xs">$1</code>',
-  );
-
-  return (
-    <span
-      dangerouslySetInnerHTML={{
-        __html: withCode,
-      }}
-    />
-  );
-};
 
 export default function CreditsClientWrapper({ initialMarkdown }: Props) {
   const { user, isLoading: authLoading } = useAuth();
@@ -103,47 +81,6 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
         );
     }
   }, [activeTabId, htmlSlides]);
-
-  // OPTIMIZATION 2: Memoizzazione totale del parsing Markdown.
-  const renderedMarkdown = useMemo(() => {
-    return markdownContent.split("\n").map((line, i) => {
-      const trimmed = line.trim();
-
-      if (trimmed.startsWith("# "))
-        return (
-          <h1
-            key={i}
-            className="text-3xl font-black border-b border-border pb-2 mb-4 text-foreground"
-          >
-            {trimmed.replace("# ", "")}
-          </h1>
-        );
-
-      if (trimmed.startsWith("## "))
-        return (
-          <h2
-            key={i}
-            className="text-2xl font-bold border-l-4 border-primary pl-3 my-4 text-foreground"
-          >
-            {trimmed.replace("## ", "")}
-          </h2>
-        );
-
-      if (trimmed.startsWith("- ") || trimmed.startsWith("* "))
-        return (
-          <li
-            key={i}
-            className="list-disc ml-6 text-muted-foreground"
-          >
-            {renderSafeText(trimmed.substring(2))}
-          </li>
-        );
-
-      if (!trimmed) return <div key={i} className="h-2" />;
-
-      return <p key={i} className="text-foreground/90 my-1">{renderSafeText(trimmed)}</p>;
-    });
-  }, [markdownContent]);
 
   // Gestione dinamica dell'upload sul Bucket di Supabase Storage
   const handleFileBrowse = async (
@@ -376,9 +313,10 @@ export default function CreditsClientWrapper({ initialMarkdown }: Props) {
               : "relative w-full aspect-video min-h-[550px] bg-muted"
           }
         >
+          {/* 🎯 SOSTITUZIONE EFFETTUATA: Qui ora usiamo il componente MarkdownPreview unificato */}
           {activeTabId === "markdown" && (
-            <div className="absolute inset-0 w-full h-full overflow-y-auto p-6 md:p-8 bg-background text-foreground prose dark:prose-invert max-w-none">
-              {renderedMarkdown}
+            <div className="absolute inset-0 w-full h-full overflow-y-auto p-6 md:p-8">
+              <MarkdownPreview content={markdownContent} />
             </div>
           )}
 

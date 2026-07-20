@@ -21,7 +21,6 @@ export default function CoursesTab({ stats }: Props) {
   };
 
   // 📊 Mappatura immediata e sicura eseguita al volo durante il rendering
-  // Si aspetta un array 'course_classes' dentro stats.raw (es. popolato dal server)
   const activeAssociations = (stats?.raw?.course_classes || []).map(
     (rel: any) => {
       const course = (stats?.raw?.courses || []).find(
@@ -41,55 +40,86 @@ export default function CoursesTab({ stats }: Props) {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
+      
       {/* SEZIONE 1: Gestione Corsi ed Editor dei Contenuti */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
-          <CreateCourseForm classes={stats.raw.classes} />
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            Gestione Didattica
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Crea la struttura dei nuovi corsi o modifica i moduli, le lezioni e i materiali di quelli esistenti.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm p-6">
+            <CreateCourseForm classes={stats.raw.classes} />
+          </div>
+
+          <div className="flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm p-6">
+            <CourseContentEditor courses={stats.raw.courses} />
+          </div>
+        </div>
+      </section>
+
+      {/* SEPARATORE VISIVO */}
+      <hr className="border-border" />
+
+      {/* SEZIONE 2: Form di Configurazione e Anagrafiche */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            Organizzazione e Struttura
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Configura le categorie, gestisci i gruppi classe e distribuisci i corsi assegnandoli agli studenti.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm p-6">
+            <CreateClassForm />
+          </div>
+
+          <div className="flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm p-6">
+            <AssignCourseClassForm
+              courses={stats.raw.courses}
+              classes={stats.raw.classes}
+            />
+          </div>
+
+          <div className="flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm p-6">
+            <ManageCategoriesForm />
+          </div>
+        </div>
+      </section>
+
+      {/* SEPARATORE VISIVO */}
+      <hr className="border-border" />
+
+      {/* SEZIONE 3: Gestione Associazioni */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            Panoramica Assegnazioni
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Visualizza ed elimina rapidamente i collegamenti attivi tra le classi e i percorsi formativi.
+          </p>
         </div>
 
-        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
-          <CourseContentEditor courses={stats.raw.courses} />
-        </div>
-      </div>
-
-      {/* SEZIONE 2: Form di Configurazione e Anagrafiche (Griglia Bilanciata 1+1+1) */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Colonna 1: Creazione Nuova Classe */}
-        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
-          <CreateClassForm />
-        </div>
-
-        {/* Colonna 2: Assegnazione Corso a Classe */}
-        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
-          <AssignCourseClassForm
-            courses={stats.raw.courses}
-            classes={stats.raw.classes}
+        <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 w-full">
+          <ActiveAssociationsList
+            associations={activeAssociations}
+            onRefresh={refreshAllData}
+            allClasses={(stats?.raw?.classes || []).map((c: any) => c.name)}
+            allCourses={(stats?.raw?.courses || []).map((c: any) => c.title)}
           />
         </div>
+      </section>
 
-        {/* Colonna 3: Gestione Categorie (Spostata qui per riempire il layout) */}
-        <div className="overflow-hidden rounded-xl border bg-background shadow p-6">
-          <ManageCategoriesForm />
-        </div>
-      </div>
-
-      {/* SEZIONE 3: Gestione Associazioni (A tutta larghezza per evitare tagli di testo) */}
-      <div className="overflow-hidden rounded-xl border bg-background shadow p-6 w-full">
-        <h2 className="text-xl font-bold text-foreground mb-1">
-          Gestione Associazioni
-        </h2>
-        <p className="text-xs text-muted-foreground mb-4">
-          Visualizza ed elimina i collegamenti attivi tra classi e corsi.
-        </p>
-
-        <ActiveAssociationsList
-          associations={activeAssociations}
-          onRefresh={refreshAllData}
-          allClasses={(stats?.raw?.classes || []).map((c: any) => c.name)}
-          allCourses={(stats?.raw?.courses || []).map((c: any) => c.title)}
-        />
-      </div>
     </div>
   );
 }
