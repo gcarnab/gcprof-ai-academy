@@ -34,6 +34,8 @@ L'apprendimento della programmazione Web richiede pratica costante: leggere il c
 
 ---
 
+<a id="indice"></a>
+
 # Indice dei moduli
 
 - [M0 — Introduzione al Web](#m0)

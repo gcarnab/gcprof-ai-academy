@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  PieChart,
-  Pie,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import { PieChart, Pie, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 type Props = {
   title: string;
@@ -35,7 +29,7 @@ export default function PieChartCard({ title, data }: Props) {
       <h3 className="mb-4 text-lg font-semibold text-foreground">{title}</h3>
 
       <div className="h-80">
-        {chartData.length === 0 || chartData.every(d => d.value === 0) ? (
+        {chartData.length === 0 || chartData.every((d) => d.value === 0) ? (
           <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
             Nessun dato disponibile
           </div>
@@ -46,31 +40,35 @@ export default function PieChartCard({ title, data }: Props) {
                 data={chartData}
                 dataKey="value"
                 nameKey="name"
-                outerRadius={85}
-                label={{ fill: "currentColor", fontSize: 11 }}
+                cx="50%"
+                cy="40%"
+                outerRadius={70}
+                label={{ fill: "currentColor", fontSize: 10 }}
                 className="text-muted-foreground"
               />
 
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: "var(--background)", 
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "var(--background)",
                   borderColor: "var(--border)",
                   color: "var(--foreground)",
-                  borderRadius: "8px"
-                }} 
+                  borderRadius: "8px",
+                }}
               />
-              
+
               {/* Legenda allineata e configurata per il supporto al tema attivo */}
-              <Legend 
+              <Legend
                 verticalAlign="bottom"
                 align="center"
                 height={40}
                 iconType="circle"
-                iconSize={10}
-                wrapperStyle={{ 
-                  fontSize: "12px", 
+                iconSize={8}
+                wrapperStyle={{
+                  fontSize: "11px",
                   color: "var(--muted-foreground)",
-                  paddingTop: "12px"
+                  paddingTop: "8px",
+                  maxHeight: "75px",
+                  overflowY: "auto",
                 }}
               />
             </PieChart>

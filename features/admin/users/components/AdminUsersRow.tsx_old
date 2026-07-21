@@ -19,7 +19,7 @@ interface AdminUsersRowProps {
     newStatus: "active" | "blocked" | "pending",
   ) => void;
 
-  // 🆕 PROPS SELEZIONE MASSIVA
+  // 🆕 PROPS AGGIUNTE PER LA SELEZIONE MASSIVA
   isChecked: boolean;
   onToggleSelect: () => void;
 }
@@ -35,6 +35,7 @@ export default function AdminUsersRow({
   onCancelEditing,
   onSaveClasses,
   onStatusChange,
+  // 🆕 NEW
   isChecked,
   onToggleSelect,
 }: AdminUsersRowProps) {
@@ -44,7 +45,7 @@ export default function AdminUsersRow({
     <tr
       className={`transition-colors hover:bg-muted ${isChecked ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}
     >
-      {/* 1. Checkbox */}
+      {/* 🆕 Cella Checkbox */}
       <td className="px-6 py-4 text-center w-[50px]">
         <input
           type="checkbox"
@@ -54,7 +55,7 @@ export default function AdminUsersRow({
         />
       </td>
 
-      {/* 2. Nome */}
+      {/* Nome */}
       <td className="px-6 py-4 font-medium text-foreground">
         <div className="font-semibold">
           {user.display_name || "Utente Senza Nome"}
@@ -62,28 +63,22 @@ export default function AdminUsersRow({
         <div className="mt-0.5 font-mono text-xs text-muted-foreground">
           {user.id}
         </div>
+
+        <div className="mt-1 text-xs text-muted-foreground">
+          {isExternalStudent ? (
+            <span>🌍 Studente Esterno</span>
+          ) : (
+            <span>
+              🎓 {user.schoolTrack ?? "--"} • Sez. {user.schoolSection ?? "--"}
+            </span>
+          )}
+        </div>
       </td>
 
-      {/* 3. Email */}
+      {/* Email */}
       <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
 
-      {/* 4. 🎯 NUOVA CELLA: Scuola */}
-      <td className="px-6 py-4 text-xs text-muted-foreground">
-        {isExternalStudent ? (
-          <span className="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-400">
-            🌍 Esterno
-          </span>
-        ) : (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-medium text-foreground">
-              🎓 {user.schoolTrack ?? "--"}
-            </span>
-            <span>Sez. {user.schoolSection ?? "--"}</span>
-          </div>
-        )}
-      </td>
-
-      {/* 5. Ruolo */}
+      {/* Ruolo */}
       <td className="px-6 py-4">
         <span
           className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
@@ -102,7 +97,7 @@ export default function AdminUsersRow({
         </span>
       </td>
 
-      {/* 6. Stato */}
+      {/* Stato */}
       <td className="px-6 py-4">
         <span
           className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium ${
@@ -119,7 +114,7 @@ export default function AdminUsersRow({
         </span>
       </td>
 
-      {/* 7. Classi */}
+      {/* Classi */}
       <td className="px-6 py-4">
         {isExternalStudent ? (
           <span className="text-xs italic text-muted-foreground font-medium">
@@ -159,7 +154,7 @@ export default function AdminUsersRow({
         )}
       </td>
 
-      {/* 8. Azioni */}
+      {/* Azioni */}
       <td className="space-x-2 whitespace-nowrap px-6 py-4 text-right">
         {user.status !== "active" && (
           <Button

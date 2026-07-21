@@ -3,11 +3,17 @@
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { registerAction } from "@/features/auth/actions/registerAction";
-import { getClassesAction } from "@/features/auth/actions/getClassesAction"; 
+import { getClassesAction } from "@/features/auth/actions/getClassesAction";
 // 🎯 MODIFICA 1: Importiamo l'azione corretta dal modulo dei corsi
 import { getAvailableCoursesAction } from "@/features/courses/actions/courseActions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
@@ -26,22 +32,36 @@ export default function RegisterPage() {
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [userType, setUserType] = useState<"SCHOOL_STUDENT" | "EXTERNAL_STUDENT">("SCHOOL_STUDENT");
-  
+  const [userType, setUserType] = useState<
+    "SCHOOL_STUDENT" | "EXTERNAL_STUDENT"
+  >("SCHOOL_STUDENT");
+
   const [classId, setClassId] = useState("");
   const [classes, setClasses] = useState<AcademyClass[]>([]);
-  
+
   const [courseId, setCourseId] = useState("");
   const [courses, setCourses] = useState<CourseItem[]>([]);
-  
+
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  const [schoolTrack, setSchoolTrack] = useState("");
+  const [schoolSection, setSchoolSection] = useState("");
+
+  // Configurazione da .env
+  const schoolTracks =
+    process.env.NEXT_PUBLIC_SCHOOL_TRACKS?.split(",").map((v) => v.trim()) ??
+    [];
+
+  const schoolSections =
+    process.env.NEXT_PUBLIC_SCHOOL_SECTIONS?.split(",").map((v) => v.trim()) ??
+    [];
 
   useEffect(() => {
     async function loadData() {
@@ -80,7 +100,17 @@ export default function RegisterPage() {
       setError("Seleziona una classe di appartenenza.");
       return;
     }
-    
+
+    if (userType === "SCHOOL_STUDENT" && !schoolTrack) {
+      setError("Seleziona l'indirizzo di studi.");
+      return;
+    }
+
+    if (userType === "SCHOOL_STUDENT" && !schoolSection) {
+      setError("Seleziona la sezione.");
+      return;
+    }
+
     if (userType === "EXTERNAL_STUDENT" && !courseId) {
       setError("Seleziona il corso a cui intendi iscriverti.");
       return;
@@ -93,9 +123,11 @@ export default function RegisterPage() {
     formData.append("password", password);
     formData.append("confirmPassword", confirmPassword);
     formData.append("userType", userType);
-    
+
     if (userType === "SCHOOL_STUDENT") {
       formData.append("classId", classId);
+      formData.append("schoolTrack", schoolTrack);
+      formData.append("schoolSection", schoolSection);
     } else {
       formData.append("courseId", courseId);
     }
@@ -104,7 +136,9 @@ export default function RegisterPage() {
       const result = await registerAction(null, formData);
 
       if (result && result.success) {
-        setSuccessMessage(result.message || "Registrazione avvenuta con successo!");
+        setSuccessMessage(
+          result.message || "Registrazione avvenuta con successo!",
+        );
         setFirstName("");
         setLastName("");
         setEmail("");
@@ -113,6 +147,8 @@ export default function RegisterPage() {
         setClassId("");
         setCourseId("");
         setUserType("SCHOOL_STUDENT");
+        setSchoolTrack("");
+        setSchoolSection("");
       } else {
         setError(result?.error || "Errore durante la registrazione.");
       }
@@ -137,12 +173,15 @@ export default function RegisterPage() {
                 {error}
               </div>
             )}
-            
+
             {successMessage && (
               <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/20 p-3 text-sm text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-900/50">
                 {successMessage}
                 <div className="mt-2">
-                  <Link href="/login" className="text-sm font-semibold underline hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+                  <Link
+                    href="/login"
+                    className="text-sm font-semibold underline hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
+                  >
                     Vai alla pagina di login &rarr;
                   </Link>
                 </div>
@@ -151,13 +190,17 @@ export default function RegisterPage() {
 
             {/* Selettore Tipo Account */}
             <div className="space-y-2">
-              <Label className="text-muted-foreground font-medium">Tipo di Account</Label>
+              <Label className="text-muted-foreground font-medium">
+                Tipo di Account
+              </Label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setUserType("SCHOOL_STUDENT");
-                    setCourseId(""); 
+                    setSchoolTrack("");
+                    setSchoolSection("");
+                    setCourseId("");
                     setError("");
                   }}
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all duration-200 ${
@@ -175,7 +218,9 @@ export default function RegisterPage() {
                   type="button"
                   onClick={() => {
                     setUserType("EXTERNAL_STUDENT");
-                    setClassId(""); 
+                    setSchoolTrack("");
+                    setSchoolSection("");
+                    setClassId("");
                     setError("");
                   }}
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all duration-200 ${
@@ -193,7 +238,12 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-muted-foreground font-medium">Nome</Label>
+                <Label
+                  htmlFor="firstName"
+                  className="text-muted-foreground font-medium"
+                >
+                  Nome
+                </Label>
                 <Input
                   id="firstName"
                   type="text"
@@ -206,7 +256,12 @@ export default function RegisterPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-muted-foreground font-medium">Cognome</Label>
+                <Label
+                  htmlFor="lastName"
+                  className="text-muted-foreground font-medium"
+                >
+                  Cognome
+                </Label>
                 <Input
                   id="lastName"
                   type="text"
@@ -221,7 +276,12 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-muted-foreground font-medium">Email</Label>
+              <Label
+                htmlFor="email"
+                className="text-muted-foreground font-medium"
+              >
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -237,7 +297,12 @@ export default function RegisterPage() {
             {/* Selettore Classe (Studente Scuola) */}
             {userType === "SCHOOL_STUDENT" && (
               <div className="space-y-2 transition-all duration-300 ease-in-out">
-                <Label htmlFor="classId" className="text-muted-foreground font-medium">Classe dell'Academy</Label>
+                <Label
+                  htmlFor="classId"
+                  className="text-muted-foreground font-medium"
+                >
+                  Classe dell'Academy
+                </Label>
                 <select
                   id="classId"
                   className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
@@ -246,7 +311,9 @@ export default function RegisterPage() {
                   required
                   disabled={isPending || !!successMessage}
                 >
-                  <option value="" disabled className="text-muted-foreground">-- Seleziona la tua classe --</option>
+                  <option value="" disabled className="text-muted-foreground">
+                    -- Seleziona la tua classe --
+                  </option>
                   {classes.map((cls) => (
                     <option key={cls.id} value={cls.id}>
                       {cls.name}
@@ -256,10 +323,69 @@ export default function RegisterPage() {
               </div>
             )}
 
+            {userType === "SCHOOL_STUDENT" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="schoolTrack"
+                    className="text-muted-foreground font-medium"
+                  >
+                    Indirizzo
+                  </Label>
+
+                  <select
+                    id="schoolTrack"
+                    value={schoolTrack}
+                    onChange={(e) => setSchoolTrack(e.target.value)}
+                    disabled={isPending || !!successMessage}
+                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-violet-500 focus-visible:ring-offset-2"
+                  >
+                    <option value="">-- Seleziona --</option>
+
+                    {schoolTracks.map((track) => (
+                      <option key={track} value={track}>
+                        {track}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="schoolSection"
+                    className="text-muted-foreground font-medium"
+                  >
+                    Sezione
+                  </Label>
+
+                  <select
+                    id="schoolSection"
+                    value={schoolSection}
+                    onChange={(e) => setSchoolSection(e.target.value)}
+                    disabled={isPending || !!successMessage}
+                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-violet-500 focus-visible:ring-offset-2"
+                  >
+                    <option value="">-- Seleziona --</option>
+
+                    {schoolSections.map((section) => (
+                      <option key={section} value={section}>
+                        {section}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             {/* Selettore Corso (Utente Esterno) */}
             {userType === "EXTERNAL_STUDENT" && (
               <div className="space-y-2 transition-all duration-300 ease-in-out">
-                <Label htmlFor="courseId" className="text-muted-foreground font-medium">Corso a cui iscriversi</Label>
+                <Label
+                  htmlFor="courseId"
+                  className="text-muted-foreground font-medium"
+                >
+                  Corso a cui iscriversi
+                </Label>
                 <select
                   id="courseId"
                   className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
@@ -268,7 +394,9 @@ export default function RegisterPage() {
                   required
                   disabled={isPending || !!successMessage}
                 >
-                  <option value="" disabled className="text-muted-foreground">-- Seleziona il corso --</option>
+                  <option value="" disabled className="text-muted-foreground">
+                    -- Seleziona il corso --
+                  </option>
                   {courses.map((course) => (
                     <option key={course.id} value={course.id}>
                       {course.title}
@@ -280,7 +408,12 @@ export default function RegisterPage() {
 
             {/* Campo Password */}
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-muted-foreground font-medium">Password</Label>
+              <Label
+                htmlFor="password"
+                className="text-muted-foreground font-medium"
+              >
+                Password
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -306,7 +439,12 @@ export default function RegisterPage() {
 
             {/* Campo Conferma Password */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-muted-foreground font-medium">Conferma Password</Label>
+              <Label
+                htmlFor="confirmPassword"
+                className="text-muted-foreground font-medium"
+              >
+                Conferma Password
+              </Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -325,13 +463,17 @@ export default function RegisterPage() {
                   disabled={isPending || !!successMessage}
                   tabIndex={-1}
                 >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showConfirmPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
                 </button>
               </div>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isPending || !!successMessage}
               className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-violet-600 dark:hover:bg-violet-700 text-white font-semibold shadow-sm transition-all disabled:opacity-50 mt-4"
             >
@@ -340,7 +482,10 @@ export default function RegisterPage() {
 
             <div className="text-center text-sm text-muted-foreground pt-2">
               Hai già un account?{" "}
-              <Link href="/login" className="underline text-blue-600 dark:text-violet-400 hover:text-blue-700 dark:hover:text-violet-300 font-medium transition-colors">
+              <Link
+                href="/login"
+                className="underline text-blue-600 dark:text-violet-400 hover:text-blue-700 dark:hover:text-violet-300 font-medium transition-colors"
+              >
                 Accedi
               </Link>
             </div>

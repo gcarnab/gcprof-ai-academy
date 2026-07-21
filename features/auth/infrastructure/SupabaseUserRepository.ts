@@ -15,6 +15,10 @@ interface SupabaseProfileRow {
   first_name: string | null; // 🎯 NUOVO
   last_name: string | null; // 🎯 NUOVO
   avatar_url: string | null; // 🎯 NUOVO
+
+  school_track: string | null;
+  school_section: string | null;
+
   created_at: string;
   updated_at: string;
 }
@@ -102,6 +106,9 @@ export class SupabaseUserRepository implements IUserRepository {
       first_name: user.firstName || null,
       last_name: user.lastName || null,
       avatar_url: user.avatarUrl || null,
+      user_type: user.userType ?? null,
+      school_track: user.schoolTrack ?? null,
+      school_section: user.schoolSection ?? null,
     };
 
     const supabase = getSupabaseAdmin();
@@ -146,6 +153,12 @@ export class SupabaseUserRepository implements IUserRepository {
     if (user.firstName !== undefined) dbPayload.first_name = user.firstName;
     if (user.lastName !== undefined) dbPayload.last_name = user.lastName;
     if (user.avatarUrl !== undefined) dbPayload.avatar_url = user.avatarUrl;
+
+    if (user.userType !== undefined) dbPayload.user_type = user.userType;
+    if (user.schoolTrack !== undefined)
+      dbPayload.school_track = user.schoolTrack;
+    if (user.schoolSection !== undefined)
+      dbPayload.school_section = user.schoolSection;
 
     dbPayload.updated_at = new Date().toISOString();
 
@@ -208,6 +221,11 @@ export class SupabaseUserRepository implements IUserRepository {
       firstName: row.first_name || undefined, // 🎯 Mappatura in camelCase
       lastName: row.last_name || undefined, // 🎯 Mappatura in camelCase
       avatarUrl: row.avatar_url || undefined, // 🎯 Mappatura in camelCase
+
+      userType: row.user_type || undefined,
+      schoolTrack: row.school_track || undefined,
+      schoolSection: row.school_section || undefined,
+
       createdAt: new Date(row.created_at).toISOString(),
       updatedAt: new Date(row.updated_at).toISOString(),
     };

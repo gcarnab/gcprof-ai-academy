@@ -8,14 +8,51 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // ⚠️ Intercettazione Sicurezza: Verifichiamo le variabili d'ambiente
 if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error("Mancano le chiavi di configurazione per Supabase Admin Service.");
+  throw new Error(
+    "Mancano le chiavi di configurazione per Supabase Admin Service.",
+  );
 }
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 // Array di nomi e cognomi realistici per generare combinazioni casuali coerenti
-const MOCK_FIRST_NAMES = ["Alessandro", "Beatrice", "Claudio", "Diana", "Francesco", "Giulia", "Leonardo", "Martina", "Marco", "Sofia", "Riccardo", "Elena"];
-const MOCK_LAST_NAMES = ["Rossi", "Ferrari", "Russo", "Bianchi", "Romano", "Gallo", "Costa", "Fontana", "Conti", "Esposito", "Ricci", "Bruno"];
+const MOCK_FIRST_NAMES = [
+  "Alessandro",
+  "Beatrice",
+  "Claudio",
+  "Diana",
+  "Francesco",
+  "Giulia",
+  "Leonardo",
+  "Martina",
+  "Marco",
+  "Sofia",
+  "Riccardo",
+  "Elena",
+];
+const MOCK_LAST_NAMES = [
+  "Rossi",
+  "Ferrari",
+  "Russo",
+  "Bianchi",
+  "Romano",
+  "Gallo",
+  "Costa",
+  "Fontana",
+  "Conti",
+  "Esposito",
+  "Ricci",
+  "Bruno",
+];
+
+// 🎯 🆕 Costanti per Seeding (prendono da .env o usano valori di fallback)
+const SCHOOL_TRACKS = process.env.NEXT_PUBLIC_SCHOOL_TRACKS
+  ? process.env.NEXT_PUBLIC_SCHOOL_TRACKS.split(",")
+  : ["INF", "RIM", "AFM", "LSA", "MMC", "CHI"];
+
+const SCHOOL_SECTIONS = process.env.NEXT_PUBLIC_SCHOOL_SECTIONS
+  ? process.env.NEXT_PUBLIC_SCHOOL_SECTIONS.split(",")
+  : ["A", "B", "C", "D", "E"];
 
 interface SeedResult {
   success: boolean;
@@ -28,7 +65,7 @@ interface SeedResult {
  */
 export async function seedBulkUsersAction(
   count: number,
-  targetClassName: string
+  targetClassName: string,
 ): Promise<SeedResult> {
   try {
     // 1. Recuperiamo l'ID della classe di destinazione partendo dal nome scelto
@@ -51,23 +88,39 @@ export async function seedBulkUsersAction(
 
     // Recuperiamo un hash di default dall'ambiente o usiamo un placeholder sicuro per i test
     // ⚠️ Spostare SEED_DEFAULT_PASSWORD_HASH nel file .env.local se si desidera simulare anche i login dei test user
-    const defaultPasswordHash = process.env.SEED_DEFAULT_PASSWORD_HASH || "$2a$12$gawqtXsKhlnJDqGldNAJYuyWKXHv8UWkwHElKKF8tG8lB1cyHUDTa";
+    const defaultPasswordHash =
+      process.env.SEED_DEFAULT_PASSWORD_HASH ||
+      "$2a$12$gawqtXsKhlnJDqGldNAJYuyWKXHv8UWkwHElKKF8tG8lB1cyHUDTa";
 
     // 2. Generazione dei dati in memoria
     for (let i = 0; i < count; i++) {
       // Generiamo un UUID valido lato server per coordinare la relazione Many-to-Many
       const profileId = crypto.randomUUID();
-      
-      const firstName = MOCK_FIRST_NAMES[Math.floor(Math.random() * MOCK_FIRST_NAMES.length)];
-      const lastName = MOCK_LAST_NAMES[Math.floor(Math.random() * MOCK_LAST_NAMES.length)];
+
+      const firstName =
+        MOCK_FIRST_NAMES[Math.floor(Math.random() * MOCK_FIRST_NAMES.length)];
+      const lastName =
+        MOCK_LAST_NAMES[Math.floor(Math.random() * MOCK_LAST_NAMES.length)];
       const displayName = `${firstName} ${lastName}`;
-      
+
       // Creiamo un'email univoca basata su timestamp e indice
       const uniqueSuffix = `${Date.now().toString().slice(-4)}${i}`;
       const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${uniqueSuffix}@gcprof-test.com`;
 
       // Simuliamo un tempo di fruizione attivo casuale (es. tra 10 e 480 minuti) per i grafici delle statistiche
       const randomMinutes = Math.floor(Math.random() * 470) + 10;
+
+      // 🎯 🆕 Generazione causale per user_type, school_track e school_section
+      const isSchoolStudent = Math.random() > 0.2; // 80% Studenti Scuola, 20% Esterni
+      const userType = isSchoolStudent ? "SCHOOL_STUDENT" : "EXTERNAL_STUDENT";
+
+      const schoolTrack = isSchoolStudent
+        ? SCHOOL_TRACKS[Math.floor(Math.random() * SCHOOL_TRACKS.length)]
+        : null;
+
+      const schoolSection = isSchoolStudent
+        ? SCHOOL_SECTIONS[Math.floor(Math.random() * SCHOOL_SECTIONS.length)]
+        : null;
 
       insertedProfiles.push({
         id: profileId,
@@ -79,7 +132,14 @@ export async function seedBulkUsersAction(
         status: "active", // Li creiamo direttamente attivi per testare i filtri della tabella
         password_hash: defaultPasswordHash,
         total_minutes_active: randomMinutes,
-        created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(), // Date casuali negli ultimi 30 giorni
+
+        user_type: userType,
+        school_track: schoolTrack,
+        school_section: schoolSection,
+
+        created_at: new Date(
+          Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(), // Date casuali negli ultimi 30 giorni
         updated_at: new Date().toISOString(),
       });
 
@@ -95,13 +155,15 @@ export async function seedBulkUsersAction(
       .from("profiles")
       .insert(insertedProfiles);
 
-    if (profileError) throw new Error(`Errore inserimento profili: ${profileError.message}`);
+    if (profileError)
+      throw new Error(`Errore inserimento profili: ${profileError.message}`);
 
     const { error: relationError } = await supabaseAdmin
       .from("profile_classes")
       .insert(profileClassesRelations);
 
-    if (relationError) throw new Error(`Errore associazione classi: ${relationError.message}`);
+    if (relationError)
+      throw new Error(`Errore associazione classi: ${relationError.message}`);
 
     // Ricarichiamo i dati della pagina dell'amministrazione per riflettere i cambiamenti
     revalidatePath("/admin/dashboard");
@@ -110,7 +172,6 @@ export async function seedBulkUsersAction(
       success: true,
       insertedCount: count,
     };
-
   } catch (err: any) {
     return {
       success: false,

@@ -17,6 +17,11 @@ export interface StudentUser {
   firstName?: string;
   lastName?: string;
   avatarUrl?: string;          // 🎯 NUOVO: URL pubblico della foto del profilo
+
+    // 🎯 Nuovi campi anagrafici scolastici
+  userType?: "SCHOOL_STUDENT" | "EXTERNAL_STUDENT" | null;
+  schoolTrack?: string;
+  schoolSection?: string;
   
   emailVerified?: boolean;
   enrolledCourses?: string[];

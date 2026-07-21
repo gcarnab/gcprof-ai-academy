@@ -26,6 +26,8 @@ Ogni modulo contiene:
 
 ---
 
+<a id="indice"></a>
+
 # Indice dei moduli
 
 - [M0 — Introduzione alla Blockchain](#m0)
@@ -57,7 +59,7 @@ Ogni modulo contiene:
 ---
 
 <a id="m0"></a>
-
+**⬆️ [Torna all'Indice](#indice)**
 ## M0 — Introduzione alla Blockchain
 
 ### 0.1 Cos'è la Blockchain
@@ -265,6 +267,7 @@ Al termine di questo modulo dovresti conoscere i seguenti termini.
 ---
 
 <a id="m1"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 ## M1 — Il problema della fiducia
 
@@ -339,6 +342,7 @@ La soluzione a questo problema rappresenta una delle innovazioni fondamentali in
 ---
 
 <a id="m2"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 ## M2 — Registri distribuiti (Distributed Ledger)
 
@@ -573,6 +577,7 @@ Al termine di questo modulo dovresti conoscere i seguenti termini.
 ---
 
 <a id="m3"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 ## M3 — Blocchi e Catena dei Blocchi
 
@@ -900,6 +905,7 @@ Al termine di questo modulo dovresti conoscere i seguenti termini.
 ---
 
 <a id="m4"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 ## M4 — Hash crittografici
 
@@ -1201,6 +1207,7 @@ Questo principio viene utilizzato anche nella conservazione digitale dei documen
 ---
 
 <a id="m5"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M5 — Crittografia a chiave pubblica e privata
 
@@ -1378,6 +1385,7 @@ L'utilizzo della coppia di chiavi offre numerosi vantaggi.
 ---
 
 <a id="m6"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M6 — Wallet e firme digitali
 
@@ -1603,6 +1611,7 @@ La perdita della Seed Phrase può comportare la perdita definitiva dell'accesso 
 ---
 
 <a id="m7"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M7 — Le transazioni
 
@@ -1786,6 +1795,7 @@ Ogni Blockchain utilizza un proprio sistema di calcolo delle commissioni.
 ---
 
 <a id="m8"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M8 — Mining e Proof of Work
 
@@ -2054,6 +2064,7 @@ Questo permette di mantenere il tempo medio di generazione dei blocchi intorno a
 ---
 
 <a id="m9"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M9 — Proof of Stake
 
@@ -2197,6 +2208,7 @@ Ciò incentiva i partecipanti a comportarsi correttamente.
 ---
 
 <a id="m10"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M10 — Bitcoin
 
@@ -2393,6 +2405,7 @@ Come per molti altri beni economici, il prezzo dipende dall'incontro tra domanda
 ---
 
 <a id="m11"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M11 — Ethereum
 
@@ -2532,6 +2545,7 @@ Tra queste troviamo:
 ---
 
 <a id="m12"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M12 — Smart Contract
 
@@ -2622,6 +2636,7 @@ Gli Smart Contract possono essere utilizzati per:
 ---
 
 <a id="m13"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M13 — Token digitali
 
@@ -2809,6 +2824,7 @@ Questi standard permettono a Wallet ed Exchange di riconoscere automaticamente i
 ---
 
 <a id="m14"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M14 — NFT (Non Fungible Token)
 
@@ -2958,6 +2974,7 @@ Tra queste:
 ---
 
 <a id="m15"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M15 — DeFi (Finanza Decentralizzata)
 
@@ -3086,6 +3103,7 @@ Tra questi:
 ---
 
 <a id="m16"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M16 — DAO (Organizzazioni Autonome Decentralizzate)
 
@@ -3205,6 +3223,7 @@ Le DAO vengono utilizzate per:
 ---
 
 <a id="m17"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M17 — Layer 1 e Layer 2
 
@@ -3324,6 +3343,7 @@ Ognuna utilizza tecniche differenti per migliorare le prestazioni.
 ---
 
 <a id="m18"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M18 — Sicurezza della Blockchain
 
@@ -3432,6 +3452,7 @@ Per utilizzare la Blockchain in modo sicuro è consigliabile:
 ---
 
 <a id="m19"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M19 — Applicazioni della Blockchain
 
@@ -3611,6 +3632,7 @@ Nel contesto dell'Industria 4.0 la Blockchain viene utilizzata per:
 ---
 
 <a id="m20"></a>
+**⬆️ [Torna all'Indice](#indice)**
 
 # M20 — Vantaggi, limiti e prospettive future
 

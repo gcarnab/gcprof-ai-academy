@@ -9,7 +9,6 @@ import { MailTemplateKeys } from "@/features/admin/mail/constants/MailTemplateKe
 import { getUserRepository } from "../infrastructure/RepositoryFactory";
 import { BcryptPasswordService } from "../infrastructure/BcryptPasswordService";
 
-
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -33,20 +32,47 @@ export async function registerAction(prevState: any, formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
-  
   const userType = (formData.get("userType") as string) || "SCHOOL_STUDENT";
+  const schoolTrack = (formData.get("schoolTrack") as string) || "";
+  const schoolSection = (formData.get("schoolSection") as string) || "";
   const classId = formData.get("classId") as string | null;
   const courseId = formData.get("courseId") as string | null;
 
   if (!firstName || !lastName || !email || !password || !confirmPassword) {
-    return { success: false, error: "Tutti i campi generali sono obbligatori." };
+    return {
+      success: false,
+      error: "Tutti i campi generali sono obbligatori.",
+    };
   }
 
   if (userType === "SCHOOL_STUDENT" && !classId) {
-    return { success: false, error: "Seleziona una classe scolastica di appartenenza." };
+    return {
+      success: false,
+      error: "Seleziona una classe scolastica di appartenenza.",
+    };
   }
+
+  if (userType === "SCHOOL_STUDENT") {
+    if (!schoolTrack) {
+      return {
+        success: false,
+        error: "Seleziona l'indirizzo di studi.",
+      };
+    }
+
+    if (!schoolSection) {
+      return {
+        success: false,
+        error: "Seleziona la sezione.",
+      };
+    }
+  }
+
   if (userType === "EXTERNAL_STUDENT" && !courseId) {
-    return { success: false, error: "Seleziona il corso a cui intendi iscriverti." };
+    return {
+      success: false,
+      error: "Seleziona il corso a cui intendi iscriverti.",
+    };
   }
 
   if (password !== confirmPassword) {
@@ -92,7 +118,10 @@ export async function registerAction(prevState: any, formData: FormData) {
         .single();
 
       if (courseErr || !courseData) {
-        return { success: false, error: "Il corso selezionato non è valido o inesistente." };
+        return {
+          success: false,
+          error: "Il corso selezionato non è valido o inesistente.",
+        };
       }
       requestedCourseTitle = courseData.title;
     }
@@ -110,20 +139,13 @@ export async function registerAction(prevState: any, formData: FormData) {
       displayName,
       firstName,
       lastName,
+      userType,
+      schoolTrack: userType === "SCHOOL_STUDENT" ? schoolTrack : undefined,
+      schoolSection: userType === "SCHOOL_STUDENT" ? schoolSection : undefined,
       classes: userType === "SCHOOL_STUDENT" ? [className] : [],
       enrolledCourses: [],
       emailVerified: false,
     } as any);
-
-    // 🔥 HOTFIX: Forza il salvataggio di user_type sul DB bypassando i limiti del Repository vecchio
-    const { error: updateTypeError } = await supabaseAdmin
-      .from("profiles")
-      .update({ user_type: userType })
-      .eq("id", newUser.id);
-
-    if (updateTypeError) {
-      logger.error("Errore durante il salvataggio forzato di user_type:", updateTypeError);
-    }
 
     // 4. Salvataggio associazione classe (Solo Scuola)
     if (userType === "SCHOOL_STUDENT" && classId) {
@@ -143,7 +165,10 @@ export async function registerAction(prevState: any, formData: FormData) {
         });
 
       if (coursePivotError) {
-        console.error("Errore inserimento iscrizione pending:", coursePivotError.message);
+        console.error(
+          "Errore inserimento iscrizione pending:",
+          coursePivotError.message,
+        );
       }
     }
 
@@ -161,9 +186,10 @@ export async function registerAction(prevState: any, formData: FormData) {
 
     return {
       success: true,
-      message: userType === "EXTERNAL_STUDENT"
-        ? `Registrazione completata! La tua richiesta di iscrizione al corso "${requestedCourseTitle}" è stata inoltrata all'amministratore per l'approvazione.`
-        : "Registrazione completata! Il tuo account scolastico è in attesa di attivazione.",
+      message:
+        userType === "EXTERNAL_STUDENT"
+          ? `Registrazione completata! La tua richiesta di iscrizione al corso "${requestedCourseTitle}" è stata inoltrata all'amministratore per l'approvazione.`
+          : "Registrazione completata! Il tuo account scolastico è in attesa di attivazione.",
     };
   } catch (error: any) {
     console.error("Error in registerAction:", error);
@@ -185,7 +211,9 @@ async function startEmailDispatches(params: {
     const templateService = new MailTemplateService();
     const emailService = new EmailService();
 
-    const { data: settingsData } = await supabaseAdmin.from("mail_settings").select("*");
+    const { data: settingsData } = await supabaseAdmin
+      .from("mail_settings")
+      .select("*");
     const globalVariables = mapMailSettingsToVariables(settingsData ?? []);
 
     const contextVariables = {
@@ -198,7 +226,10 @@ async function startEmailDispatches(params: {
       class_slug: params.classSlug,
       user_type: params.userType,
       requested_course: params.requestedCourseTitle || "Nessuno",
-      user_type_label: params.userType === "EXTERNAL_STUDENT" ? "Esterno (Commerciale)" : "Studente Scuola",
+      user_type_label:
+        params.userType === "EXTERNAL_STUDENT"
+          ? "Esterno (Commerciale)"
+          : "Studente Scuola",
       status: "pending",
       created_at: new Date().toLocaleString("it-IT"),
       studentName: params.displayName,
@@ -208,16 +239,25 @@ async function startEmailDispatches(params: {
     const engine = new MailTemplateEngine(contextVariables);
 
     // 1. WELCOME TO STUDENT
-    const studentTemplate = await templateService.getTemplate(MailTemplateKeys.WELCOME);
+    const studentTemplate = await templateService.getTemplate(
+      MailTemplateKeys.WELCOME,
+    );
     if (studentTemplate && studentTemplate.enabled) {
-      const subject = engine.render(studentTemplate.subject ?? "Registrazione Ricevuta");
-      const title = engine.render(studentTemplate.title_override ?? studentTemplate.subject ?? "");
-      
+      const subject = engine.render(
+        studentTemplate.subject ?? "Registrazione Ricevuta",
+      );
+      const title = engine.render(
+        studentTemplate.title_override ?? studentTemplate.subject ?? "",
+      );
+
       let bodyText = studentTemplate.body_text_override ?? "";
-      if (params.userType === "EXTERNAL_STUDENT" && params.requestedCourseTitle) {
+      if (
+        params.userType === "EXTERNAL_STUDENT" &&
+        params.requestedCourseTitle
+      ) {
         bodyText += `<br/><br/><strong>Corso richiesto:</strong> ${params.requestedCourseTitle}<br/>Riceverai una notifica non appena l'amministratore avrà attivato la tua licenza.`;
       }
-      
+
       const body = engine.render(bodyText);
 
       const html = `
@@ -232,11 +272,17 @@ async function startEmailDispatches(params: {
     }
 
     // 2. ADMIN NOTIFICATION
-    const adminTemplate = await templateService.getTemplate(MailTemplateKeys.ADMIN_NEW_REGISTRATION);
+    const adminTemplate = await templateService.getTemplate(
+      MailTemplateKeys.ADMIN_NEW_REGISTRATION,
+    );
     if (adminTemplate && adminTemplate.enabled) {
-      const subject = engine.render(adminTemplate.subject ?? "Nuovo Studente Registrato");
-      const title = engine.render(adminTemplate.title_override ?? adminTemplate.subject ?? "");
-      
+      const subject = engine.render(
+        adminTemplate.subject ?? "Nuovo Studente Registrato",
+      );
+      const title = engine.render(
+        adminTemplate.title_override ?? adminTemplate.subject ?? "",
+      );
+
       let bodyText = adminTemplate.body_text_override ?? "";
       bodyText += `<br/><br/>
         <strong>Tipologia Account:</strong> ${contextVariables.user_type_label}<br/>
@@ -252,7 +298,8 @@ async function startEmailDispatches(params: {
           <p style="font-size: 12px; color: #64748b;">GCPROF Academy Backoffice</p>
         </div>
       `;
-      const adminRecipient = process.env.GMAIL_SMTP_USER || "gcarnab74@gmail.com";
+      const adminRecipient =
+        process.env.GMAIL_SMTP_USER || "gcarnab74@gmail.com";
       await emailService.sendGenericEmail(adminRecipient, subject, html);
     }
   } catch (err) {

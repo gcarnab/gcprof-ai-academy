@@ -1,5 +1,7 @@
 # 🐍 Guida Completa a Python
+
 ### Materiale didattico — Prof. Giuseppe Carnabuci per la piattaforma gcprof-academy.com
+
 ### Ottimizzata per Google Colab · Aggiornata a Python 3.13/3.14
 
 ---
@@ -8,6 +10,7 @@
 
 Ogni modulo è pensato per essere copiato **così com'è** in una cella di testo (Markdown) o di codice di Google Colab. I blocchi di codice sono eseguibili direttamente: apri un nuovo notebook, incolla, premi `Shift+Invio`.
 
+<a id="indice"></a>
 **Indice dei moduli**
 
 - [M0 — Introduzione a Python e ambiente di lavoro](#m0)
@@ -23,6 +26,8 @@ Ogni modulo è pensato per essere copiato **così com'è** in una cella di testo
 ---
 
 <a id="m0"></a>
+**⬆️ [Torna all'Indice](#indice)**
+
 ## M0 — Introduzione a Python e ambiente di lavoro
 
 ### 0.1 Cos'è Python
@@ -75,6 +80,7 @@ In Colab: crea una nuova cella di codice, incolla la riga, premi `Shift+Invio`. 
 ---
 
 <a id="m1"></a>
+**⬆️[Torna all'Indice](#indice)**
 ## M1 — Numeri e operatori
 
 ### 1.1 I tipi numerici di Python
@@ -217,6 +223,7 @@ print(math.pow(2, 10))    # potenza (restituisce sempre float)
 ---
 
 <a id="m2"></a>
+**⬆️[Torna all'Indice](#indice)**
 ## M2 — Variabili e stringhe
 
 ### 2.1 Variabili
@@ -381,6 +388,7 @@ print("-".join(parole))
 ---
 
 <a id="m3"></a>
+**⬆️[Torna all'Indice](#indice)**
 ## M3 — Conversioni di tipo, `print()` e `input()`
 
 ### 3.1 Conversione implicita (coercizione automatica)
@@ -489,6 +497,7 @@ while True:
 ---
 
 <a id="m4"></a>
+**⬆️[Torna all'Indice](#indice)**
 ## M4 — Controllo del flusso, algebra booleana, operatori di confronto
 
 ### 4.1 Cos'è il controllo del flusso
@@ -651,6 +660,7 @@ match punto:
 ---
 
 <a id="m5"></a>
+**⬆️[Torna all'Indice](#indice)**
 ## M5 — Istruzioni `if`, `elif`, `else`
 
 ### 5.1 Struttura di base
@@ -772,6 +782,7 @@ print(messaggio)
 ---
 
 <a id="m6"></a>
+**⬆️[Torna all'Indice](#indice)**
 ## M6 — Ciclo `while`, istruzioni `break` e `continue`
 
 ### 6.1 Sintassi di base
@@ -897,6 +908,7 @@ else:
 ---
 
 <a id="m7"></a>
+**⬆️[Torna all'Indice](#indice)**
 ## M7 — Ciclo `for`, funzione `range()`, `enumerate()`
 
 ### 7.1 Sintassi di base
@@ -1042,6 +1054,7 @@ for nome, voto in zip(nomi, voti):
 ---
 
 <a id="appendice"></a>
+**⬆️[Torna all'Indice](#indice)**
 ## Appendice — Cheat sheet riassuntivo
 
 ### Tipi di dato fondamentali

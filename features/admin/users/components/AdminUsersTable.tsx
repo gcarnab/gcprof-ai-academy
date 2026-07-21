@@ -39,6 +39,10 @@ export default function AdminUsersTable({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBulkClass, setSelectedBulkClass] = useState("");
 
+  const [selectedUserType, setSelectedUserType] = useState("all");
+  const [selectedSchoolTrack, setSelectedSchoolTrack] = useState("all");
+  const [selectedSchoolSection, setSelectedSchoolSection] = useState("all");
+
   // 🆕 State: Checkbox & Bulk Update
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [targetBulkClass, setTargetBulkClass] = useState("");
@@ -59,6 +63,9 @@ export default function AdminUsersTable({
           searchTerm: searchTerm.trim() || undefined,
           statusFilter: selectedStatus,
           classFilter: selectedClass,
+          userTypeFilter: selectedUserType,
+          schoolTrackFilter: selectedSchoolTrack,
+          schoolSectionFilter: selectedSchoolSection,          
         });
         setUsers(response.users);
         setTotalCount(response.totalCount);
@@ -66,7 +73,16 @@ export default function AdminUsersTable({
         alert("Errore nel caricamento degli utenti: " + error.message);
       }
     });
-  }, [page, pageSize, searchTerm, selectedStatus, selectedClass]);
+  }, [page, 
+    pageSize, 
+    searchTerm, 
+    selectedStatus, 
+    selectedClass,
+    selectedUserType,
+    selectedSchoolTrack,
+    selectedSchoolSection,    
+  
+  ]);
 
   useEffect(() => { fetchPaginatedUsers(); }, [fetchPaginatedUsers]);
 
@@ -74,7 +90,15 @@ export default function AdminUsersTable({
   useEffect(() => {
     setPage(1);
     setSelectedIds([]); // 🛡️ Evita ghost-selections
-  }, [searchTerm, selectedStatus, selectedClass, pageSize]);
+  }, [searchTerm, 
+    selectedStatus, 
+    selectedClass, 
+    selectedUserType,
+    selectedSchoolTrack,
+    selectedSchoolSection,    
+    pageSize,
+  
+  ]);
 
   // Handlers
   const handleStatusChange = (userId: string, newStatus: "active" | "blocked" | "pending") => {
@@ -202,6 +226,12 @@ export default function AdminUsersTable({
         selectedBulkClass={selectedBulkClass}
         onBulkClassChange={setSelectedBulkClass}
         onBulkActivate={handleBulkActivate}
+        selectedUserType={selectedUserType}
+        selectedSchoolTrack={selectedSchoolTrack}
+        selectedSchoolSection={selectedSchoolSection}
+        onUserTypeChange={setSelectedUserType}
+        onSchoolTrackChange={setSelectedSchoolTrack}
+        onSchoolSectionChange={setSelectedSchoolSection}        
       />
 
       {/* 🆕 FLOATING BANNER AZIONI DI MASSA */}
@@ -254,6 +284,7 @@ export default function AdminUsersTable({
               </th>
               <th className="px-6 py-4">Studente / Nome Completo</th>
               <th className="px-6 py-4">Email</th>
+              <th className="px-6 py-4">Scuola</th> 
               <th className="px-6 py-4">Ruolo</th>
               <th className="px-6 py-4">Stato</th>
               <th className="px-6 py-4">Classi Assegnate</th>
@@ -264,7 +295,7 @@ export default function AdminUsersTable({
           <tbody className="divide-y divide-gray-200 bg-background">
             {users.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-10 text-center italic text-muted-foreground">
+                <td colSpan={8} className="px-6 py-10 text-center italic text-muted-foreground">
                   Nessun utente trovato corrispondente ai criteri di ricerca.
                 </td>
               </tr>

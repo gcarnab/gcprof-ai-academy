@@ -48,7 +48,7 @@ export async function getAdminDashboardStats() {
       .gte("login_at", twoWeeksAgo.toISOString()),
     supabaseAdmin
       .from("user_page_views")
-      .select("course_slug, lesson_slug, path") 
+      .select("course_slug, lesson_slug, path")
       .gte("viewed_at", twoWeeksAgo.toISOString()),
   ]);
 
@@ -90,6 +90,20 @@ export async function getAdminDashboardStats() {
         acc[c] = (acc[c] || 0) + 1;
       });
     }
+    return acc;
+  }, {});
+
+  // 🟢 NUOVO: Aggregazione per Indirizzo (schoolTrack)
+  const studentsByTrack = users.reduce((acc: any, u: any) => {
+    const track = u.schoolTrack || u.school_track || "Non Specificato";
+    acc[track] = (acc[track] || 0) + 1;
+    return acc;
+  }, {});
+
+  // 🟢 NUOVO: Aggregazione per Sezione (schoolSection)
+  const studentsBySection = users.reduce((acc: any, u: any) => {
+    const section = u.schoolSection || u.school_section || "Non Specificata";
+    acc[section] = (acc[section] || 0) + 1;
     return acc;
   }, {});
 
@@ -236,40 +250,47 @@ export async function getAdminDashboardStats() {
 
   // DEBUG di controllo per verificare cosa contiene path nel database
   if (pageViews.length > 0) {
-    logger.info(`DEBUG - Esempio path salvati in pageViews: ${JSON.stringify(pageViews.slice(0, 3).map((p: any) => p.path))}`);
+    logger.info(
+      `DEBUG - Esempio path salvati in pageViews: ${JSON.stringify(pageViews.slice(0, 3).map((p: any) => p.path))}`,
+    );
   }
 
   // B. Aggregazione Lezioni più viste con fallback di sicurezza
-  const lessonViewsMap = pageViews.reduce((acc: Record<string, number>, pv: any) => {
-    let matchedTitle = "";
+  const lessonViewsMap = pageViews.reduce(
+    (acc: Record<string, number>, pv: any) => {
+      let matchedTitle = "";
 
-    // 1. Controllo lesson_slug diretto
-    if (pv.lesson_slug && lessonTitleMap.has(pv.lesson_slug)) {
-      matchedTitle = lessonTitleMap.get(pv.lesson_slug)!;
-    } 
-    // 2. Controllo all'interno del path
-    else if (pv.path) {
-      const foundSlug = lessonSlugsList.find((slug) => pv.path.includes(slug));
-      if (foundSlug) {
-        matchedTitle = lessonTitleMap.get(foundSlug)!;
+      // 1. Controllo lesson_slug diretto
+      if (pv.lesson_slug && lessonTitleMap.has(pv.lesson_slug)) {
+        matchedTitle = lessonTitleMap.get(pv.lesson_slug)!;
       }
-    }
+      // 2. Controllo all'interno del path
+      else if (pv.path) {
+        const foundSlug = lessonSlugsList.find((slug) =>
+          pv.path.includes(slug),
+        );
+        if (foundSlug) {
+          matchedTitle = lessonTitleMap.get(foundSlug)!;
+        }
+      }
 
-    // 3. FALLBACK DI SICUREZZA: se non trova il match pulito con il titolo, 
-    // usiamo il lesson_slug o il path stesso per non perdere il dato nel grafico
-    if (!matchedTitle) {
-      if (!pv.path && !pv.lesson_slug) return acc;
-      
-      // Filtriamo via le pagine di sistema o dashboard generali se vogliamo focalizzarci solo sui contenuti
-      const rawKey = pv.lesson_slug || pv.path;
-      // Puliamo un po' il path rimuovendo slash superflui se è un URL
-      matchedTitle = rawKey.split('/').filter(Boolean).pop() || rawKey;
-      matchedTitle = matchedTitle.replace(/-/g, " ");
-    }
+      // 3. FALLBACK DI SICUREZZA: se non trova il match pulito con il titolo,
+      // usiamo il lesson_slug o il path stesso per non perdere il dato nel grafico
+      if (!matchedTitle) {
+        if (!pv.path && !pv.lesson_slug) return acc;
 
-    acc[matchedTitle] = (acc[matchedTitle] || 0) + 1;
-    return acc;
-  }, {});
+        // Filtriamo via le pagine di sistema o dashboard generali se vogliamo focalizzarci solo sui contenuti
+        const rawKey = pv.lesson_slug || pv.path;
+        // Puliamo un po' il path rimuovendo slash superflui se è un URL
+        matchedTitle = rawKey.split("/").filter(Boolean).pop() || rawKey;
+        matchedTitle = matchedTitle.replace(/-/g, " ");
+      }
+
+      acc[matchedTitle] = (acc[matchedTitle] || 0) + 1;
+      return acc;
+    },
+    {},
+  );
 
   const mostViewedLessonsRaw = Object.entries(lessonViewsMap)
     .map(([label, count]) => ({ label, count: count as number }))
@@ -366,6 +387,8 @@ export async function getAdminDashboardStats() {
       usersByRole,
       usersByStatus,
       studentsByClass,
+      studentsByTrack, // 👈 Aggiunto
+      studentsBySection, // 👈 Aggiunto
       studentEngagement,
       coursesByCategory,
       publishedCourses,

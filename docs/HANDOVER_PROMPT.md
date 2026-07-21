@@ -153,17 +153,18 @@ GCPROF-AI-ACADEMY
 +---docs
 |   |   credits.md
 |   |   gcprof-academy_DEV_GUIDE.md
-|   |   gcprof-academy_index_gem.md
 |   |   gcprof-academy_index_gpt.md
 |   |   HANDOVER_PROMPT.md
 |   |   README-DB.md
 |   |   
 |   +---courses
-|   |       Python_Practice.md
+|   |       Blockchain_Guide_Full.md
+|   |       ProblemSolving_Guide_Full.md
 |   |       Python_Practice_Full.md
-|   |       Python_Practice_Gem.md
-|   |       Python_Practice_GPT.md
-|   |       Python_Practice_LM.md
+|   |       WebProgramming_Base_HTML_CSS_Full.md
+|   |       
+|   +---dev
+|   |       gcprof-academy_index_gem.md
 |   |       
 |   +---quiz
 |   |       quiz_AI_base_01.md
@@ -207,7 +208,9 @@ GCPROF-AI-ACADEMY
 |   |   |   |       ActiveAssociationsList.tsx
 |   |   |   |       AssignCourseClassForm.tsx
 |   |   |   |       CourseContentEditor.tsx
+|   |   |   |       CourseContentEditor.tsx_old
 |   |   |   |       CoursesTab.tsx
+|   |   |   |       CoursesTab.tsx_old
 |   |   |   |       CreateClassForm.tsx
 |   |   |   |       CreateCourseForm.tsx
 |   |   |   |       ManageCategoriesForm.tsx
@@ -272,6 +275,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |           DonutChartCard.tsx
 |   |   |   |           HorizontalBarChartCard.tsx
 |   |   |   |           PieChartCard.tsx
+|   |   |   |           ProgressChartCard.tsx
 |   |   |   |           StatsKpiCards.tsx
 |   |   |   |           StudentsByClassChart.tsx
 |   |   |   |           
@@ -323,7 +327,6 @@ GCPROF-AI-ACADEMY
 |   |   |       loginAction.ts
 |   |   |       logoutAction.ts
 |   |   |       registerAction.ts
-|   |   |       registerAction.ts_old
 |   |   |       requestPasswordResetAction.ts
 |   |   |       validateResetTokenAction.ts
 |   |   |       
@@ -388,6 +391,7 @@ GCPROF-AI-ACADEMY
 |   |   |   |   CoursesHeader.tsx
 |   |   |   |   CourseViewer.tsx
 |   |   |   |   MarkdownPreview.tsx
+|   |   |   |   MarkdownPreview.tsx_old
 |   |   |   |   
 |   |   |   \---lesson
 |   |   |           LessonRenderer.tsx
@@ -506,7 +510,7 @@ GCPROF-AI-ACADEMY
 |       
 +---logs
 |       app.log
-|            
+|             
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -532,7 +536,6 @@ GCPROF-AI-ACADEMY
 |           
 +---shared
 |   +---config
-|   |   |   navigation.ts
 |   |   |   site.ts
 |   |   |   
 |   |   \---navigation
@@ -971,14 +974,14 @@ GCPROF-AI-ACADEMY
 | `title` | `text` |  |
 | `description` | `text` |  |
 | `url` | `text` |  |
-| `provider` | `text` |  |
 | `type` | `text` |  |
 | `typeVariant` | `text` |  |
-| `rating` | `int2` |  |
+| `provider` | `text` |  Nullable |
 | `tags` | `_text` |  |
 | `language` | `text` |  |
 | `is_visible` | `bool` |  |
 | `created_at` | `timestamptz` |  |
+| `rating` | `int2` |  Nullable |
 
 ## Custom Types / Enums
 
@@ -1058,7 +1061,6 @@ GCPROF-AI-ACADEMY
 
 
 
-
 ### PROMPT 
 
 CONTESTO :  
@@ -1067,9 +1069,16 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-attualmente se fa login un utente esterno di tipo EXTERNAL_STUDENT in fase di registrazione sceglie 
-un solo corso a cui iscriversi ma la piattaforma deve consentire di associare più di un corso 
-all'utente tramite la sezione dedicata della admin dashboard "Richieste Esterni"
+sono un insegnante di informatica che deve gestire molte classi (anche fino a 8 classi) delle superiori
+di vari indirizzi e sezioni. attualmente per semplificare il processo ho deciso di dare la possibilità
+all'utente di tipo SCHOOL_STUDENT di scegliere, in fase di registrazione la sua appartenenza alle classi
+nel modo seguente (CLASSI_PRIME, CLASSI_SECONDE,... CLASSI_QUINTE). i corsi saranno assegnati a queste 5 tipologie
+di classi. in previsione dell'inizio dell'anno scolastico devo prepararmi a mantenere , in fase di registrazione
+anche le seguenti informazioni dello studente: indirizzo (RIM, LSA, INF, MMC, CHI ...) e sezione (A,B,C,D,E).
+Queste informazioni dovranno essere gestite nella sezione CORSI della dashboard admin riguardo l'anagrafica (CRUD)
+inoltre queste informazioni saranno utilizzate a fini statistici nella sezione STATS. consigliami come
+strutturare la modifica in modo che sia meno impattante possibile con lo stato STABILE del codice attuale 
+evitando di regredire
 
 
 SITUAZIONE ATTUALE :
