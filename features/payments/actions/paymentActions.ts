@@ -16,6 +16,7 @@ import { CheckoutService } from "../services/CheckoutService";
 import { PaymentGatewayFactory } from "../factories/PaymentGatewayFactory";
 import { PAYMENTS_CONFIG } from "../constants/paymentConstants";
 import { CartSummaryDTO, CheckoutSessionResult } from "../types/paymentTypes";
+import { EnrollmentService } from "../services/EnrollmentService";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "super-secret-key-change-me-in-production"
@@ -216,6 +217,43 @@ export async function createCheckoutSessionAction(): Promise<
         error instanceof Error
           ? error.message
           : "Errore durante l'avvio del checkout.",
+    };
+  }
+}
+
+/**
+ * Iscrive gratuitamente l'utente autenticato a un corso.
+ */
+export async function enrollInFreeCourseAction(
+  courseId: string
+): Promise<ActionResult<void>> {
+  try {
+    if (!courseId) {
+      return { success: false, error: "ID corso non valido." };
+    }
+
+    const user = await getAuthenticatedUser();
+
+    if (!user) {
+      return {
+        success: false,
+        error: "Devi effettuare l'accesso per iscriverti a questo corso.",
+      };
+    }
+
+    // Usiamo il client Supabase con Service Role già presente nel file per superare eventuali blocchi RLS
+    const enrollmentService = new EnrollmentService(supabase);
+    await enrollmentService.enrollUserInCourses(user.id, [courseId]);
+
+    return { success: true, data: undefined };
+  } catch (error) {
+    console.error("[enrollInFreeCourseAction] Errore:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Errore durante l'iscrizione al corso.",
     };
   }
 }

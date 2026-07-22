@@ -28,7 +28,7 @@ export async function checkExternalCourseAccessAction(
       .select("status")
       .eq("profile_id", userId)
       .eq("course_id", courseId)
-      .eq("status", "active")
+      .eq("status", "ACTIVE")
       .maybeSingle();
 
     if (error) {

@@ -63,6 +63,97 @@ export type Database = {
         }
         Relationships: []
       }
+      coupon_redemptions: {
+        Row: {
+          coupon_id: string
+          id: string
+          order_id: string
+          profile_id: string
+          redeemed_at: string
+        }
+        Insert: {
+          coupon_id: string
+          id?: string
+          order_id: string
+          profile_id: string
+          redeemed_at?: string
+        }
+        Update: {
+          coupon_id?: string
+          id?: string
+          order_id?: string
+          profile_id?: string
+          redeemed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          current_redemptions: number
+          description: string | null
+          discount_type: Database["public"]["Enums"]["discount_type_enum"]
+          discount_value: number
+          id: string
+          is_active: boolean
+          max_redemptions: number | null
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_redemptions?: number
+          description?: string | null
+          discount_type: Database["public"]["Enums"]["discount_type_enum"]
+          discount_value: number
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number | null
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_redemptions?: number
+          description?: string | null
+          discount_type?: Database["public"]["Enums"]["discount_type_enum"]
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number | null
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: []
+      }
       course_categories: {
         Row: {
           created_at: string
@@ -179,6 +270,7 @@ export type Database = {
           course_id: string | null
           created_at: string
           id: string
+          is_preview: boolean
           order_index: number
           title: string
         }
@@ -186,6 +278,7 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           id?: string
+          is_preview?: boolean
           order_index?: number
           title: string
         }
@@ -193,6 +286,7 @@ export type Database = {
           course_id?: string | null
           created_at?: string
           id?: string
+          is_preview?: boolean
           order_index?: number
           title?: string
         }
@@ -256,12 +350,17 @@ export type Database = {
           category: string | null
           cover_image: string | null
           created_at: string
+          currency: Database["public"]["Enums"]["currency_enum"]
           description: string | null
           difficulty: string | null
           estimated_hours: number | null
           id: string
+          is_paid: boolean
+          price: number
           published: boolean | null
           slug: string
+          stripe_price_id: string | null
+          stripe_product_id: string | null
           teacher: string | null
           title: string
           updated_at: string
@@ -271,12 +370,17 @@ export type Database = {
           category?: string | null
           cover_image?: string | null
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_enum"]
           description?: string | null
           difficulty?: string | null
           estimated_hours?: number | null
           id?: string
+          is_paid?: boolean
+          price?: number
           published?: boolean | null
           slug: string
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
           teacher?: string | null
           title: string
           updated_at?: string
@@ -286,12 +390,17 @@ export type Database = {
           category?: string | null
           cover_image?: string | null
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_enum"]
           description?: string | null
           difficulty?: string | null
           estimated_hours?: number | null
           id?: string
+          is_paid?: boolean
+          price?: number
           published?: boolean | null
           slug?: string
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
           teacher?: string | null
           title?: string
           updated_at?: string
@@ -483,6 +592,133 @@ export type Database = {
           },
         ]
       }
+      order_items: {
+        Row: {
+          course_id: string
+          course_title_snapshot: string
+          created_at: string
+          id: string
+          line_total: number
+          metadata: Json
+          order_id: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          course_id: string
+          course_title_snapshot: string
+          created_at?: string
+          id?: string
+          line_total: number
+          metadata?: Json
+          order_id: string
+          quantity?: number
+          unit_price: number
+        }
+        Update: {
+          course_id?: string
+          course_title_snapshot?: string
+          created_at?: string
+          id?: string
+          line_total?: number
+          metadata?: Json
+          order_id?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "student_courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          coupon_id: string | null
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_enum"]
+          discount: number
+          id: string
+          metadata: Json
+          order_number: string
+          payment_provider: Database["public"]["Enums"]["payment_provider_enum"]
+          payment_provider_order_id: string | null
+          profile_id: string
+          status: Database["public"]["Enums"]["order_status_enum"]
+          subtotal: number
+          tax: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          coupon_id?: string | null
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_enum"]
+          discount?: number
+          id?: string
+          metadata?: Json
+          order_number: string
+          payment_provider?: Database["public"]["Enums"]["payment_provider_enum"]
+          payment_provider_order_id?: string | null
+          profile_id: string
+          status?: Database["public"]["Enums"]["order_status_enum"]
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          coupon_id?: string | null
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_enum"]
+          discount?: number
+          id?: string
+          metadata?: Json
+          order_number?: string
+          payment_provider?: Database["public"]["Enums"]["payment_provider_enum"]
+          payment_provider_order_id?: string | null
+          profile_id?: string
+          status?: Database["public"]["Enums"]["order_status_enum"]
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_reset_tokens: {
         Row: {
           created_at: string
@@ -514,6 +750,143 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_logs: {
+        Row: {
+          created_at: string
+          error: string | null
+          event: string
+          id: string
+          payload: Json
+          processed: boolean
+          processed_at: string | null
+          provider: Database["public"]["Enums"]["payment_provider_enum"]
+          provider_event_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          event: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+          provider?: Database["public"]["Enums"]["payment_provider_enum"]
+          provider_event_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          event?: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+          provider?: Database["public"]["Enums"]["payment_provider_enum"]
+          provider_event_id?: string | null
+        }
+        Relationships: []
+      }
+      payment_settings: {
+        Row: {
+          academy_country: string
+          allow_coupons: boolean
+          checkout_session_expire_minutes: number
+          created_at: string
+          default_currency: Database["public"]["Enums"]["currency_enum"]
+          id: string
+          provider: Database["public"]["Enums"]["payment_provider_enum"]
+          sandbox_enabled: boolean
+          updated_at: string
+          vat_percentage: number
+        }
+        Insert: {
+          academy_country?: string
+          allow_coupons?: boolean
+          checkout_session_expire_minutes?: number
+          created_at?: string
+          default_currency?: Database["public"]["Enums"]["currency_enum"]
+          id?: string
+          provider?: Database["public"]["Enums"]["payment_provider_enum"]
+          sandbox_enabled?: boolean
+          updated_at?: string
+          vat_percentage?: number
+        }
+        Update: {
+          academy_country?: string
+          allow_coupons?: boolean
+          checkout_session_expire_minutes?: number
+          created_at?: string
+          default_currency?: Database["public"]["Enums"]["currency_enum"]
+          id?: string
+          provider?: Database["public"]["Enums"]["payment_provider_enum"]
+          sandbox_enabled?: boolean
+          updated_at?: string
+          vat_percentage?: number
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_enum"]
+          failure_reason: string | null
+          id: string
+          order_id: string
+          paid_at: string | null
+          provider: Database["public"]["Enums"]["payment_provider_enum"]
+          provider_checkout_session_id: string | null
+          provider_event_id: string | null
+          provider_payment_id: string | null
+          raw_response: Json
+          status: Database["public"]["Enums"]["payment_status_enum"]
+          transaction_reference: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_enum"]
+          failure_reason?: string | null
+          id?: string
+          order_id: string
+          paid_at?: string | null
+          provider?: Database["public"]["Enums"]["payment_provider_enum"]
+          provider_checkout_session_id?: string | null
+          provider_event_id?: string | null
+          provider_payment_id?: string | null
+          raw_response?: Json
+          status?: Database["public"]["Enums"]["payment_status_enum"]
+          transaction_reference?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_enum"]
+          failure_reason?: string | null
+          id?: string
+          order_id?: string
+          paid_at?: string | null
+          provider?: Database["public"]["Enums"]["payment_provider_enum"]
+          provider_checkout_session_id?: string | null
+          provider_event_id?: string | null
+          provider_payment_id?: string | null
+          raw_response?: Json
+          status?: Database["public"]["Enums"]["payment_status_enum"]
+          transaction_reference?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1081,6 +1454,90 @@ export type Database = {
         }
         Relationships: []
       }
+      shopping_cart_items: {
+        Row: {
+          cart_id: string
+          course_id: string
+          created_at: string
+          id: string
+          quantity: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          cart_id: string
+          course_id: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          cart_id?: string
+          course_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_cart_items_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_cart_items_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_cart_items_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "student_courses"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
+      shopping_carts: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          status: Database["public"]["Enums"]["cart_status_enum"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          status?: Database["public"]["Enums"]["cart_status_enum"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          status?: Database["public"]["Enums"]["cart_status_enum"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_carts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_page_views: {
         Row: {
           course_slug: string | null
@@ -1203,6 +1660,26 @@ export type Database = {
     }
     Enums: {
       attempt_status: "submitted" | "graded"
+      cart_status_enum: "ACTIVE" | "CHECKOUT" | "ABANDONED" | "EXPIRED"
+      currency_enum: "EUR" | "USD" | "GBP"
+      discount_type_enum: "PERCENTAGE" | "FIXED"
+      order_status_enum:
+        | "PENDING"
+        | "CHECKOUT_CREATED"
+        | "PAYMENT_PROCESSING"
+        | "PAID"
+        | "FULFILLED"
+        | "FAILED"
+        | "EXPIRED"
+        | "CANCELLED"
+        | "REFUNDED"
+      payment_provider_enum: "STRIPE" | "PAYPAL" | "MOLLIE"
+      payment_status_enum:
+        | "CREATED"
+        | "AUTHORIZED"
+        | "CAPTURED"
+        | "FAILED"
+        | "REFUNDED"
       question_type: "multiple_choice" | "open_ended"
       quiz_status: "draft" | "active"
     }
@@ -1336,6 +1813,28 @@ export const Constants = {
   public: {
     Enums: {
       attempt_status: ["submitted", "graded"],
+      cart_status_enum: ["ACTIVE", "CHECKOUT", "ABANDONED", "EXPIRED"],
+      currency_enum: ["EUR", "USD", "GBP"],
+      discount_type_enum: ["PERCENTAGE", "FIXED"],
+      order_status_enum: [
+        "PENDING",
+        "CHECKOUT_CREATED",
+        "PAYMENT_PROCESSING",
+        "PAID",
+        "FULFILLED",
+        "FAILED",
+        "EXPIRED",
+        "CANCELLED",
+        "REFUNDED",
+      ],
+      payment_provider_enum: ["STRIPE", "PAYPAL", "MOLLIE"],
+      payment_status_enum: [
+        "CREATED",
+        "AUTHORIZED",
+        "CAPTURED",
+        "FAILED",
+        "REFUNDED",
+      ],
       question_type: ["multiple_choice", "open_ended"],
       quiz_status: ["draft", "active"],
     },

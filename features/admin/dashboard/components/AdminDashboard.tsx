@@ -16,6 +16,7 @@ interface Props {
   currentTab: string;
   trackingStats: any;
   initialResources: Resource[];
+  paymentsTab?: React.ReactNode;
 }
 
 const tabs = [
@@ -27,6 +28,7 @@ const tabs = [
   { id: "stats", label: "📊 Stats" },
   { id: "tracking", label: "🛰 Tracking" },
   { id: "resources", label: "🔗 Risorse" },
+  { id: "payments", label: "💳 Payments" },
 ];
 
 export default function AdminDashboard({
@@ -34,11 +36,12 @@ export default function AdminDashboard({
   currentTab,
   trackingStats,
   initialResources,
+  paymentsTab,
 }: Props) {
   const router = useRouter();
 
-  const availableClassesNames = (stats.raw.classes || []).map(
-    (c: any) => c.name,
+  const availableClassesNames = (stats.raw?.classes || []).map(
+    (c: any) => c.name
   );
   const availableQuizzes = stats.raw?.quizzes || [];
 
@@ -86,10 +89,9 @@ export default function AdminDashboard({
 
         {/* 
           Area Contenuto con animazione fade-in allo switch delle tab.
-          La key={currentTab} forza il re-render dell'animazione quando cambi tab.
         */}
-        <div 
-          key={currentTab} 
+        <div
+          key={currentTab}
           className="p-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
         >
           {/* COURSES */}
@@ -106,7 +108,7 @@ export default function AdminDashboard({
           {/* USERS */}
           {currentTab === "users" && (
             <UsersTab
-              users={stats.raw.users}
+              users={stats.raw?.users || []}
               availableClasses={availableClassesNames}
             />
           )}
@@ -128,6 +130,9 @@ export default function AdminDashboard({
           {currentTab === "resources" && (
             <ResourceAdminTable resources={initialResources} />
           )}
+
+          {/* PAYMENTS */}
+          {currentTab === "payments" && paymentsTab}
         </div>
       </div>
     </div>

@@ -95,11 +95,9 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---courses
 |   |   |   page.tsx
-|   |   |   page.tsx_old
 |   |   |   
 |   |   \---[slug]
 |   |       |   page.tsx
-|   |       |   page.tsx_old
 |   |       |   
 |   |       +---modules
 |   |       |   \---[moduleId]
@@ -118,7 +116,6 @@ GCPROF-AI-ACADEMY
 |   +---dashboard
 |   |       layout.tsx
 |   |       page.tsx
-|   |       page.tsx_old
 |   |       
 |   +---login
 |   |       page.tsx
@@ -128,7 +125,6 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---register
 |   |       page.tsx
-|   |       page.tsx_old
 |   |       
 |   +---resources
 |   |       page.tsx
@@ -171,8 +167,14 @@ GCPROF-AI-ACADEMY
 |   |   |   WebProgramming_Base_HTML_CSS_Full.md
 |   |   |   
 |   |   \---preview
+|   |           AI_01_preview.md
 |   |           Blockchain_01_preview.md
+|   |           DataBase_01_preview.md
+|   |           Finance_01_preview.md
+|   |           OOP_01_preview.md
 |   |           ProbleSolving_01_preview.md
+|   |           Python_01_preview.md
+|   |           WebProgramming_01_preview.md
 |   |           
 |   +---dev
 |   |       gcprof-academy_index_gem.md
@@ -344,7 +346,6 @@ GCPROF-AI-ACADEMY
 |   |   |       loginAction.ts
 |   |   |       logoutAction.ts
 |   |   |       registerAction.ts
-|   |   |       registerAction.ts_old
 |   |   |       requestPasswordResetAction.ts
 |   |   |       validateResetTokenAction.ts
 |   |   |       
@@ -401,13 +402,17 @@ GCPROF-AI-ACADEMY
 |   |   |       courseActions.ts
 |   |   |       
 |   |   +---components
+|   |   |   |   AccessNoticeBanner.tsx
 |   |   |   |   CategoryFilter.tsx
 |   |   |   |   CourseCard.tsx
+|   |   |   |   CourseCTA.tsx
 |   |   |   |   CourseDashboard.tsx
 |   |   |   |   CourseList.tsx
 |   |   |   |   CourseSearch.tsx
 |   |   |   |   CoursesHeader.tsx
+|   |   |   |   CourseSidebar.tsx
 |   |   |   |   CourseViewer.tsx
+|   |   |   |   LessonRow.tsx
 |   |   |   |   MarkdownPreview.tsx
 |   |   |   |   MarkdownPreview.tsx_old
 |   |   |   |   
@@ -419,7 +424,6 @@ GCPROF-AI-ACADEMY
 |   |   |       
 |   |   +---hooks
 |   |   |       useCourses.ts
-|   |   |       useCourses.ts_old
 |   |   |       
 |   |   +---queries
 |   |   |       getStudentCourses.ts
@@ -442,7 +446,6 @@ GCPROF-AI-ACADEMY
 |   |           Footer.tsx
 |   |           Hero.tsx
 |   |           Navbar.tsx
-|   |           Navbar.tsx_old
 |   |           
 |   +---marketing
 |   |   \---components
@@ -453,6 +456,7 @@ GCPROF-AI-ACADEMY
 |   |           
 |   +---payments
 |   |   +---actions
+|   |   |       getPaymentsDashboardAction.ts
 |   |   |       paymentActions.ts
 |   |   |       
 |   |   +---adapters
@@ -468,16 +472,23 @@ GCPROF-AI-ACADEMY
 |   |   +---constants
 |   |   |       paymentConstants.ts
 |   |   |       
+|   |   +---dto
+|   |   |       PaymentDashboardDTO.ts
+|   |   |       
 |   |   +---factories
 |   |   |       PaymentGatewayFactory.ts
 |   |   |       
 |   |   +---ports
 |   |   |       IPaymentGateway.ts
 |   |   |       
+|   |   +---repositories
+|   |   |       PaymentRepository.ts
+|   |   |       
 |   |   +---services
 |   |   |       CartService.ts
 |   |   |       CheckoutService.ts
 |   |   |       EnrollmentService.ts
+|   |   |       PaymentDashboardService.ts
 |   |   |       PaymentService.ts
 |   |   |       
 |   |   \---types
@@ -563,7 +574,7 @@ GCPROF-AI-ACADEMY
 |       
 +---logs
 |       app.log
-|       
+|               
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -646,7 +657,6 @@ GCPROF-AI-ACADEMY
 \---types
         database.types.ts
         
-
         
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
@@ -1384,7 +1394,14 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-sono loggato con utente esterno abilitato già da admin. vado nella sezione corsi vedo correttamente solo i corsi che hanno un modulo di preview. quando faccio click su un qualsiasi corso non vedo il modulo di preview ma vedo il blocco : Accesso Riservato Non risulti attualmente iscritto a questo corso. Aggiungilo al carrello per completare l'iscrizione. se provo a premere sul pulsante di pagamento a €0 ottengo : Il corso selezionato è gratuito. Non è necessario aggiungerlo al carrello.
+sono loggato con utente esterno abilitato già da admin. vado nella sezione corsi vedo correttamente 
+solo i corsi che hanno un modulo di preview. quando faccio click sul pulsante "iscriviti gratuitamente"
+il corso si vede correttamente completo nella sezione /courses ed anche correttamente nella dashboard
+utente http://localhost:3000/dashboard?tab=courses il problema che quando ritorno sul corso lo stato
+di iscrizione è sparito ed il corso ritorna in modalità preview e si rivede il pulsante "iscriviti gratuitamente".
+l'obiettivo finale è quello di avere una sezione della admindashboard chiamata "Payments" dove l'admin 
+può gestire ogni aspetto dei corsi pagati.per adesso riusciamo a simulare il processo di pagamento completo 
+con STRIPE anche se a prezzo €0 ?
 
 SITUAZIONE ATTUALE :
 0. feature in fase di svilippo (app stabile) 
