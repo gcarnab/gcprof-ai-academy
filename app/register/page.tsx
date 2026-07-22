@@ -4,8 +4,6 @@ import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { registerAction } from "@/features/auth/actions/registerAction";
 import { getClassesAction } from "@/features/auth/actions/getClassesAction";
-// 🎯 MODIFICA 1: Importiamo l'azione corretta dal modulo dei corsi
-import { getAvailableCoursesAction } from "@/features/courses/actions/courseActions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,11 +19,6 @@ import { Eye, EyeOff } from "lucide-react";
 interface AcademyClass {
   id: string;
   name: string;
-}
-
-interface CourseItem {
-  id: string | number;
-  title: string;
 }
 
 export default function RegisterPage() {
@@ -44,9 +37,6 @@ export default function RegisterPage() {
 
   const [classId, setClassId] = useState("");
   const [classes, setClasses] = useState<AcademyClass[]>([]);
-
-  const [courseId, setCourseId] = useState("");
-  const [courses, setCourses] = useState<CourseItem[]>([]);
 
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -67,19 +57,9 @@ export default function RegisterPage() {
     async function loadData() {
       if (userType === "SCHOOL_STUDENT") {
         const result = await getClassesAction();
+
         if (result.success && result.data) {
           setClasses(result.data);
-        }
-      } else {
-        // 🎯 MODIFICA 2: Utilizziamo getAvailableCoursesAction per caricare i corsi disponibili
-
-        setCourses([]);
-
-        const result = await getAvailableCoursesAction();
-        if (result.success && result.data) {
-          setCourses(result.data);
-        } else if (result.error) {
-          setError(result.error);
         }
       }
     }
@@ -111,11 +91,6 @@ export default function RegisterPage() {
       return;
     }
 
-    if (userType === "EXTERNAL_STUDENT" && !courseId) {
-      setError("Seleziona il corso a cui intendi iscriverti.");
-      return;
-    }
-
     const formData = new FormData();
     formData.append("firstName", firstName);
     formData.append("lastName", lastName);
@@ -128,8 +103,6 @@ export default function RegisterPage() {
       formData.append("classId", classId);
       formData.append("schoolTrack", schoolTrack);
       formData.append("schoolSection", schoolSection);
-    } else {
-      formData.append("courseId", courseId);
     }
 
     startTransition(async () => {
@@ -145,7 +118,6 @@ export default function RegisterPage() {
         setPassword("");
         setConfirmPassword("");
         setClassId("");
-        setCourseId("");
         setUserType("SCHOOL_STUDENT");
         setSchoolTrack("");
         setSchoolSection("");
@@ -200,7 +172,6 @@ export default function RegisterPage() {
                     setUserType("SCHOOL_STUDENT");
                     setSchoolTrack("");
                     setSchoolSection("");
-                    setCourseId("");
                     setError("");
                   }}
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all duration-200 ${
@@ -374,35 +345,6 @@ export default function RegisterPage() {
                     ))}
                   </select>
                 </div>
-              </div>
-            )}
-
-            {/* Selettore Corso (Utente Esterno) */}
-            {userType === "EXTERNAL_STUDENT" && (
-              <div className="space-y-2 transition-all duration-300 ease-in-out">
-                <Label
-                  htmlFor="courseId"
-                  className="text-muted-foreground font-medium"
-                >
-                  Corso a cui iscriversi
-                </Label>
-                <select
-                  id="courseId"
-                  className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-                  value={courseId}
-                  onChange={(e) => setCourseId(e.target.value)}
-                  required
-                  disabled={isPending || !!successMessage}
-                >
-                  <option value="" disabled className="text-muted-foreground">
-                    -- Seleziona il corso --
-                  </option>
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.title}
-                    </option>
-                  ))}
-                </select>
               </div>
             )}
 

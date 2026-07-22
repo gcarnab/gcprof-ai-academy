@@ -20,7 +20,7 @@ export async function getCourseStructureAction(courseId: string) {
         `
         id, title,
         course_modules (
-          id, title, order_index,
+          id, title, order_index, is_preview,
           course_lessons (
             id, title, slug, content_type, external_url, video_url, content, duration, order_index
           )
@@ -55,16 +55,48 @@ export async function addModule(
   courseId: string,
   title: string,
   orderIndex: number,
+  isPreview: boolean = false,
 ) {
   const { error } = await supabaseAdmin
     .from("course_modules")
-    .insert({ course_id: courseId, title, order_index: orderIndex });
+    .insert({
+      course_id: courseId,
+      title,
+      order_index: orderIndex,
+      is_preview: isPreview,
+    });
 
   if (error) return { success: false, error: error.message };
-    revalidatePath("/admin");
-    revalidatePath("/admin/courses");
-    revalidatePath("/admin/dashboard");
-    revalidatePath("/courses");
+  revalidatePath("/admin");
+  revalidatePath("/admin/courses");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/courses");
+  return { success: true };
+}
+
+export async function updateModule(
+  moduleId: string,
+  data: {
+    title?: string;
+    isPreview?: boolean;
+    orderIndex?: number;
+  },
+) {
+  const updatePayload: Record<string, any> = {};
+  if (data.title !== undefined) updatePayload.title = data.title;
+  if (data.isPreview !== undefined) updatePayload.is_preview = data.isPreview;
+  if (data.orderIndex !== undefined) updatePayload.order_index = data.orderIndex;
+
+  const { error } = await supabaseAdmin
+    .from("course_modules")
+    .update(updatePayload)
+    .eq("id", moduleId);
+
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/admin/courses");
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/courses");
   return { success: true };
 }
 
@@ -74,7 +106,7 @@ export async function addLesson(
     title: string;
     content_type: ExtendedLessonContentType;
     external_url: string;
-    content?: string; // Sbloccato il campo facoltativo per il testo/markdown
+    content?: string;
     order_index: number;
   },
 ) {
@@ -92,7 +124,7 @@ export async function addLesson(
       content_type: data.content_type,
       external_url: data.external_url || "",
       video_url: data.content_type === "video" ? data.external_url : null,
-      content: data.content || "", // Salva il testo reale se presente, altrimenti stringa vuota di fallback
+      content: data.content || "",
       order_index: data.order_index,
       duration: 15,
     };

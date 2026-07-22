@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import {
   deleteModule,
   deleteLesson,
-  upsertModule,
   upsertLesson,
 } from "@/features/courses/services/courseActions";
 
 import {
   addLesson,
   addModule,
+  updateModule,
   getCourseStructureAction,
   ExtendedLessonContentType,
 } from "../actions/structureActions";
@@ -20,7 +20,10 @@ import {
 export default function CourseContentEditor({ courses }: { courses: any[] }) {
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [courseStructure, setCourseStructure] = useState<any>(null);
+  
+  // Stati Creazione Modulo
   const [newModuleTitle, setNewModuleTitle] = useState("");
+  const [newModuleIsPreview, setNewModuleIsPreview] = useState(false);
 
   const [dbStatus, setDbStatus] = useState<{
     status: "idle" | "loading" | "success" | "error";
@@ -30,9 +33,12 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
     msg: "Pronto. Seleziona un corso per iniziare.",
   });
 
-  // Stati per la modifica in-line (Rename / Update)
+  // Stati per la modifica in-line (Rename / Update Modulo)
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
   const [editingModuleTitle, setEditingModuleTitle] = useState("");
+  const [editingModuleIsPreview, setEditingModuleIsPreview] = useState(false);
+
+  // Stati per le Lezioni
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [editingLessonTitle, setEditingLessonTitle] = useState("");
   const [editingLessonContent, setEditingLessonContent] = useState("");
@@ -74,10 +80,36 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
     if (!selectedCourseId || !newModuleTitle.trim()) return;
     startTransition(async () => {
       const nextOrder = (courseStructure?.course_modules?.length || 0) + 1;
-      const res = await addModule(selectedCourseId, newModuleTitle, nextOrder);
+      const res = await addModule(
+        selectedCourseId,
+        newModuleTitle.trim(),
+        nextOrder,
+        newModuleIsPreview
+      );
       if (res.success) {
         setNewModuleTitle("");
+        setNewModuleIsPreview(false);
         await loadCourseStructureFromDB(selectedCourseId);
+      } else {
+        alert("Errore durante la creazione del modulo: " + res.error);
+      }
+    });
+  };
+
+  const handleUpdateModule = (moduleId: string, orderIndex: number) => {
+    if (!editingModuleTitle.trim()) return;
+    startTransition(async () => {
+      const res = await updateModule(moduleId, {
+        title: editingModuleTitle.trim(),
+        isPreview: editingModuleIsPreview,
+        orderIndex,
+      });
+
+      if (res.success) {
+        setEditingModuleId(null);
+        await loadCourseStructureFromDB(selectedCourseId);
+      } else {
+        alert("Errore durante l'aggiornamento del modulo: " + res.error);
       }
     });
   };
@@ -116,32 +148,15 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
     });
   };
 
-  const handleRenameModule = (moduleId: string, orderIndex: number) => {
-    if (!editingModuleTitle.trim()) return;
-    startTransition(async () => {
-      try {
-        await upsertModule(selectedCourseId, {
-          id: moduleId,
-          title: editingModuleTitle.trim(),
-          orderIndex,
-        });
-        setEditingModuleId(null);
-        await loadCourseStructureFromDB(selectedCourseId);
-      } catch (err: any) {
-        alert(err.message);
-      }
-    });
-  };
-
   const handleRenameLesson = (
     moduleId: string,
     lessonId: string,
     currentLesson: any,
   ) => {
     if (!editingLessonTitle.trim()) return;
-    
+
     const needsText = isTextBasedContent(currentLesson.content_type);
-    
+
     if (needsText && !editingLessonContent.trim()) {
       alert("Il contenuto in testo/markdown non può essere vuoto.");
       return;
@@ -214,12 +229,16 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
           Costruttore Struttura Corsi
         </h2>
         <p className="text-sm text-muted-foreground">
-          Gestisci, rinomina ed elimina moduli e lezioni.
+          Gestisci, rinomina, imposta anteprime ed elimina moduli e lezioni.
         </p>
       </div>
 
       <div
-        className={`p-2.5 text-xs rounded-lg border ${dbStatus.status === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-muted text-muted-foreground"}`}
+        className={`p-2.5 text-xs rounded-lg border ${
+          dbStatus.status === "success"
+            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+            : "bg-muted text-muted-foreground"
+        }`}
       >
         <strong>Stato Connessione:</strong> {dbStatus.msg}
       </div>
@@ -239,52 +258,74 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
 
       {selectedCourseId && courseStructure && (
         <div className="space-y-6">
-          <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 flex gap-2 items-center">
+          {/* Form Nuovo Modulo */}
+          <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl border border-blue-200 dark:border-blue-900 flex flex-wrap gap-3 items-center">
             <input
               type="text"
               placeholder="Nome nuovo modulo (es: Modulo 1)..."
               value={newModuleTitle}
               onChange={(e) => setNewModuleTitle(e.target.value)}
-              className="flex-1 rounded-md border border-border p-2 text-sm bg-background text-foreground"
+              className="flex-1 min-w-[200px] rounded-md border border-border p-2 text-sm bg-background text-foreground"
             />
+            
+            <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={newModuleIsPreview}
+                onChange={(e) => setNewModuleIsPreview(e.target.checked)}
+                className="rounded border-border"
+              />
+              👁️ Anteprima gratuita
+            </label>
+
             <Button
               onClick={handleAddModule}
               disabled={isPending}
-              className="bg-blue-600 text-white"
+              className="bg-blue-600 text-white hover:bg-blue-700"
             >
               + Modulo
             </Button>
           </div>
 
+          {/* Lista Moduli */}
           <div className="space-y-4">
             {courseStructure.course_modules?.map((mod: any, mIdx: number) => (
               <div
                 key={mod.id}
                 className="bg-background border rounded-xl p-4 shadow-sm space-y-3"
               >
-                <div className="flex justify-between items-center border-b pb-2 gap-4">
+                <div className="flex justify-between items-center border-b pb-2 gap-4 flex-wrap">
                   {editingModuleId === mod.id ? (
-                    <div className="flex items-center gap-2 flex-1">
+                    <div className="flex items-center gap-3 flex-1 flex-wrap">
                       <input
                         type="text"
                         value={editingModuleTitle}
                         onChange={(e) => setEditingModuleTitle(e.target.value)}
-                        className="border rounded p-1 text-sm flex-1 text-foreground bg-background"
+                        className="border rounded p-1 text-sm flex-1 text-foreground bg-background min-w-[150px]"
                       />
+                      <label className="flex items-center gap-1.5 text-xs text-foreground font-medium cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editingModuleIsPreview}
+                          onChange={(e) => setEditingModuleIsPreview(e.target.checked)}
+                          className="rounded border-border"
+                        />
+                        Anteprima
+                      </label>
                       <button
                         onClick={() =>
-                          handleRenameModule(
+                          handleUpdateModule(
                             mod.id,
                             mod.order_index || mIdx + 1,
                           )
                         }
-                        className="text-xs text-green-600 font-bold"
+                        className="text-xs text-green-600 font-bold hover:underline"
                       >
                         Salva
                       </button>
                       <button
                         onClick={() => setEditingModuleId(null)}
-                        className="text-xs text-muted-foreground"
+                        className="text-xs text-muted-foreground hover:underline"
                       >
                         Annulla
                       </button>
@@ -294,12 +335,19 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                       <span className="font-semibold text-foreground">
                         {mod.title}
                       </span>
+                      {mod.is_preview && (
+                        <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded font-medium border border-amber-200 dark:border-amber-800">
+                          👁️ Anteprima
+                        </span>
+                      )}
                       <button
                         onClick={() => {
                           setEditingModuleId(mod.id);
                           setEditingModuleTitle(mod.title);
+                          setEditingModuleIsPreview(Boolean(mod.is_preview));
                         }}
-                        className="text-xs text-muted-foreground"
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        title="Modifica modulo"
                       >
                         ✏️
                       </button>
@@ -332,6 +380,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                   </div>
                 </div>
 
+                {/* Form Aggiunta Lezione */}
                 {activeModuleIdForLesson === mod.id && (
                   <div className="bg-muted p-3 rounded-lg border space-y-2 text-sm">
                     <input
@@ -395,6 +444,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                   </div>
                 )}
 
+                {/* Lista Lezioni del Modulo */}
                 <ul className="space-y-1.5 pl-4">
                   {mod.course_lessons?.map((les: any) => (
                     <li
@@ -465,7 +515,7 @@ export default function CourseContentEditor({ courses }: { courses: any[] }) {
                                   les.external_url ?? les.video_url ?? "",
                                 );
                               }}
-                              className="text-[11px] text-muted-foreground ml-1"
+                              className="text-[11px] text-muted-foreground ml-1 hover:text-foreground"
                             >
                               ✏️
                             </button>

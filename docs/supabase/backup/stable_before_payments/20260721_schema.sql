@@ -161,6 +161,22 @@ $$;
 ALTER FUNCTION "public"."is_admin"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."prevent_admin_deletion"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+    -- Controlla sia il vecchio campo 'role' che il nuovo 'user_type'
+    IF OLD.role = 'admin' OR OLD.user_type = 'ADMIN' THEN
+        RAISE EXCEPTION 'OPERAZIONE BLOCCATA: Impossibile eliminare il profilo ADMIN (%)', COALESCE(OLD.email, OLD.id::text);
+    END IF;
+    RETURN OLD;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."prevent_admin_deletion"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."trigger_set_timestamp"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -422,6 +438,8 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "avatar_url" "text",
     "total_minutes_active" integer DEFAULT 0 NOT NULL,
     "user_type" character varying DEFAULT 'SCHOOL_STUDENT'::character varying NOT NULL,
+    "school_track" "text",
+    "school_section" "text",
     CONSTRAINT "check_role" CHECK ((("role")::"text" = ANY ((ARRAY['admin'::character varying, 'student'::character varying])::"text"[]))),
     CONSTRAINT "check_status" CHECK ((("status")::"text" = ANY ((ARRAY['pending'::character varying, 'active'::character varying, 'blocked'::character varying])::"text"[]))),
     CONSTRAINT "check_user_type" CHECK ((("user_type")::"text" = ANY ((ARRAY['SCHOOL_STUDENT'::character varying, 'EXTERNAL_STUDENT'::character varying, 'TEACHER'::character varying, 'ADMIN'::character varying])::"text"[])))
@@ -531,6 +549,25 @@ CREATE TABLE IF NOT EXISTS "public"."quizzes" (
 
 
 ALTER TABLE "public"."quizzes" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."resources" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "title" "text" NOT NULL,
+    "description" "text" NOT NULL,
+    "url" "text" NOT NULL,
+    "provider" "text",
+    "type" "text" NOT NULL,
+    "typeVariant" "text" DEFAULT 'default'::"text" NOT NULL,
+    "rating" smallint DEFAULT 5,
+    "tags" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "language" "text" DEFAULT 'English'::"text" NOT NULL,
+    "is_visible" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
+);
+
+
+ALTER TABLE "public"."resources" OWNER TO "postgres";
 
 
 CREATE OR REPLACE VIEW "public"."student_courses" WITH ("security_invoker"='true') AS
@@ -760,6 +797,11 @@ ALTER TABLE ONLY "public"."quizzes"
 
 
 
+ALTER TABLE ONLY "public"."resources"
+    ADD CONSTRAINT "resources_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."user_page_views"
     ADD CONSTRAINT "user_page_views_pkey" PRIMARY KEY ("id");
 
@@ -883,6 +925,10 @@ CREATE OR REPLACE TRIGGER "trg_mail_settings_updated_at" BEFORE UPDATE ON "publi
 
 
 CREATE OR REPLACE TRIGGER "trg_mail_templates_updated_at" BEFORE UPDATE ON "public"."mail_templates" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_prevent_admin_deletion" BEFORE DELETE ON "public"."profiles" FOR EACH ROW EXECUTE FUNCTION "public"."prevent_admin_deletion"();
 
 
 
@@ -1088,6 +1134,10 @@ CREATE POLICY "Admin controllo totale moduli" ON "public"."course_modules" TO "a
 
 
 
+CREATE POLICY "Admins can do everything" ON "public"."resources" USING ((("auth"."jwt"() ->> 'role'::"text") = 'admin'::"text"));
+
+
+
 CREATE POLICY "Assegnazioni leggibili da autenticati" ON "public"."course_classes" FOR SELECT TO "authenticated" USING (true);
 
 
@@ -1111,6 +1161,10 @@ CREATE POLICY "Lezioni leggibili da autenticati" ON "public"."course_lessons" FO
 
 
 CREATE POLICY "Moduli leggibili da autenticati" ON "public"."course_modules" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Public profiles are viewable by everyone." ON "public"."resources" FOR SELECT USING (("is_visible" = true));
 
 
 
@@ -1184,6 +1238,9 @@ ALTER TABLE "public"."quiz_reviews" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."quizzes" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."resources" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."user_page_views" ENABLE ROW LEVEL SECURITY;
@@ -1381,6 +1438,12 @@ GRANT ALL ON FUNCTION "public"."is_admin"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."prevent_admin_deletion"() TO "anon";
+GRANT ALL ON FUNCTION "public"."prevent_admin_deletion"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."prevent_admin_deletion"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."trigger_set_timestamp"() TO "anon";
 GRANT ALL ON FUNCTION "public"."trigger_set_timestamp"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trigger_set_timestamp"() TO "service_role";
@@ -1549,6 +1612,12 @@ GRANT ALL ON TABLE "public"."quiz_reviews" TO "service_role";
 GRANT ALL ON TABLE "public"."quizzes" TO "anon";
 GRANT ALL ON TABLE "public"."quizzes" TO "authenticated";
 GRANT ALL ON TABLE "public"."quizzes" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."resources" TO "anon";
+GRANT ALL ON TABLE "public"."resources" TO "authenticated";
+GRANT ALL ON TABLE "public"."resources" TO "service_role";
 
 
 

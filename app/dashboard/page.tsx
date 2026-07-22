@@ -33,6 +33,16 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
     redirect("/");
   }
 
+  // ==========================================
+  // 🚀 FIX: REINDIRIZZAMENTO STUDENTE ESTERNO
+  // ==========================================
+  // Se l'utente ha il ruolo di studente esterno, non deve stare nella dashboard
+  // dei corsi acquistati. Lo reindirizziamo al catalogo pubblico.
+  // Nota: assicurati che la stringa coincida col ruolo che hai a DB (es: "external_student" o "user")
+  if (user.role === "external_student") {
+    redirect("/courses");
+  }
+
   const userId = user.id || user.sub;
   const supabase = getSupabaseAdmin();
 

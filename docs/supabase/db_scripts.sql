@@ -52,3 +52,4 @@ WHERE (role != 'admin' OR role IS NULL)
   AND (user_type != 'ADMIN' OR user_type IS NULL);
 
 COMMIT;
+

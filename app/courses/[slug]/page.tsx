@@ -12,6 +12,7 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
 import { getLiveCourses } from "@/features/courses/services/courseActions";
 import { checkExternalCourseAccessAction } from "@/features/courses/services/checkExternalCourseAccessAction";
+import { AddToCartButton } from "@/features/payments/components/AddToCartButton";
 
 const CONTENT_TYPES: Record<
   string,
@@ -64,21 +65,31 @@ export default function CourseDetailPage() {
         setCourse(currentCourse || null);
 
         if (currentCourse) {
+          const currentUser = user as any;
+          const rawUserType = String(
+            currentUser?.userType || currentUser?.user_type || "",
+          ).toUpperCase();
+          const rawRole = String(currentUser?.role || "").toUpperCase();
+
+          const isExternalStudent =
+            rawUserType === "EXTERNAL_STUDENT" ||
+            rawRole === "EXTERNAL_STUDENT";
+
           // 1. Gli Admin passano sempre
-          if (user?.role === "admin") {
+          if (currentUser?.role === "admin") {
             setHasAccess(true);
           }
-          // 2. Controllo Via Classe Interna (Modello Scuola)
-          else if (hasCourseAccess(currentCourse, user)) {
-            setHasAccess(true);
-          }
-          // 3. Controllo Via Iscrizione Singola (Modello Esterni)
-          else if (user?.id) {
+          // 2. Controllo Iscrizione Singola per Studenti Esterni
+          else if (isExternalStudent && currentUser?.id) {
             const hasExternalAccess = await checkExternalCourseAccessAction(
               String(currentCourse.id),
-              user.id,
+              currentUser.id,
             );
             setHasAccess(hasExternalAccess);
+          }
+          // 3. Controllo Via Classe Interna per Studenti Scuola
+          else if (hasCourseAccess(currentCourse, user)) {
+            setHasAccess(true);
           }
           // 4. Utente non autenticato o non autorizzato
           else {
@@ -119,6 +130,7 @@ export default function CourseDetailPage() {
   const isPendingUser =
     user && user.status === "pending" && user.role !== "admin";
   const courseQuizzes = (course as any).quiz_assignments || [];
+  const coursePrice = (course as any).price ?? 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/30">
@@ -126,28 +138,15 @@ export default function CourseDetailPage() {
       <Navbar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
-        {/* BREADCRUMB NAVIGATION */}
-
-        {/*        
-        <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6 overflow-x-auto pb-2">
-          <Link href="/" className="hover:text-foreground transition-colors flex items-center gap-1.5 shrink-0">
-            <span>🏠</span> Home
-          </Link>
-          <span className="text-muted-foreground/40 shrink-0">/</span>
-          <Link href="/courses" className="hover:text-foreground transition-colors shrink-0">
-            Corsi
-          </Link>
-          <span className="text-muted-foreground/40 shrink-0">/</span>
-          <span className="text-foreground font-medium truncate">
-            {course.title}
-          </span>
-        </nav>
- */}
-
-        <nav aria-label="Breadcrumb" className="flex items-center space-x-2 text-sm text-muted-foreground mb-6 overflow-x-auto pb-2">
+        {/* BREADCRUMB */}
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center space-x-2 text-sm text-muted-foreground mb-6 overflow-x-auto pb-2"
+        >
           <ol className="flex items-center space-x-2">
             <li>
-              <span>🏠</span><Link href="/dashboard?tab=courses">Dashboard</Link>
+              <span>🏠</span>{" "}
+              <Link href="/dashboard?tab=courses">Dashboard</Link>
             </li>
             <li>
               <span>/</span>
@@ -159,7 +158,12 @@ export default function CourseDetailPage() {
               <span>/</span>
             </li>
             <li>
-              <span className="text-foreground font-medium truncate" aria-current="page">{course.title}</span>
+              <span
+                className="text-foreground font-medium truncate"
+                aria-current="page"
+              >
+                {course.title}
+              </span>
             </li>
           </ol>
         </nav>
@@ -209,191 +213,231 @@ export default function CourseDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* MAIN CONTENT COLUMNS */}
+          {/* COLONNA PRINCIPALE */}
           <div className="lg:col-span-2 space-y-6">
             {!user ? (
-              <div className="rounded-2xl border border-yellow-200 bg-yellow-50/50 p-8 text-center shadow-sm">
+              <div className="rounded-2xl border border-yellow-200 bg-yellow-50/50 p-6 text-center shadow-sm space-y-4 mb-6">
                 <span className="text-4xl">🔒</span>
-                <h3 className="text-xl font-bold text-yellow-800 mt-4">
+                <h3 className="text-xl font-bold text-yellow-800">
                   Autenticazione Richiesta
                 </h3>
-                <p className="text-sm text-yellow-700 my-3 max-w-md mx-auto">
-                  Accedi con il tuo account per sbloccare i moduli multimediali
-                  e iniziare l'apprendimento.
+                <p className="text-sm text-yellow-700 max-w-md mx-auto">
+                  Accedi con il tuo account o registrati per completare
+                  l'iscrizione ed accedere ai moduli didattici.
                 </p>
-                <div className="mt-6 flex justify-center">
+                <div className="pt-2 flex flex-col sm:flex-row justify-center items-center gap-3">
                   <LoginDialog />
+                  <AddToCartButton
+                    courseId={String(course.id)}
+                    price={coursePrice}
+                  />
                 </div>
               </div>
             ) : isPendingUser ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-8 text-center shadow-sm">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-6 text-center shadow-sm mb-6">
                 <span className="text-4xl">⏳</span>
-                <h3 className="text-xl font-bold text-amber-800 mt-4">
+                <h3 className="text-xl font-bold text-amber-800 mt-2">
                   Account in fase di verifica
                 </h3>
-                <p className="text-sm text-amber-700 mt-3 max-w-md mx-auto">
+                <p className="text-sm text-amber-700 mt-2 max-w-md mx-auto">
                   Il tuo account è attualmente in attesa di attivazione da parte
-                  dello staff. Riceverai un'email non appena sarai abilitato.
-                </p>
-              </div>
-            ) : !hasAccess ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50/50 p-8 text-center shadow-sm">
-                <span className="text-4xl">🚫</span>
-                <h3 className="text-xl font-bold text-red-800 mt-4">
-                  Accesso Riservato
-                </h3>
-                <p className="text-sm text-red-700 mt-3 max-w-md mx-auto">
-                  Non risulti attualmente iscritto a questo corso. Contatta
-                  l'amministratore per richiedere l'abilitazione.
+                  dello staff.
                 </p>
               </div>
             ) : (
-              <div className="space-y-8">
-                {/* SEZIONE QUIZ */}
-                {courseQuizzes.length > 0 && (
-                  <div className="space-y-4">
-                    <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                      <span>🎯</span> Verifiche e Quiz
-                    </h2>
-                    <div className="rounded-2xl border border-purple-100 bg-purple-50/30 p-2 shadow-sm space-y-1">
-                      {courseQuizzes.map((assignment: any, index: number) => {
-                        const quizTitle =
-                          assignment.quiz_title ||
-                          assignment.quiz?.title ||
-                          `Quiz di Verifica #${index + 1}`;
-
-                        return (
-                          <div
-                            key={assignment.id || index}
-                            className="flex justify-between items-center text-sm p-3 rounded-xl border bg-background/80 border-purple-100/50 transition-all hover:bg-white hover:shadow-sm"
-                          >
-                            <button
-                              onClick={() =>
-                                router.push(
-                                  `/courses/${slug}/quizzes/${assignment.quiz_id}`,
-                                )
-                              }
-                              className="font-semibold text-left flex items-center gap-3 text-purple-700 hover:text-purple-900 transition-colors"
-                            >
-                              <span className="text-lg bg-purple-100 rounded-lg p-1.5 select-none">
-                                📝
-                              </span>
-                              <span className="hover:underline underline-offset-4">
-                                {quizTitle}
-                              </span>
-                            </button>
-
-                            {assignment.due_at && (
-                              <span className="text-xs text-muted-foreground font-mono bg-muted px-2.5 py-1 rounded-md">
-                                Scadenza:{" "}
-                                {new Date(assignment.due_at).toLocaleDateString(
-                                  "it-IT",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+              !hasAccess && (
+                <div className="rounded-2xl border border-blue-200 bg-blue-50/60 dark:bg-blue-950/20 dark:border-blue-900/40 p-6 text-center shadow-sm mb-6 space-y-3">
+                  <div className="flex items-center justify-center gap-2 text-blue-800 dark:text-blue-300 font-bold text-lg">
+                    <span>👀</span> Visualizzazione Anteprima
                   </div>
-                )}
+                  <p className="text-sm text-blue-700 dark:text-blue-300 max-w-md mx-auto">
+                    Stai consultando l'anteprima del corso. Iscriviti per
+                    sbloccare l'accesso completo a tutti i moduli e le
+                    verifiche.
+                  </p>
+                  <div className="pt-2 max-w-xs mx-auto">
+                    <AddToCartButton
+                      courseId={String(course.id)}
+                      price={coursePrice}
+                    />
+                  </div>
+                </div>
+              )
+            )}
 
-                {/* SEZIONE MODULI */}
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                    <span>📚</span> Moduli del Corso
-                  </h2>
+            {/* SEZIONE QUIZ (Visibile solo agli utenti con accesso completo) */}
+            {hasAccess && courseQuizzes.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <span>🎯</span> Verifiche e Quiz
+                </h2>
+                <div className="rounded-2xl border border-purple-100 bg-purple-50/30 p-2 shadow-sm space-y-1">
+                  {courseQuizzes.map((assignment: any, index: number) => {
+                    const quizTitle =
+                      assignment.quiz_title ||
+                      assignment.quiz?.title ||
+                      `Quiz di Verifica #${index + 1}`;
 
-                  {course.modules && course.modules.length > 0 ? (
-                    <div className="space-y-4">
-                      {course.modules.map((module: Module) => (
-                        <div
-                          key={module.id}
-                          className="rounded-2xl border border-border bg-background overflow-hidden shadow-sm transition-all hover:border-muted-foreground/30"
+                    return (
+                      <div
+                        key={assignment.id || index}
+                        className="flex justify-between items-center text-sm p-3 rounded-xl border bg-background/80 border-purple-100/50 transition-all hover:bg-white hover:shadow-sm"
+                      >
+                        <button
+                          onClick={() =>
+                            router.push(
+                              `/courses/${slug}/quizzes/${assignment.quiz_id}`,
+                            )
+                          }
+                          className="font-semibold text-left flex items-center gap-3 text-purple-700 hover:text-purple-900 transition-colors"
                         >
-                          <div className="bg-muted/30 px-5 py-4 border-b border-border">
-                            <h3 className="font-bold text-foreground text-lg flex items-center gap-2">
-                              <span className="text-muted-foreground">📂</span>{" "}
-                              {module.title}
-                            </h3>
-                          </div>
+                          <span className="text-lg bg-purple-100 rounded-lg p-1.5 select-none">
+                            📝
+                          </span>
+                          <span className="hover:underline underline-offset-4">
+                            {quizTitle}
+                          </span>
+                        </button>
 
-                          <div className="p-3">
-                            <ul className="space-y-1">
-                              {module.lessons && module.lessons.length > 0 ? (
-                                module.lessons.map((lesson: Lesson) => {
-                                  const rawType = (lesson.contentType ||
-                                    (lesson as any).content_type) as string;
-                                  const config =
-                                    CONTENT_TYPES[rawType] ||
-                                    CONTENT_TYPES.default;
-
-                                  const targetPath =
-                                    rawType === "quiz"
-                                      ? `/courses/${slug}/modules/${module.id}/quizzes/${lesson.id}`
-                                      : `/courses/${slug}/modules/${module.id}/lessons/${lesson.id}`;
-
-                                  return (
-                                    <li key={lesson.id}>
-                                      <button
-                                        onClick={() => router.push(targetPath)}
-                                        className="w-full flex justify-between items-center text-sm p-3 rounded-xl transition-all hover:bg-muted group"
-                                      >
-                                        <div
-                                          className={`font-medium text-left flex items-center gap-3 ${config.textStyle}`}
-                                        >
-                                          <span className="text-lg bg-background shadow-sm rounded-md p-1 group-hover:scale-110 transition-transform select-none">
-                                            {config.icon}
-                                          </span>
-                                          <span className="group-hover:underline underline-offset-4">
-                                            {lesson.title}
-                                          </span>
-                                        </div>
-
-                                        <span
-                                          className={`text-[11px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-md border ${config.badgeStyle}`}
-                                        >
-                                          {config.label}
-                                        </span>
-                                      </button>
-                                    </li>
-                                  );
-                                })
-                              ) : (
-                                <li className="text-sm italic text-muted-foreground p-4 text-center">
-                                  Nessun contenuto attualmente presente in
-                                  questo modulo.
-                                </li>
-                              )}
-                            </ul>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-border bg-transparent p-12 text-center">
-                      <p className="text-muted-foreground">
-                        Nessun modulo didattico caricato per questo corso.
-                      </p>
-                    </div>
-                  )}
+                        {assignment.due_at && (
+                          <span className="text-xs text-muted-foreground font-mono bg-muted px-2.5 py-1 rounded-md">
+                            Scadenza:{" "}
+                            {new Date(assignment.due_at).toLocaleDateString(
+                              "it-IT",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
+
+            {/* SEZIONE MODULI (Visibile sia in anteprima che per gli iscritti) */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <span>📚</span> Moduli del Corso
+              </h2>
+
+              {course.modules && course.modules.length > 0 ? (
+                <div className="space-y-4">
+                  {course.modules.map((module: Module) => (
+                    <div
+                      key={module.id}
+                      className="rounded-2xl border border-border bg-background overflow-hidden shadow-sm transition-all hover:border-muted-foreground/30"
+                    >
+                      <div className="bg-muted/30 px-5 py-4 border-b border-border flex justify-between items-center">
+                        <h3 className="font-bold text-foreground text-lg flex items-center gap-2">
+                          <span className="text-muted-foreground">📂</span>{" "}
+                          {module.title}
+                        </h3>
+                      </div>
+
+                      <div className="p-3">
+                        <ul className="space-y-1">
+                          {module.lessons && module.lessons.length > 0 ? (
+                            module.lessons.map((lesson: Lesson) => {
+                              const rawType = (lesson.contentType ||
+                                (lesson as any).content_type) as string;
+                              const config =
+                                CONTENT_TYPES[rawType] || CONTENT_TYPES.default;
+
+                              const isPreview = Boolean(
+                                (lesson as any).is_preview,
+                              );
+
+                              const canAccessLesson = hasAccess || isPreview;
+
+                              const targetPath =
+                                rawType === "quiz"
+                                  ? `/courses/${slug}/modules/${module.id}/quizzes/${lesson.id}`
+                                  : `/courses/${slug}/modules/${module.id}/lessons/${lesson.id}`;
+
+                              return (
+                                <li key={lesson.id}>
+                                  <button
+                                    onClick={() => {
+                                      if (canAccessLesson) {
+                                        router.push(targetPath);
+                                      }
+                                    }}
+                                    disabled={!canAccessLesson}
+                                    className={`w-full flex justify-between items-center text-sm p-3 rounded-xl transition-all ${
+                                      canAccessLesson
+                                        ? "hover:bg-muted group cursor-pointer"
+                                        : "opacity-60 cursor-not-allowed bg-muted/20"
+                                    }`}
+                                  >
+                                    <div
+                                      className={`font-medium text-left flex items-center gap-3 ${
+                                        canAccessLesson
+                                          ? config.textStyle
+                                          : "text-muted-foreground"
+                                      }`}
+                                    >
+                                      <span className="text-lg bg-background shadow-sm rounded-md p-1 group-hover:scale-110 transition-transform select-none">
+                                        {canAccessLesson ? config.icon : "🔒"}
+                                      </span>
+                                      <span
+                                        className={
+                                          canAccessLesson
+                                            ? "group-hover:underline underline-offset-4"
+                                            : ""
+                                        }
+                                      >
+                                        {lesson.title}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                      {isPreview && !hasAccess && (
+                                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                          Anteprima
+                                        </span>
+                                      )}
+                                      <span
+                                        className={`text-[11px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-md border ${config.badgeStyle}`}
+                                      >
+                                        {config.label}
+                                      </span>
+                                    </div>
+                                  </button>
+                                </li>
+                              );
+                            })
+                          ) : (
+                            <li className="text-sm italic text-muted-foreground p-4 text-center">
+                              Nessun contenuto attualmente presente in questo
+                              modulo.
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border bg-transparent p-12 text-center">
+                  <p className="text-muted-foreground">
+                    Nessun modulo didattico caricato per questo corso.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* SIDEBAR - INFORMAZIONI CORSO */}
+          {/* SIDEBAR */}
           <div className="relative">
             <div className="space-y-6 rounded-2xl border border-border bg-background p-6 shadow-sm sticky top-6">
               <h3 className="font-bold text-lg text-foreground border-b border-border pb-3 flex items-center gap-2">
                 <span>ℹ️</span> Info Corso
               </h3>
 
-              {/* DESCRIZIONE SINTETICA AGGIUNTA QUI */}
               <div className="bg-muted/40 rounded-xl p-4 border border-border/50">
                 <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
                   Sintesi
@@ -407,7 +451,6 @@ export default function CourseDetailPage() {
                 </p>
               </div>
 
-              {/* METADATI MIGLIORATI GRAFICAMENTE */}
               <div className="space-y-1 text-sm pt-2">
                 <div className="flex justify-between items-center py-2.5 border-b border-border/40">
                   <span className="text-muted-foreground">Categoria</span>
@@ -439,6 +482,23 @@ export default function CourseDetailPage() {
                   </span>
                 </div>
               </div>
+
+              {!hasAccess && (
+                <div className="pt-4 border-t border-border flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Prezzo Iscrizione
+                    </span>
+                    <span className="text-2xl font-extrabold text-foreground">
+                      {coursePrice > 0 ? `€${coursePrice}` : "Gratuito"}
+                    </span>
+                  </div>
+                  <AddToCartButton
+                    courseId={String(course.id)}
+                    price={coursePrice}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

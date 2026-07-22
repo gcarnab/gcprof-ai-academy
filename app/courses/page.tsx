@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useCourses } from "@/features/courses/hooks/useCourses";
 import CourseList from "@/features/courses/components/CourseList";
 import CourseSearch from "@/features/courses/components/CourseSearch";
@@ -9,11 +10,11 @@ import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
+import { logger } from "@/lib/logger";
 
 export default function CoursesPage() {
-  const { user } = useAuth(); // 🎯 Recuperiamo la sessione utente
+  const { user } = useAuth();
 
-  // 🎯 Recuperiamo categories direttamente dall'hook dinamico collegato al DB
   const {
     courses,
     search,
@@ -27,31 +28,67 @@ export default function CoursesPage() {
   const isPendingUser =
     user && user.status === "pending" && user.role !== "admin";
 
+  const displayCourses = useMemo(() => {
+    if (!courses || !Array.isArray(courses)) return [];
+
+    const currentUser = user as any;
+    
+    // Lettura sicura tramite String() per evitare l'errore di overlapping dei tipi TS
+    const rawUserType = String(currentUser?.userType || currentUser?.user_type || "").toUpperCase();
+    const rawRole = String(currentUser?.role || "").toUpperCase();
+
+    const isExternalOrGuest =
+      !user || rawUserType === "EXTERNAL_STUDENT" || rawRole === "EXTERNAL_STUDENT";
+
+    if (isExternalOrGuest) {
+      return courses
+        .map((course: any) => {
+          const rawModules = course.modules || course.course_modules;
+
+          if (!rawModules || !Array.isArray(rawModules)) {
+            return course;
+          }
+
+          const previewModules = rawModules.filter((mod: any) =>
+            Boolean(mod.isPreview ?? mod.is_preview),
+          );
+
+          return {
+            ...course,
+            modules: previewModules,
+            course_modules: previewModules,
+          };
+        })
+        .filter((course: any) => {
+          const rawModules = course.modules || course.course_modules;
+          if (!rawModules) return true;
+          return rawModules.length > 0;
+        });
+    }
+
+    return courses;
+  }, [courses, user]);
+
   return (
-    <div className="flex min-h-screen flex-col bg-muted">
-      {/* 🎯 IL SENSORE ATTIVO IN BACKGROUND */}
+    <div className="flex min-h-screen flex-col bg-muted/30 text-foreground transition-colors duration-200">
       <ActivityTracker />
-      
       <Navbar />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">
         <CoursesHeader />
 
         {isPendingUser ? (
-          // 🎯 Schermata di blocco dedicata all'utente registrato ma non ancora attivato
-          <div className="mt-12 rounded-xl border border-amber-200 bg-amber-50 p-10 text-center shadow-sm max-w-2xl mx-auto">
+          <div className="mt-12 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-10 text-center shadow-sm max-w-2xl mx-auto">
             <span className="text-4xl">⏳</span>
-            <h3 className="text-xl font-bold text-amber-800 mt-3">
+            <h3 className="text-xl font-bold text-amber-800 dark:text-amber-300 mt-3">
               Account in fase di verifica
             </h3>
-            <p className="text-sm text-amber-700 mt-2">
+            <p className="text-sm text-amber-700 dark:text-amber-400 mt-2">
               Il tuo profilo è stato registrato con successo ed è in attesa di
-              abilitazione da parte del docente. Riceverai una notifica email
-              non appena l'accesso sarà attivo.
+              abilitazione da parte del docente.
             </p>
           </div>
         ) : (
-          // Catalogo Standard per Utenti Attivi o Ospiti
           <>
             <div className="mb-6">
               <CourseSearch onSearch={setSearch} />
@@ -59,7 +96,7 @@ export default function CoursesPage() {
 
             <div className="mb-8">
               <CategoryFilter
-                categories={categories} // 🎯 Adesso usa l'array dinamico fornito da useCourses
+                categories={categories}
                 selected={category}
                 onChange={setCategory}
               />
@@ -70,7 +107,7 @@ export default function CoursesPage() {
                 Caricamento corsi in corso...
               </div>
             ) : (
-              <CourseList courses={courses} />
+              <CourseList courses={displayCourses} />
             )}
           </>
         )}

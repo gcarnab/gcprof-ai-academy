@@ -12,6 +12,10 @@ export const studentNavigation: NavigationItem[] = [
     href: "/dashboard",
   },
   {
+    label: "Corsi",
+    href: "/courses",
+  },  
+  {
     label: "Risorse", 
     href: "/resources",
   },

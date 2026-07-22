@@ -14,6 +14,7 @@ export interface Module {
   id: string;
   title: string;
   lessons: Lesson[];
+  isPreview?: boolean;
 }
 
 // Nuova interfaccia per l'assegnazione dei quiz a livello di corso

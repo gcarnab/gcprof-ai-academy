@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,11 +11,40 @@ import ThemeToggle from "@/features/theme/components/ThemeToggle";
 import { getNavigationForUser } from "@/shared/config/navigation/getNavigationForUser";
 import { logger } from "@/lib/logger";
 
+// 🛒 MODIFICA 1: Import del sistema Carrello e Pagamenti
+import { CartBadge } from "@/features/payments/components/CartBadge";
+import { CartDrawer } from "@/features/payments/components/CartDrawer";
+import { getCartSummaryAction } from "@/features/payments/actions/paymentActions";
+
 export default function Navbar() {
   const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // 🛒 MODIFICA 2: Stato e gestione apertura Drawer e conteggio Carrello
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  const refreshCartCount = useCallback(async () => {
+    try {
+      const res = await getCartSummaryAction();
+      if (res.success && res.data) {
+        setCartCount(res.data.items?.length || 0);
+      }
+    } catch {
+      // Ignora silenziosamente se il modulo pagamenti non è attivo
+    }
+  }, []);
+
+  // Aggiorna il conteggio carrello al cambio utente
+  useEffect(() => {
+    if (user) {
+      refreshCartCount();
+    } else {
+      setCartCount(0);
+    }
+  }, [user, refreshCartCount]);
 
   // =====================================================
   // CONFIGURAZIONI DA AMBIENTE (.env)
@@ -30,7 +59,7 @@ export default function Navbar() {
     process.env.NEXT_PUBLIC_TOPBAR_TEXT || "🚀 Benvenuto in GCPROF Academy!";
 
   // =====================================================
-  // SCROLL DETECTION (Evoluzione UI Sticky)
+  // SCROLL DETECTION
   // =====================================================
   useEffect(() => {
     const handleScroll = () => {
@@ -45,7 +74,6 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Logger di tracciamento montaggio e stato utente
   useEffect(() => {
     logger.info("Navbar montata correttamente", {
       userId: user?.id || "anonimo",
@@ -91,7 +119,6 @@ export default function Navbar() {
     return user.displayName?.substring(0, 2).toUpperCase() || "US";
   };
 
-  // Logout sicuro con log di tracciamento
   const handleLogout = async () => {
     try {
       logger.info("Tentativo di logout avviato dall'utente", {
@@ -99,8 +126,6 @@ export default function Navbar() {
       });
       await logout();
       setMobileMenuOpen(false);
-      // 🎯 FORZA IL REINDIRIZZAMENTO E IL REFRESH HARD
-      // window.location.href distrugge lo stato React in memoria e pulisce la cache di Next.js
       window.location.href = "/";
     } catch (error) {
       logger.error("Errore durante la disconnessione", { error });
@@ -109,18 +134,14 @@ export default function Navbar() {
 
   return (
     <div className="sticky top-0 z-50 w-full flex flex-col">
-      {/* =====================================================
-          STEP 2: TOP BAR PROMOZIONALE (DINAMICA DA .ENV)
-      ===================================================== */}
+      {/* TOP BAR PROMOZIONALE */}
       {isTopBarEnabled && (
         <div className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 text-white text-center py-1.5 px-4 text-xs font-medium tracking-wide shadow-inner">
           {topBarText}
         </div>
       )}
 
-      {/* =====================================================
-          STEP 3: HEADER GLASSMORPHISM DINAMICO
-      ===================================================== */}
+      {/* HEADER GLASSMORPHISM */}
       <header
         className={`w-full border-b border-border transition-all duration-300 ${
           isScrolled
@@ -190,6 +211,12 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-4">
             <ThemeToggle />
 
+            {/* 🛒 MODIFICA 3: Badge Carrello per Desktop */}
+            <CartBadge
+              itemCount={cartCount}
+              onClick={() => setIsCartOpen(true)}
+            />
+
             {isLoading ? (
               <div className="text-xs text-muted-foreground animate-pulse">
                 Verifica sessione...
@@ -246,7 +273,6 @@ export default function Navbar() {
                 </button>
               </div>
             ) : (
-              /* DISCONNESSO - STEP 1: CTA IN EVIDENZA */
               <div className="flex items-center gap-4">
                 <LoginDialog />
                 <Link
@@ -259,26 +285,32 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* MOBILE BUTTON */}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex rounded-md p-2 hover:bg-accent md:hidden text-foreground"
-            aria-label="Apri menu"
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
+          {/* 🛒 MODIFICA 4: Controls Mobile (Carrello sempre accessibile + Menu Hamburger) */}
+          <div className="flex md:hidden items-center gap-2">
+            <CartBadge
+              itemCount={cartCount}
+              onClick={() => setIsCartOpen(true)}
+            />
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="flex rounded-md p-2 hover:bg-accent text-foreground"
+              aria-label="Apri menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* MOBILE MENU */}
         {mobileMenuOpen && (
           <div className="border-t border-border bg-background md:hidden transition-all duration-300">
             <nav className="flex flex-col space-y-2 p-4">
-              {/* BRANDING EXTRA MOBILE SE LOGGATO (Dashboard Feeling) */}
               {user && (
                 <div className="flex items-center gap-3 p-3 mb-2 rounded-lg bg-accent/40 border border-border">
                   <div className="relative h-10 w-10 overflow-hidden rounded-full border shadow-sm">
@@ -364,6 +396,13 @@ export default function Navbar() {
           </div>
         )}
       </header>
+
+      {/* 🛒 MODIFICA 5: Componente Drawer del Carrello (Montato globalmente nell'Header) */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        onCartUpdated={refreshCartCount}
+      />
     </div>
   );
 }

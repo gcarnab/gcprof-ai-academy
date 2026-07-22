@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { getLiveCourses, getLiveCategories } from "../services/courseActions";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Course } from "../types/course";
+import { logger } from "@/lib/logger";
 
 export function useCourses() {
   const { user } = useAuth();
@@ -23,13 +24,18 @@ export function useCourses() {
           getLiveCategories(),
         ]);
 
-        setDbCourses(coursesData);
+        setDbCourses(coursesData || []);
+
+        logger.debug(
+          `[HOOK] Caricati dal service: ${(coursesData || []).length} corsi`,
+        );
+
         if (categoriesData && categoriesData.length > 0) {
           setDbCategories(categoriesData);
         }
       } catch (error) {
-        console.error(
-          "❌ Errore durante il caricamento dei dati iniziali nell'hook:",
+        logger.error(
+          "❌ Errore durante il caricamento dei dati iniziali nell'hook useCourses:",
           error,
         );
       } finally {
@@ -49,34 +55,41 @@ export function useCourses() {
     };
   }, [user]);
 
-  /**
-   * 🛡️ STRATO DI SICUREZZA AGGIORNATO PER CORSI PUBBLICI E PRIVATI
-   */
   const allowedCourses = useMemo(() => {
     const currentUser = legacySessionUser as any;
+    if (!currentUser) return dbCourses;
 
-    // 1. Se è Admin, vede tutto il catalogo
-    if (currentUser?.role === "admin") {
+    // Type assertion sicura per evitare TS2367
+    const rawUserType = String(currentUser.userType || currentUser.user_type || "").toUpperCase();
+    const rawRole = String(currentUser.role || "").toUpperCase();
+
+    const isExternalStudent =
+      rawUserType === "EXTERNAL_STUDENT" || rawRole === "EXTERNAL_STUDENT";
+
+    const isAdmin = currentUser.role === "admin";
+
+    // 1. Se admin o studente esterno -> Mostra tutti i corsi
+    if (isAdmin || isExternalStudent) {
       return dbCourses;
     }
 
-    // 🎯 FIX: Se l'utente NON è loggato, mostriamo tutti i corsi in evidenza sulla Home pubblica
-    if (!currentUser) {
-      return dbCourses;
-    }
-
-    // 2. Se l'utente è registrato ma bloccato o in attesa, non mostriamo i corsi interni
-    if (
-      currentUser.status === "pending" ||
-      currentUser.status === "blocked"
-    ) {
+    // 2. Se in attesa o bloccato
+    if (currentUser.status === "pending" || currentUser.status === "blocked") {
       return [];
     }
 
-    // 3. Lo studente autenticato vede i corsi solo se appartengono esplicitamente alla sua classe
-    const userClasses = currentUser.classes || [];
+    // 3. Studenti scolastici
+    const userClasses: string[] =
+      currentUser.allowedClasses || currentUser.classes || [];
+
     return dbCourses.filter((course) => {
-      return course.allowedClasses.some((allowedClass: string) =>
+      const courseClasses = course.allowedClasses || [];
+
+      if (!courseClasses || courseClasses.length === 0) {
+        return true;
+      }
+
+      return courseClasses.some((allowedClass: string) =>
         userClasses.includes(allowedClass),
       );
     });
@@ -86,9 +99,11 @@ export function useCourses() {
     return allowedCourses.filter((course) => {
       const matchCategory =
         category === "Tutti" || course.category === category;
-      const matchSearch = course.title
+
+      const matchSearch = (course.title || "")
         .toLowerCase()
         .includes(search.toLowerCase());
+
       return matchCategory && matchSearch;
     });
   }, [allowedCourses, search, category]);

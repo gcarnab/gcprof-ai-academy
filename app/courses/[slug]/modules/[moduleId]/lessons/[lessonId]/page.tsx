@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
-import Link from "next/link"; // 🎯 Importato per gestire la navigazione interna immediata
+import Link from "next/link";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 import { getLiveCourses } from "@/features/courses/services/courseActions";
@@ -13,9 +13,13 @@ import { ProtectedRoute } from "@/features/auth/components/ProtectedRoute";
 import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
 import { MarkdownPreview } from "@/features/courses/components/MarkdownPreview";
 import { logger } from "@/lib/logger";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { hasCourseAccess } from "@/features/courses/services/courseService";
+import { checkExternalCourseAccessAction } from "@/features/courses/services/checkExternalCourseAccessAction";
 
 export default function LessonPage() {
   const params = useParams();
+  const { user } = useAuth();
 
   logger.info(
     "gcprof-ai-academy\\app\\courses\\[slug]\\modules\\[moduleId]\\lessons\\[lessonId]\\page.tsx Componente avviato. Params correnti:",
@@ -36,6 +40,7 @@ export default function LessonPage() {
     lesson: any;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
     async function loadLessonData() {
@@ -47,7 +52,9 @@ export default function LessonPage() {
       });
 
       try {
-        const liveCourses = await getLiveCourses();
+        const liveCourses = await getLiveCourses(
+          user?.role === "admin" ? "admin" : "student"
+        );
         // 🔴 CHECKPOINT 3: I corsi live sono arrivati?
         logger.warn(
           "=== [CHECKPOINT 3] Corsi scaricati dal service. Totale corsi:",
@@ -71,6 +78,29 @@ export default function LessonPage() {
             lesson
           );
           setData({ course, module, lesson });
+
+          // 🎯 VERIFICA ACCESSO CORSO
+          const currentUser = user as any;
+          const rawUserType = String(
+            currentUser?.userType || currentUser?.user_type || ""
+          ).toUpperCase();
+          const rawRole = String(currentUser?.role || "").toUpperCase();
+          const isExternalStudent =
+            rawUserType === "EXTERNAL_STUDENT" || rawRole === "EXTERNAL_STUDENT";
+
+          let accessGranted = false;
+          if (currentUser?.role === "admin") {
+            accessGranted = true;
+          } else if (isExternalStudent && currentUser?.id) {
+            accessGranted = await checkExternalCourseAccessAction(
+              String(course.id),
+              currentUser.id
+            );
+          } else if (hasCourseAccess(course, user)) {
+            accessGranted = true;
+          }
+
+          setHasAccess(accessGranted);
         } else {
           logger.warn(
             "=== [CHECKPOINT 4-FAIL] Impossibile trovare la tripletta nei dati!"
@@ -93,7 +123,7 @@ export default function LessonPage() {
         lessonId,
       });
     }
-  }, [slug, moduleId, lessonId]);
+  }, [slug, moduleId, lessonId, user]);
 
   // 🔴 CHECKPOINT 5: Stato dello switch di rendering
   logger.warn("=== [CHECKPOINT 5] Stato render attuale:", {
@@ -126,6 +156,10 @@ export default function LessonPage() {
 
   const { course, module, lesson } = data;
 
+  // 🎯 CALCOLO DISPONIBILITÀ ANTEPRIMA / ACCESSO
+  const isPreview = Boolean(lesson.isPreview || lesson.is_preview);
+  const canAccessLesson = hasAccess || isPreview;
+
   const normalizedType = (
     lesson.content_type ||
     lesson.contentType ||
@@ -155,60 +189,91 @@ export default function LessonPage() {
     formattedContents
   );
 
-  return (
-    <ProtectedRoute>
-      <div className="flex min-h-screen flex-col bg-muted">
-        {/* 🎯 PASSO 1: Passiamo gli identificativi reali del corso e della lezione al tracker */}
+  const pageContent = (
+    <div className="flex min-h-screen flex-col bg-muted">
+      {/* 🎯 Tracciamento attività abilitato se l'utente è autenticato */}
+      {user && (
         <ActivityTracker
           courseId={course.id || course.course_id}
           lessonId={lesson.id}
         />
+      )}
 
-        <Navbar />
+      <Navbar />
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
-          {/* 🎯 BREADCRUMB INTERATTIVA PER LA NAVIGAZIONE DI RITORNO */}
-          <nav className="text-sm text-muted-foreground flex flex-wrap items-center gap-2 select-none">
-            <Link
-              href="/courses"
-              className="hover:text-blue-600 hover:underline transition-colors"
-            >
-              Corsi
-            </Link>
-            <span className="text-muted-foreground">/</span>
-            <Link
-              href={`/courses/${slug}`}
-              className="hover:text-blue-600 hover:underline transition-colors max-w-[200px] truncate"
-              title={course.title}
-            >
-              {course.title}
-            </Link>
-            <span className="text-muted-foreground">/</span>
-            <span
-              className="text-muted-foreground font-medium max-w-[250px] truncate"
-              title={module.title}
-            >
-              {module.title}
-            </span>
-          </nav>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+        {/* BREADCRUMB INTERATTIVA */}
+        <nav className="text-sm text-muted-foreground flex flex-wrap items-center gap-2 select-none">
+          <Link
+            href="/courses"
+            className="hover:text-blue-600 hover:underline transition-colors"
+          >
+            Corsi
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <Link
+            href={`/courses/${slug}`}
+            className="hover:text-blue-600 hover:underline transition-colors max-w-[200px] truncate"
+            title={course.title}
+          >
+            {course.title}
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <span
+            className="text-muted-foreground font-medium max-w-[250px] truncate"
+            title={module.title}
+          >
+            {module.title}
+          </span>
+        </nav>
 
-          <h1 className="mt-4 text-4xl font-bold text-foreground">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-4xl font-bold text-foreground">
             {lesson.title}
           </h1>
+          {isPreview && !hasAccess && (
+            <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider">
+              👀 Modulo in Anteprima
+            </span>
+          )}
+        </div>
 
-          <div className="mt-8">
-            {/* 🎯 INTERCETTAZIONE E RENDERING DEL CONTENUTO MARKDOWN SANITIZZATO */}
-            {normalizedType === "markdown" ? (
-              <div className="p-6 bg-background dark:bg-card rounded-lg shadow-sm border border-border">
-                <MarkdownPreview content={normalizedContent} />
+        <div className="mt-8">
+          {!canAccessLesson ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900/40 p-8 text-center shadow-sm space-y-4">
+              <span className="text-4xl">🔒</span>
+              <h3 className="text-2xl font-bold text-amber-900 dark:text-amber-300">
+                Contenuto Riservato
+              </h3>
+              <p className="text-sm text-amber-800 dark:text-amber-400 max-w-md mx-auto leading-relaxed">
+                Questa lezione fa parte del corso <strong>{course.title}</strong> ed è accessibile solo agli studenti iscritti.
+              </p>
+              <div className="pt-2">
+                <Link
+                  href={`/courses/${slug}`}
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  Iscriviti al corso per accedere
+                </Link>
               </div>
-            ) : (
-              <LessonRenderer contents={formattedContents} />
-            )}
-          </div>
-        </main>
-        <Footer />
-      </div>
-    </ProtectedRoute>
+            </div>
+          ) : normalizedType === "markdown" ? (
+            <div className="p-6 bg-background dark:bg-card rounded-lg shadow-sm border border-border">
+              <MarkdownPreview content={normalizedContent} />
+            </div>
+          ) : (
+            <LessonRenderer contents={formattedContents} />
+          )}
+        </div>
+      </main>
+      <Footer />
+    </div>
   );
+
+  // 🎯 Se è un'anteprima, non blocchiamo con ProtectedRoute (consente anche la fruizione libera dell'anteprima)
+  if (isPreview) {
+    return pageContent;
+  }
+
+  return <ProtectedRoute>{pageContent}</ProtectedRoute>;
 }

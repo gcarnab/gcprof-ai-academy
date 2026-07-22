@@ -36,7 +36,6 @@ export async function registerAction(prevState: any, formData: FormData) {
   const schoolTrack = (formData.get("schoolTrack") as string) || "";
   const schoolSection = (formData.get("schoolSection") as string) || "";
   const classId = formData.get("classId") as string | null;
-  const courseId = formData.get("courseId") as string | null;
 
   if (!firstName || !lastName || !email || !password || !confirmPassword) {
     return {
@@ -68,13 +67,6 @@ export async function registerAction(prevState: any, formData: FormData) {
     }
   }
 
-  if (userType === "EXTERNAL_STUDENT" && !courseId) {
-    return {
-      success: false,
-      error: "Seleziona il corso a cui intendi iscriverti.",
-    };
-  }
-
   if (password !== confirmPassword) {
     return { success: false, error: "Le password non coincidono." };
   }
@@ -92,7 +84,6 @@ export async function registerAction(prevState: any, formData: FormData) {
 
     let className = "Esterno";
     let classSlug = "esterno";
-    let requestedCourseTitle = "";
 
     // 1. Gestione studente scuola
     if (userType === "SCHOOL_STUDENT" && classId) {
@@ -107,23 +98,6 @@ export async function registerAction(prevState: any, formData: FormData) {
       }
       className = classData.name;
       classSlug = classData.slug;
-    }
-
-    // 2. Gestione utente esterno
-    if (userType === "EXTERNAL_STUDENT" && courseId) {
-      const { data: courseData, error: courseErr } = await supabaseAdmin
-        .from("courses")
-        .select("title")
-        .eq("id", courseId)
-        .single();
-
-      if (courseErr || !courseData) {
-        return {
-          success: false,
-          error: "Il corso selezionato non è valido o inesistente.",
-        };
-      }
-      requestedCourseTitle = courseData.title;
     }
 
     const passwordService = new BcryptPasswordService();
@@ -154,24 +128,6 @@ export async function registerAction(prevState: any, formData: FormData) {
         .insert({ profile_id: newUser.id, class_id: classId });
     }
 
-    // 5. Salvataggio iscrizione corso in stato "pending" (Solo Esterno)
-    if (userType === "EXTERNAL_STUDENT" && courseId) {
-      const { error: coursePivotError } = await supabaseAdmin
-        .from("profile_courses")
-        .insert({
-          profile_id: newUser.id,
-          course_id: courseId,
-          status: "pending",
-        });
-
-      if (coursePivotError) {
-        console.error(
-          "Errore inserimento iscrizione pending:",
-          coursePivotError.message,
-        );
-      }
-    }
-
     // 6. Invio Email con dettagli
     await startEmailDispatches({
       firstName,
@@ -181,15 +137,12 @@ export async function registerAction(prevState: any, formData: FormData) {
       className,
       classSlug,
       userType,
-      requestedCourseTitle,
     });
 
     return {
       success: true,
       message:
-        userType === "EXTERNAL_STUDENT"
-          ? `Registrazione completata! La tua richiesta di iscrizione al corso "${requestedCourseTitle}" è stata inoltrata all'amministratore per l'approvazione.`
-          : "Registrazione completata! Il tuo account scolastico è in attesa di attivazione.",
+        "Registrazione completata! Il tuo account è in attesa di attivazione da parte dell'amministratore.",
     };
   } catch (error: any) {
     console.error("Error in registerAction:", error);
@@ -205,7 +158,6 @@ async function startEmailDispatches(params: {
   className: string;
   classSlug: string;
   userType: string;
-  requestedCourseTitle?: string;
 }) {
   try {
     const templateService = new MailTemplateService();
@@ -225,7 +177,6 @@ async function startEmailDispatches(params: {
       class_name: params.className,
       class_slug: params.classSlug,
       user_type: params.userType,
-      requested_course: params.requestedCourseTitle || "Nessuno",
       user_type_label:
         params.userType === "EXTERNAL_STUDENT"
           ? "Esterno (Commerciale)"
@@ -251,12 +202,6 @@ async function startEmailDispatches(params: {
       );
 
       let bodyText = studentTemplate.body_text_override ?? "";
-      if (
-        params.userType === "EXTERNAL_STUDENT" &&
-        params.requestedCourseTitle
-      ) {
-        bodyText += `<br/><br/><strong>Corso richiesto:</strong> ${params.requestedCourseTitle}<br/>Riceverai una notifica non appena l'amministratore avrà attivato la tua licenza.`;
-      }
 
       const body = engine.render(bodyText);
 
@@ -286,8 +231,12 @@ async function startEmailDispatches(params: {
       let bodyText = adminTemplate.body_text_override ?? "";
       bodyText += `<br/><br/>
         <strong>Tipologia Account:</strong> ${contextVariables.user_type_label}<br/>
-        ${params.userType === "EXTERNAL_STUDENT" ? `<strong>Corso da Abilitare:</strong> ${params.requestedCourseTitle}` : `<strong>Classe di appartenenza:</strong> ${params.className}`}
-      `;
+      ${
+        params.userType === "SCHOOL_STUDENT"
+          ? `<strong>Classe di appartenenza:</strong> ${params.className}`
+          : `<strong>Account esterno registrato.</strong>`
+      } `;
+
       const body = engine.render(bodyText);
 
       const html = `

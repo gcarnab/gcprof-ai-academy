@@ -133,10 +133,10 @@ export async function approveEnrollmentAction(
     if (profileData?.email && courseData?.title) {
       const emailService = new EmailService();
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      const appUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
       if (!appUrl) {
-        logger.warn("NEXT_PUBLIC_APP_URL non configurata");
+        logger.warn("NEXT_PUBLIC_SITE_URL non configurata");
       }
 
       const subject = `Iscrizione Approvata: ${courseData.title}`;
@@ -347,9 +347,9 @@ export async function syncUserCoursesAction(
         });
       } else if (profileData?.email && coursesData && coursesData.length > 0) {
         const emailService = new EmailService();
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+        const appUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
-        if (!appUrl) logger.warn("NEXT_PUBLIC_APP_URL non configurata");
+        if (!appUrl) logger.warn("NEXT_PUBLIC_SITE_URL non configurata");
 
         const subject = "Il tuo account è attivo - Corsi assegnati";
 

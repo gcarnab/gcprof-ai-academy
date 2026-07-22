@@ -77,9 +77,13 @@ GCPROF-AI-ACADEMY
 |   |   |   \---upload
 |   |   |           route.ts
 |   |   |           
-|   |   \---seed-admin
-|   |           route.ts
-|   |           
+|   |   +---seed-admin
+|   |   |       route.ts
+|   |   |       
+|   |   \---webhooks
+|   |       \---stripe
+|   |               route.ts
+|   |               
 |   +---auth
 |   |   \---reset-password
 |   |           page.tsx
@@ -91,6 +95,7 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---courses
 |   |   |   page.tsx
+|   |   |   page.tsx_old
 |   |   |   
 |   |   \---[slug]
 |   |       |   page.tsx
@@ -113,6 +118,7 @@ GCPROF-AI-ACADEMY
 |   +---dashboard
 |   |       layout.tsx
 |   |       page.tsx
+|   |       page.tsx_old
 |   |       
 |   +---login
 |   |       page.tsx
@@ -122,6 +128,7 @@ GCPROF-AI-ACADEMY
 |   |       
 |   +---register
 |   |       page.tsx
+|   |       page.tsx_old
 |   |       
 |   +---resources
 |   |       page.tsx
@@ -158,11 +165,15 @@ GCPROF-AI-ACADEMY
 |   |   README-DB.md
 |   |   
 |   +---courses
-|   |       Blockchain_Guide_Full.md
-|   |       ProblemSolving_Guide_Full.md
-|   |       Python_Practice_Full.md
-|   |       WebProgramming_Base_HTML_CSS_Full.md
-|   |       
+|   |   |   Blockchain_Guide_Full.md
+|   |   |   ProblemSolving_Guide_Full.md
+|   |   |   Python_Practice_Full.md
+|   |   |   WebProgramming_Base_HTML_CSS_Full.md
+|   |   |   
+|   |   \---preview
+|   |           Blockchain_01_preview.md
+|   |           ProbleSolving_01_preview.md
+|   |           
 |   +---dev
 |   |       gcprof-academy_index_gem.md
 |   |       
@@ -175,10 +186,16 @@ GCPROF-AI-ACADEMY
 |   |       quiz_Python_base_01.md
 |   |       
 |   \---supabase
-|           data.sql
-|           roles.sql
-|           schema.sql
-|           
+|       |   db_scripts.sql
+|       |   payments_schema.sql
+|       |   
+|       \---backup
+|           +---payments
+|           \---stable_before_payments
+|                   20260721_data.sql
+|                   20260721_roles.sql
+|                   20260721_schema.sql
+|                   
 +---e2e
 |   +---admin
 |   +---auth
@@ -208,7 +225,6 @@ GCPROF-AI-ACADEMY
 |   |   |   |       ActiveAssociationsList.tsx
 |   |   |   |       AssignCourseClassForm.tsx
 |   |   |   |       CourseContentEditor.tsx
-|   |   |   |       CourseContentEditor.tsx_old
 |   |   |   |       CoursesTab.tsx
 |   |   |   |       CoursesTab.tsx_old
 |   |   |   |       CreateClassForm.tsx
@@ -268,6 +284,7 @@ GCPROF-AI-ACADEMY
 |   |   +---stats
 |   |   |   +---components
 |   |   |   |   |   AdminStatsDashboard.tsx
+|   |   |   |   |   AdminStatsDashboard.tsx_old
 |   |   |   |   |   StatsTab.tsx
 |   |   |   |   |   
 |   |   |   |   \---charts
@@ -311,13 +328,13 @@ GCPROF-AI-ACADEMY
 |   |       |       AdminUsersClassesEditor.tsx
 |   |       |       AdminUsersHeader.tsx
 |   |       |       AdminUsersRow.tsx
+|   |       |       AdminUsersRow.tsx_old
 |   |       |       AdminUsersTable.tsx
 |   |       |       AdminUsersToolbar.tsx
 |   |       |       UsersTab.tsx
 |   |       |       
 |   |       \---services
 |   |               adminService.ts
-|   |               adminService.ts_old
 |   |               
 |   +---auth
 |   |   +---actions
@@ -327,6 +344,7 @@ GCPROF-AI-ACADEMY
 |   |   |       loginAction.ts
 |   |   |       logoutAction.ts
 |   |   |       registerAction.ts
+|   |   |       registerAction.ts_old
 |   |   |       requestPasswordResetAction.ts
 |   |   |       validateResetTokenAction.ts
 |   |   |       
@@ -401,6 +419,7 @@ GCPROF-AI-ACADEMY
 |   |   |       
 |   |   +---hooks
 |   |   |       useCourses.ts
+|   |   |       useCourses.ts_old
 |   |   |       
 |   |   +---queries
 |   |   |       getStudentCourses.ts
@@ -423,6 +442,7 @@ GCPROF-AI-ACADEMY
 |   |           Footer.tsx
 |   |           Hero.tsx
 |   |           Navbar.tsx
+|   |           Navbar.tsx_old
 |   |           
 |   +---marketing
 |   |   \---components
@@ -430,6 +450,38 @@ GCPROF-AI-ACADEMY
 |   |           HowItWorks.tsx
 |   |           StudentFeatures.tsx
 |   |           WhyChoose.tsx
+|   |           
+|   +---payments
+|   |   +---actions
+|   |   |       paymentActions.ts
+|   |   |       
+|   |   +---adapters
+|   |   |   \---stripe
+|   |   |           StripeGatewayAdapter.ts
+|   |   |           
+|   |   +---components
+|   |   |       AddToCartButton.tsx
+|   |   |       CartBadge.tsx
+|   |   |       CartDrawer.tsx
+|   |   |       PaymentFeedbackBanner.tsx
+|   |   |       
+|   |   +---constants
+|   |   |       paymentConstants.ts
+|   |   |       
+|   |   +---factories
+|   |   |       PaymentGatewayFactory.ts
+|   |   |       
+|   |   +---ports
+|   |   |       IPaymentGateway.ts
+|   |   |       
+|   |   +---services
+|   |   |       CartService.ts
+|   |   |       CheckoutService.ts
+|   |   |       EnrollmentService.ts
+|   |   |       PaymentService.ts
+|   |   |       
+|   |   \---types
+|   |           paymentTypes.ts
 |   |           
 |   +---profile
 |   |   +---components
@@ -505,12 +557,13 @@ GCPROF-AI-ACADEMY
 |               
 +---lib
 |       logger.ts
+|       stripe.ts
 |       supabase.ts
 |       utils.ts
 |       
 +---logs
 |       app.log
-|             
+|       
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -594,6 +647,7 @@ GCPROF-AI-ACADEMY
         database.types.ts
         
 
+        
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
@@ -604,10 +658,10 @@ GCPROF-AI-ACADEMY
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
-| `created_at` | `timestamptz` |  |
 | `slug` | `text` |  Unique |
 | `name` | `text` |  |
 | `description` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  |
 
 ## Table `profiles`
 
@@ -615,9 +669,6 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `avatar_url` | `text` |  Nullable |
-| `user_type` | `varchar` |  |
-| `total_minutes_active` | `int4` |  |
 | `id` | `uuid` | Primary |
 | `first_name` | `varchar` |  Nullable |
 | `last_name` | `varchar` |  Nullable |
@@ -628,6 +679,11 @@ GCPROF-AI-ACADEMY
 | `updated_at` | `timestamptz` |  |
 | `email` | `text` |  Nullable Unique |
 | `password_hash` | `text` |  Nullable |
+| `avatar_url` | `text` |  Nullable |
+| `total_minutes_active` | `int4` |  |
+| `user_type` | `varchar` |  |
+| `school_track` | `text` |  Nullable |
+| `school_section` | `text` |  Nullable |
 
 ## Table `profile_classes`
 
@@ -645,10 +701,10 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `slug` | `varchar` |  Unique |
 | `title` | `varchar` |  |
 | `description` | `text` |  Nullable |
-| `id` | `uuid` | Primary |
 | `created_at` | `timestamptz` |  |
 | `updated_at` | `timestamptz` |  |
 | `category` | `varchar` |  Nullable |
@@ -658,6 +714,11 @@ GCPROF-AI-ACADEMY
 | `cover_image` | `text` |  Nullable |
 | `published` | `bool` |  Nullable |
 | `allowed_classes` | `_text` |  |
+| `price` | `numeric` |  |
+| `currency` | `currency_enum` |  |
+| `is_paid` | `bool` |  |
+| `stripe_product_id` | `text` |  Nullable |
+| `stripe_price_id` | `text` |  Nullable |
 
 ## Table `course_modules`
 
@@ -665,11 +726,12 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `course_id` | `uuid` |  Nullable |
 | `title` | `varchar` |  |
-| `id` | `uuid` | Primary |
 | `order_index` | `int4` |  |
 | `created_at` | `timestamptz` |  |
+| `is_preview` | `bool` |  |
 
 ## Table `course_lessons`
 
@@ -677,12 +739,12 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `module_id` | `uuid` |  Nullable |
 | `title` | `varchar` |  |
 | `slug` | `varchar` |  |
 | `video_url` | `text` |  Nullable |
 | `content` | `text` |  Nullable |
-| `id` | `uuid` | Primary |
 | `order_index` | `int4` |  |
 | `created_at` | `timestamptz` |  |
 | `content_type` | `varchar` |  Nullable |
@@ -706,9 +768,9 @@ GCPROF-AI-ACADEMY
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
-| `created_at` | `timestamptz` |  |
 | `name` | `varchar` |  Unique |
 | `slug` | `varchar` |  Unique |
+| `created_at` | `timestamptz` |  |
 
 ## Table `document_configs`
 
@@ -752,18 +814,18 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `template_key` | `text` |  Unique |
 | `name` | `varchar` |  |
 | `description` | `text` |  Nullable |
 | `subject` | `varchar` |  |
 | `title_override` | `varchar` |  Nullable |
 | `body_text_override` | `text` |  Nullable |
-| `updated_by` | `uuid` |  Nullable |
-| `id` | `uuid` | Primary |
 | `enabled` | `bool` |  |
 | `version` | `int4` |  |
 | `created_at` | `timestamptz` |  |
 | `updated_at` | `timestamptz` |  |
+| `updated_by` | `uuid` |  Nullable |
 
 ## Table `mail_logs`
 
@@ -771,14 +833,14 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `template_key` | `text` |  |
 | `recipient` | `text` |  |
 | `subject` | `text` |  |
 | `status` | `text` |  |
+| `provider` | `text` |  |
 | `provider_id` | `text` |  Nullable |
 | `error_message` | `text` |  Nullable |
-| `id` | `uuid` | Primary |
-| `provider` | `text` |  |
 | `created_at` | `timestamptz` |  |
 
 ## Table `password_reset_tokens`
@@ -787,10 +849,10 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `user_id` | `uuid` |  |
 | `token` | `text` |  Unique |
 | `expires_at` | `timestamp` |  |
-| `id` | `uuid` | Primary |
 | `used` | `bool` |  |
 | `created_at` | `timestamp` |  |
 
@@ -814,13 +876,13 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `profile_id` | `uuid` |  |
+| `login_at` | `timestamptz` |  |
 | `logout_at` | `timestamptz` |  Nullable |
 | `session_duration_seconds` | `int4` |  Nullable |
 | `ip_address` | `text` |  Nullable |
 | `user_agent` | `text` |  Nullable |
-| `id` | `uuid` | Primary |
-| `login_at` | `timestamptz` |  |
 | `created_at` | `timestamptz` |  |
 
 ## Table `user_page_views`
@@ -829,11 +891,11 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `profile_id` | `uuid` |  Nullable |
 | `path` | `text` |  |
 | `course_slug` | `text` |  Nullable |
 | `lesson_slug` | `text` |  Nullable |
-| `id` | `uuid` | Primary |
 | `viewed_at` | `timestamptz` |  |
 
 ## Table `quizzes`
@@ -842,17 +904,17 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
-| `passing_score` | `numeric` |  |
+| `id` | `uuid` | Primary |
 | `title` | `varchar` |  |
 | `description` | `text` |  Nullable |
-| `created_by` | `uuid` |  Nullable |
-| `id` | `uuid` | Primary |
 | `status` | `quiz_status` |  |
 | `penalty_enabled` | `bool` |  |
 | `negative_mark` | `numeric` |  |
 | `max_score` | `numeric` |  |
+| `created_by` | `uuid` |  Nullable |
 | `created_at` | `timestamptz` |  |
 | `updated_at` | `timestamptz` |  |
+| `passing_score` | `numeric` |  |
 
 ## Table `quiz_questions`
 
@@ -860,12 +922,12 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `quiz_id` | `uuid` |  |
 | `type` | `question_type` |  |
 | `order_index` | `int4` |  |
 | `text` | `text` |  |
 | `points` | `numeric` |  |
-| `id` | `uuid` | Primary |
 | `created_at` | `timestamptz` |  |
 
 ## Table `quiz_options`
@@ -874,9 +936,9 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `question_id` | `uuid` |  |
 | `text` | `text` |  |
-| `id` | `uuid` | Primary |
 | `is_correct` | `bool` |  |
 
 ## Table `course_quizzes`
@@ -894,11 +956,11 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `quiz_id` | `uuid` |  |
 | `student_id` | `uuid` |  |
-| `completed_at` | `timestamptz` |  Nullable |
-| `id` | `uuid` | Primary |
 | `started_at` | `timestamptz` |  |
+| `completed_at` | `timestamptz` |  Nullable |
 | `auto_score` | `numeric` |  |
 | `teacher_score` | `numeric` |  |
 | `final_score` | `numeric` |  |
@@ -911,12 +973,12 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `attempt_id` | `uuid` |  |
 | `question_id` | `uuid` |  |
 | `selected_option_id` | `uuid` |  Nullable |
 | `open_answer_text` | `text` |  Nullable |
 | `is_correct` | `bool` |  Nullable |
-| `id` | `uuid` | Primary |
 | `score` | `numeric` |  |
 | `created_at` | `timestamptz` |  |
 
@@ -926,12 +988,12 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `attempt_id` | `uuid` |  |
 | `teacher_id` | `uuid` |  Nullable |
 | `question_id` | `uuid` |  |
-| `comment` | `text` |  Nullable |
-| `id` | `uuid` | Primary |
 | `score` | `numeric` |  |
+| `comment` | `text` |  Nullable |
 | `reviewed_at` | `timestamptz` |  |
 
 ## Table `lessons`
@@ -940,6 +1002,7 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `module_id` | `uuid` |  |
 | `title` | `text` |  |
 | `duration` | `int4` |  |
@@ -947,7 +1010,6 @@ GCPROF-AI-ACADEMY
 | `youtube_url` | `text` |  Nullable |
 | `google_drive_url` | `text` |  Nullable |
 | `quiz_id` | `uuid` |  Nullable |
-| `id` | `uuid` | Primary |
 | `sort_order` | `int4` |  |
 | `created_at` | `timestamptz` |  |
 
@@ -957,11 +1019,11 @@ GCPROF-AI-ACADEMY
 
 | Name | Type | Constraints |
 |------|------|-------------|
+| `id` | `uuid` | Primary |
 | `quiz_id` | `uuid` |  |
 | `course_id` | `uuid` |  |
-| `due_at` | `timestamptz` |  Nullable |
-| `id` | `uuid` | Primary |
 | `assigned_at` | `timestamptz` |  |
+| `due_at` | `timestamptz` |  Nullable |
 | `is_visible` | `bool` |  |
 
 ## Table `resources`
@@ -974,14 +1036,182 @@ GCPROF-AI-ACADEMY
 | `title` | `text` |  |
 | `description` | `text` |  |
 | `url` | `text` |  |
+| `provider` | `text` |  Nullable |
 | `type` | `text` |  |
 | `typeVariant` | `text` |  |
-| `provider` | `text` |  Nullable |
+| `rating` | `int2` |  Nullable |
 | `tags` | `_text` |  |
 | `language` | `text` |  |
 | `is_visible` | `bool` |  |
 | `created_at` | `timestamptz` |  |
-| `rating` | `int2` |  Nullable |
+
+## Table `shopping_carts`
+
+Carrello persistente dello studente
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `profile_id` | `uuid` |  Unique |
+| `status` | `cart_status_enum` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+
+## Table `shopping_cart_items`
+
+Snapshot dei corsi presenti nel carrello
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `cart_id` | `uuid` |  |
+| `course_id` | `uuid` |  |
+| `unit_price` | `numeric` |  |
+| `quantity` | `int4` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+
+## Table `coupons`
+
+Coupon promozionali
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `code` | `varchar` |  Unique |
+| `description` | `text` |  Nullable |
+| `discount_type` | `discount_type_enum` |  |
+| `discount_value` | `numeric` |  |
+| `valid_from` | `timestamptz` |  |
+| `valid_to` | `timestamptz` |  Nullable |
+| `max_redemptions` | `int4` |  Nullable |
+| `current_redemptions` | `int4` |  |
+| `is_active` | `bool` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+
+## Table `payment_settings`
+
+Configurazione funzionale della feature Payments
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `provider` | `payment_provider_enum` |  |
+| `sandbox_enabled` | `bool` |  |
+| `default_currency` | `currency_enum` |  |
+| `vat_percentage` | `numeric` |  |
+| `allow_coupons` | `bool` |  |
+| `academy_country` | `varchar` |  |
+| `checkout_session_expire_minutes` | `int4` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+
+## Table `orders`
+
+Ordini generati dal checkout
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `order_number` | `varchar` |  Unique |
+| `profile_id` | `uuid` |  |
+| `status` | `order_status_enum` |  |
+| `subtotal` | `numeric` |  |
+| `discount` | `numeric` |  |
+| `tax` | `numeric` |  |
+| `total` | `numeric` |  |
+| `currency` | `currency_enum` |  |
+| `payment_provider` | `payment_provider_enum` |  |
+| `payment_provider_order_id` | `text` |  Nullable |
+| `coupon_id` | `uuid` |  Nullable |
+| `metadata` | `jsonb` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+
+## Table `order_items`
+
+Snapshot dei corsi acquistati
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `order_id` | `uuid` |  |
+| `course_id` | `uuid` |  |
+| `course_title_snapshot` | `text` |  |
+| `unit_price` | `numeric` |  |
+| `quantity` | `int4` |  |
+| `line_total` | `numeric` |  |
+| `metadata` | `jsonb` |  |
+| `created_at` | `timestamptz` |  |
+
+## Table `coupon_redemptions`
+
+Storico utilizzo coupon
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `coupon_id` | `uuid` |  |
+| `profile_id` | `uuid` |  |
+| `order_id` | `uuid` |  |
+| `redeemed_at` | `timestamptz` |  |
+
+## Table `payments`
+
+Transazioni economiche
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `order_id` | `uuid` |  |
+| `provider` | `payment_provider_enum` |  |
+| `provider_payment_id` | `text` |  Nullable Unique |
+| `provider_checkout_session_id` | `text` |  Nullable Unique |
+| `provider_event_id` | `text` |  Nullable |
+| `status` | `payment_status_enum` |  |
+| `amount` | `numeric` |  |
+| `currency` | `currency_enum` |  |
+| `transaction_reference` | `text` |  Nullable |
+| `failure_reason` | `text` |  Nullable |
+| `paid_at` | `timestamptz` |  Nullable |
+| `raw_response` | `jsonb` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+
+## Table `payment_logs`
+
+Audit trail dei webhook ricevuti
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `provider` | `payment_provider_enum` |  |
+| `provider_event_id` | `text` |  Nullable Unique |
+| `event` | `varchar` |  |
+| `payload` | `jsonb` |  |
+| `processed` | `bool` |  |
+| `processed_at` | `timestamptz` |  Nullable |
+| `error` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  |
 
 ## Custom Types / Enums
 
@@ -996,6 +1226,30 @@ GCPROF-AI-ACADEMY
 ### `attempt_status`
 
 `submitted` | `graded`
+
+### `order_status_enum`
+
+`PENDING` | `CHECKOUT_CREATED` | `PAYMENT_PROCESSING` | `PAID` | `FULFILLED` | `FAILED` | `EXPIRED` | `CANCELLED` | `REFUNDED`
+
+### `payment_status_enum`
+
+`CREATED` | `AUTHORIZED` | `CAPTURED` | `FAILED` | `REFUNDED`
+
+### `discount_type_enum`
+
+`PERCENTAGE` | `FIXED`
+
+### `payment_provider_enum`
+
+`STRIPE` | `PAYPAL` | `MOLLIE`
+
+### `currency_enum`
+
+`EUR` | `USD` | `GBP`
+
+### `cart_status_enum`
+
+`ACTIVE` | `CHECKOUT` | `ABANDONED` | `EXPIRED`
 
 ## RLS Policies
 
@@ -1059,6 +1313,67 @@ GCPROF-AI-ACADEMY
 | `Public profiles are viewable by everyone.` | SELECT | public | PERMISSIVE | `(is_visible = true)` | — |
 | `Admins can do everything` | ALL | public | PERMISSIVE | `((auth.jwt() ->> 'role'::text) = 'admin'::text)` | — |
 
+### `shopping_carts`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `student_cart` | ALL | authenticated | PERMISSIVE | `(profile_id = auth.uid())` | `(profile_id = auth.uid())` |
+| `payments_admin_shopping_carts` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
+
+### `shopping_cart_items`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `student_cart_items` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM shopping_carts c   WHERE ((c.id = shopping_cart_items.cart_id) AND (c.profile_id = auth.uid()))))` | — |
+| `payments_admin_cart_items` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
+
+### `orders`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `student_orders` | SELECT | authenticated | PERMISSIVE | `(profile_id = auth.uid())` | — |
+| `payments_admin_orders` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
+
+### `order_items`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `student_order_items` | SELECT | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM orders o   WHERE ((o.id = order_items.order_id) AND (o.profile_id = auth.uid()))))` | — |
+| `payments_admin_order_items` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
+
+### `coupon_redemptions`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `student_coupon_redemptions` | SELECT | authenticated | PERMISSIVE | `(profile_id = auth.uid())` | — |
+| `payments_admin_coupon_redemptions` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
+
+### `payments`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `student_payments` | SELECT | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM orders o   WHERE ((o.id = payments.order_id) AND (o.profile_id = auth.uid()))))` | — |
+| `payments_admin_payments` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
+
+### `payment_logs`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `payments_admin_logs` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
+
+### `coupons`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `payments_admin_coupons` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
+
+### `payment_settings`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `payments_admin_settings` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
+
+
 
 
 ### PROMPT 
@@ -1069,20 +1384,10 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-sono un insegnante di informatica che deve gestire molte classi (anche fino a 8 classi) delle superiori
-di vari indirizzi e sezioni. attualmente per semplificare il processo ho deciso di dare la possibilità
-all'utente di tipo SCHOOL_STUDENT di scegliere, in fase di registrazione la sua appartenenza alle classi
-nel modo seguente (CLASSI_PRIME, CLASSI_SECONDE,... CLASSI_QUINTE). i corsi saranno assegnati a queste 5 tipologie
-di classi. in previsione dell'inizio dell'anno scolastico devo prepararmi a mantenere , in fase di registrazione
-anche le seguenti informazioni dello studente: indirizzo (RIM, LSA, INF, MMC, CHI ...) e sezione (A,B,C,D,E).
-Queste informazioni dovranno essere gestite nella sezione CORSI della dashboard admin riguardo l'anagrafica (CRUD)
-inoltre queste informazioni saranno utilizzate a fini statistici nella sezione STATS. consigliami come
-strutturare la modifica in modo che sia meno impattante possibile con lo stato STABILE del codice attuale 
-evitando di regredire
-
+sono loggato con utente esterno abilitato già da admin. vado nella sezione corsi vedo correttamente solo i corsi che hanno un modulo di preview. quando faccio click su un qualsiasi corso non vedo il modulo di preview ma vedo il blocco : Accesso Riservato Non risulti attualmente iscritto a questo corso. Aggiungilo al carrello per completare l'iscrizione. se provo a premere sul pulsante di pagamento a €0 ottengo : Il corso selezionato è gratuito. Non è necessario aggiungerlo al carrello.
 
 SITUAZIONE ATTUALE :
-1. feature in fase di svilippo (app stabile) 
+0. feature in fase di svilippo (app stabile) 
 
 VINCOLI: 
 1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
@@ -1096,19 +1401,4 @@ VINCOLI:
 9. adotta sempre il metodo di spezzare i file (part1, part2...) quando sono troppo grandi per riscriverli per intero non darmi le modifiche puntuali che mi fanno perdere più tempo
 
 
-SITUAZIONE ATTUALE :
-1. faccio login come admin
-2. vado nella sezione QUIZ della admin/dashboard
-3. uso il tasto importa da markdown e seleziono un template di quiz valido
-4. il sistema processa correttamente e mostra Quiz importato e salvato nel database con successo!
-5. il nuovo quiz viene mostrato nella lista sottostante co il seguenti campi di intestazione : titolo del quiz, soglia minima, Azioni
-6. faccio click sul tasto "Analizza risultati" del quiz appena creato
-7. atterro su una pagina "Admin Analytics" in questa sezione ho due pulsanti "Assegna al corso", "Correggi Quiz" 
-oltre che una lista che rappresenta il registro dei test
-8. faccio click sul pulsante "Assegna al corso"
-9. uso il popup per assegnare il quiz ad un corso ottengo : 🎉 Quiz assegnato con successo! 
-sul db viene popolata la tabella quiz_assignments
-10. vado nella sezione corsi seleziono il corso al quale ho assegnato il quiz e vedo il quiz come link
-11. faccio click sul link del quiz eseguo il quiz compilando tutte le risposte
-12. faccio click sul tasto "Analizza risultati" atterro su una pagina "Admin Analytics" in questa sezione ho due pulsanti "Assegna al corso" "Correggi Quiz"
-13. faccio click su "Correggi Quiz" ed eseguo la correzione del quiz nella sezione Registro Correzioni Quiz
+

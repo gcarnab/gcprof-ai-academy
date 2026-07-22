@@ -4,12 +4,6 @@ import { revalidatePath } from "next/cache";
 import type { Course, Module, Lesson } from "../types/course";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "super-secret-key-change-me-in-production",
-);
 
 const supabaseAdmin = getSupabaseAdmin();
 
@@ -27,10 +21,11 @@ function generateSlug(text: string): string {
 /* ============================================================================
  * 🛰️ LETTURA CORSI
  * ========================================================================== */
-export async function getLiveCourses( role?: "admin" | "student"): Promise<Course[]> {
+export async function getLiveCourses(
+  role?: "admin" | "student",
+): Promise<Course[]> {
   try {
-
-    // 1. 🟢 QUERY ORIGINALE (FUNZIONANTE): Recupera i corsi senza inquinare la select
+    // 1. 🟢 QUERY: Recupera i corsi con is_preview sui moduli (non presente su course_lessons)
     const { data: coursesData, error: coursesError } = await supabaseAdmin.from(
       "courses",
     ).select(`
@@ -51,6 +46,7 @@ export async function getLiveCourses( role?: "admin" | "student"): Promise<Cours
           id, 
           title, 
           order_index,
+          is_preview,
           course_lessons (
             id,
             title,
@@ -144,6 +140,10 @@ export async function getLiveCourses( role?: "admin" | "student"): Promise<Cours
         (a: any, b: any) => a.order_index - b.order_index,
       );
 
+      logger.debug(
+        `[COURSES] ${dbCourse.title}: ${sortedModules.filter((m: any) => m.is_preview).length} preview module(s) su ${sortedModules.length}`,
+      );
+
       // Mappiamo i nomi delle classi abilitate a questo specifico corso
       const allowedClassesNames = (dbCourse.course_classes || [])
         .map((cc: any) => cc.academy_classes?.name)
@@ -151,6 +151,8 @@ export async function getLiveCourses( role?: "admin" | "student"): Promise<Cours
 
       // Recuperiamo i quiz associati a questo ID corso (se presenti)
       const associatedQuizzes = quizzesByCourse[dbCourse.id] || [];
+
+      logger.debug(`[COURSES] Mapping corso "${dbCourse.title}" completato`);
 
       return {
         id: dbCourse.id,
@@ -169,13 +171,11 @@ export async function getLiveCourses( role?: "admin" | "student"): Promise<Cours
         published: dbCourse.published ?? true,
         allowedClasses: allowedClassesNames,
 
-        // FIX: Forniamo entrambe le nomenclature per evitare bug sul frontend `page.tsx`
         quiz_assignments: associatedQuizzes.map((qa: any) => ({
           id: qa.id,
           quiz_id: qa.quiz_id,
           quiz_title: qa.quiz_title,
           due_at: qa.due_at,
-          // Fallback di sicurezza nel caso il frontend cerchi un oggetto annidato
           quiz: {
             id: qa.quiz_id,
             title: qa.quiz_title,
@@ -193,14 +193,21 @@ export async function getLiveCourses( role?: "admin" | "student"): Promise<Cours
             (a: any, b: any) => a.order_index - b.order_index,
           );
 
+          const moduleIsPreview = Boolean(mod.is_preview);
+
           return {
             id: mod.id,
             title: mod.title,
+            isPreview: moduleIsPreview,
+            is_preview: moduleIsPreview,
             lessons: sortedLessons.map((les: any) => ({
               id: les.id,
               title: les.title,
               duration: les.duration || 15,
               contentType: les.content_type,
+              // Propaghiamo l'anteprima dal modulo padre sia in cammello che con underscore
+              isPreview: moduleIsPreview,
+              is_preview: moduleIsPreview,
               youtubeUrl:
                 les.content_type === "video"
                   ? les.external_url || les.video_url
@@ -237,8 +244,6 @@ export async function upsertCourse(course: Partial<Course>) {
     estimated_hours: course.estimatedHours,
     cover_image: course.coverImage,
     published: course.published,
-    // 🛡️ Nota: Non inviamo allowed_classes direttamente sulla tabella courses
-    // poiché la gestione ora avviene tramite la pivot autonoma course_classes.
   };
 
   if (course.id) {
@@ -253,16 +258,13 @@ export async function upsertCourse(course: Partial<Course>) {
 
   if (error) throw new Error(`Errore salvataggio corso: ${error.message}`);
 
-  // Se vengono passate delle classi specifiche nell'azione, aggiorna la tabella pivot
   if (course.allowedClasses && data?.id) {
-    // 1. Svuota le vecchie relazioni per il corso
     await supabaseAdmin
       .from("course_classes")
       .delete()
       .eq("course_id", data.id);
 
     if (course.allowedClasses.length > 0) {
-      // 2. Prendi gli ID reali delle classi dai nomi passati
       const { data: targetClasses } = await supabaseAdmin
         .from("academy_classes")
         .select("id")
@@ -282,7 +284,6 @@ export async function upsertCourse(course: Partial<Course>) {
   return data;
 }
 
-// 🎯 Fissato l'argomento accettando string | number per evitare l'errore di build in page.tsx
 export async function deleteCourse(courseId: string | number) {
   const { error } = await supabaseAdmin
     .from("courses")
@@ -304,13 +305,17 @@ export async function deleteCourse(courseId: string | number) {
 
 export async function upsertModule(
   courseId: string | number,
-  mod: { id?: string | number; title: string; orderIndex: number },
+  mod: { id?: string | number; title: string; orderIndex: number; isPreview?: boolean },
 ) {
   const payload: Record<string, any> = {
     course_id: courseId,
     title: mod.title,
     order_index: mod.orderIndex,
   };
+
+  if (mod.isPreview !== undefined) {
+    payload.is_preview = mod.isPreview;
+  }
 
   if (mod.id) {
     payload.id = mod.id;
@@ -341,16 +346,16 @@ export async function deleteModule(moduleId: string | number) {
 interface UpsertLessonInput {
   id?: string | number;
   title: string;
-  contentType: "video" | "document" | "colab" | "markdown" | "sandbox"; // 🎯 Aggiornato con tutti i tipi
+  contentType: "video" | "document" | "colab" | "markdown" | "sandbox";
   externalUrl: string;
-  content?: string; // 📝 Aggiunto per gestire il testo Markdown
+  content?: string;
   orderIndex: number;
   duration?: number;
 }
 
 export async function upsertLesson(
   moduleId: string | number,
-  lesson: UpsertLessonInput, // 🎯 Utilizza l'interfaccia aggiornata per eliminare l'errore di build
+  lesson: UpsertLessonInput,
 ) {
   const payload: Record<string, any> = {
     module_id: moduleId,
@@ -358,7 +363,7 @@ export async function upsertLesson(
     slug: generateSlug(lesson.title),
     content_type: lesson.contentType,
     external_url: lesson.externalUrl,
-    content: lesson.content || "", // 🎯 FONDAMENTALE: Salva il testo Markdown/Dati aggiuntivi sul DB
+    content: lesson.content || "",
     order_index: lesson.orderIndex,
     duration: lesson.duration || 15,
   };
@@ -460,7 +465,7 @@ export async function upsertSchoolClass(
 ) {
   const payload: Record<string, any> = {
     name: name.trim(),
-    slug: generateSlug(name), // 🎯 RISOLTO: Ora valorizza sempre lo slug obbligatorio
+    slug: generateSlug(name),
     description: description?.trim() || "",
   };
 
@@ -548,8 +553,6 @@ export async function getCourseClasses() {
   const { data, error } = await supabaseAdmin
     .from("course_classes")
     .select("course_id, class_id");
-
-  //logger.debug("=== COURSE_CLASSES ADMIN ===", data);
 
   if (error) {
     logger.error("Errore getCourseClasses:", error);

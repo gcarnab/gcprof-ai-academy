@@ -680,6 +680,8 @@ export type Database = {
           last_name: string | null
           password_hash: string | null
           role: string
+          school_section: string | null
+          school_track: string | null
           status: string
           total_minutes_active: number
           updated_at: string
@@ -695,6 +697,8 @@ export type Database = {
           last_name?: string | null
           password_hash?: string | null
           role?: string
+          school_section?: string | null
+          school_track?: string | null
           status?: string
           total_minutes_active?: number
           updated_at?: string
@@ -710,6 +714,8 @@ export type Database = {
           last_name?: string | null
           password_hash?: string | null
           role?: string
+          school_section?: string | null
+          school_track?: string | null
           status?: string
           total_minutes_active?: number
           updated_at?: string
@@ -1029,6 +1035,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      resources: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          is_visible: boolean
+          language: string
+          provider: string | null
+          rating: number | null
+          tags: string[]
+          title: string
+          type: string
+          typeVariant: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          is_visible?: boolean
+          language?: string
+          provider?: string | null
+          rating?: number | null
+          tags?: string[]
+          title: string
+          type: string
+          typeVariant?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_visible?: boolean
+          language?: string
+          provider?: string | null
+          rating?: number | null
+          tags?: string[]
+          title?: string
+          type?: string
+          typeVariant?: string
+          url?: string
+        }
+        Relationships: []
       }
       user_page_views: {
         Row: {
