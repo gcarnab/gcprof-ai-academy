@@ -4,51 +4,55 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { createClient } from "@supabase/supabase-js";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "super-secret-key-change-me-in-production"
-);
+import { CheckoutService } from "@/features/payments/services/CheckoutService";
+import { StripeGatewayAdapter } from "@/features/payments/adapters/stripe/StripeGatewayAdapter";
+import { logger } from "@/lib/logger";
+
+const jwtSecretValue = process.env.JWT_SECRET;
+const JWT_SECRET = new TextEncoder().encode(jwtSecretValue || "");
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  supabaseUrl || "",
+  supabaseServiceKey || "",
+  { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
 /**
- * Verifica se uno studente esterno ha un accesso attivo per un determinato corso.
+ * 1. Verifica se un utente ha accesso attivo al corso nel DB.
  */
 export async function checkExternalCourseAccessAction(
   courseId: string,
   userId: string
 ): Promise<boolean> {
-  if (!courseId || !userId) return false;
-
   try {
     const { data, error } = await supabaseAdmin
       .from("profile_courses")
-      .select("status")
+      .select("id, status")
       .eq("profile_id", userId)
       .eq("course_id", courseId)
       .eq("status", "ACTIVE")
       .maybeSingle();
 
-    if (error) {
-      console.error("Errore durante il controllo dell'accesso esterno:", error);
+    if (error || !data) {
       return false;
     }
 
-    return !!data;
+    return true;
   } catch (err) {
-    console.error("Errore imprevisto nel controllo accesso esterno:", err);
+    logger.error("[checkExternalCourseAccessAction] Errore verifica accesso", { error: err });
     return false;
   }
 }
 
 /**
- * Iscrive gratuitamente l'utente autenticato ad un corso a costo zero (0€).
+ * 2. Iscrizione a corso gratuito tramite Checkout Service (ordine 0€ e svuotamento carrello).
  */
 export async function enrollFreeCourseAction(
   courseId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; redirectUrl?: string; error?: string }> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token")?.value;
@@ -58,49 +62,61 @@ export async function enrollFreeCourseAction(
     }
 
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    const userId = payload.id as string;
+    const userId = (payload.sub || payload.id || payload.userId) as string;
+    const userEmail = (payload.email as string) || "student@academy.com";
 
-    if (!userId) {
-      return { success: false, error: "Utente non identificato." };
-    }
-
-    // Verifica che il corso sia effettivamente gratuito
-    const { data: course, error: courseError } = await supabaseAdmin
+    // 1. Verifica che il corso esista e sia a €0
+    const { data: course } = await supabaseAdmin
       .from("courses")
-      .select("price")
+      .select("id, price")
       .eq("id", courseId)
       .maybeSingle();
 
-    if (courseError || !course) {
-      return { success: false, error: "Corso non trovato." };
+    if (!course || Number(course.price || 0) > 0) {
+      return { success: false, error: "Corso non valido per l'iscrizione gratuita." };
     }
 
-    const price = Number(course.price || 0);
-    if (price > 0) {
-      return { success: false, error: "Questo corso richiede un acquisto." };
+    // 2. Prepara il carrello attivo dell'utente
+    let { data: cart } = await supabaseAdmin
+      .from("shopping_carts")
+      .select("id")
+      .eq("profile_id", userId)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    if (!cart) {
+      const { data: newCart } = await supabaseAdmin
+        .from("shopping_carts")
+        .insert({ profile_id: userId, status: "ACTIVE" })
+        .select("id")
+        .single();
+      cart = newCart;
     }
 
-    // Registra l'iscrizione attiva in profile_courses
-    const { error: enrollError } = await supabaseAdmin
-      .from("profile_courses")
-      .upsert(
-        {
-          profile_id: userId,
-          course_id: courseId,
-          status: "active",
-          created_at: new Date().toISOString(),
-        },
-        { onConflict: "profile_id,course_id" }
-      );
-
-    if (enrollError) {
-      console.error("[ENROLL FREE COURSE ERROR]:", enrollError.message);
-      return { success: false, error: "Impossibile completare l'iscrizione." };
+    // Svuota items residui e imposta il corso corrente
+    if (cart) {
+      await supabaseAdmin.from("shopping_cart_items").delete().eq("cart_id", cart.id);
+      await supabaseAdmin.from("shopping_cart_items").insert({
+        cart_id: cart.id,
+        course_id: courseId,
+        quantity: 1,
+        unit_price: 0.00,
+      });
     }
 
-    return { success: true };
+    // 3. Esegue il checkout (Crea Ordine FULFILLED + Paga 0€ + Sblocca Corso + SVUOTA CARRELLO)
+    const stripeGateway = new StripeGatewayAdapter();
+    const checkoutService = new CheckoutService(supabaseAdmin, stripeGateway);
+
+    const checkoutResult = await checkoutService.createCheckoutSession(userId, userEmail);
+
+    return {
+      success: true,
+      redirectUrl: checkoutResult.checkout_url,
+    };
   } catch (err) {
-    console.error("[ENROLL FREE COURSE EXCEPTION]:", err);
-    return { success: false, error: "Errore durante l'iscrizione gratuita." };
+    const errorMessage = err instanceof Error ? err.message : "Errore durante l'iscrizione.";
+    logger.error("[enrollFreeCourseAction] Errore", { error: err });
+    return { success: false, error: errorMessage };
   }
 }

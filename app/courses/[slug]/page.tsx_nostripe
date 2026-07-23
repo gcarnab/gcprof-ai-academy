@@ -12,11 +12,8 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import type { Course, Module, Lesson } from "@/features/courses/types/course";
 import { hasCourseAccess } from "@/features/courses/services/courseService";
 import { getLiveCourses } from "@/features/courses/services/courseActions";
-
-import { 
-  checkExternalCourseAccessAction, 
-  enrollFreeCourseAction 
-} from "@/features/courses/services/checkExternalCourseAccessAction";
+import { checkExternalCourseAccessAction } from "@/features/courses/services/checkExternalCourseAccessAction";
+import { enrollInFreeCourseAction } from "@/features/payments/actions/paymentActions";
 
 import { AccessNoticeBanner } from "@/features/courses/components/AccessNoticeBanner";
 import { LessonRow } from "@/features/courses/components/LessonRow";
@@ -26,7 +23,6 @@ export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
-
   const slug = params?.slug as string;
 
   const [course, setCourse] = useState<Course | null>(null);
@@ -76,11 +72,8 @@ export default function CourseDetailPage() {
     setEnrollError(null);
 
     try {
-      const result = await enrollFreeCourseAction(String(course.id));
-      
-      if (result.success && result.redirectUrl) {
-        router.push(result.redirectUrl);
-      } else if (result.success) {
+      const result = await enrollInFreeCourseAction(String(course.id));
+      if (result.success) {
         setHasAccess(true);
         router.refresh();
       } else {
@@ -88,7 +81,7 @@ export default function CourseDetailPage() {
       }
     } catch (err) {
       console.error("Errore iscrizione gratuita:", err);
-      setEnrollError("Si è verificato un errore inaspettato durante la generazione dell'ordine.");
+      setEnrollError("Si è verificato un errore inaspettato.");
     } finally {
       setIsEnrolling(false);
     }
@@ -112,10 +105,7 @@ export default function CourseDetailPage() {
 
   const isPendingUser = user && user.status === "pending" && user.role !== "admin";
   const courseQuizzes = (course as any).quiz_assignments || [];
-  
-  // ✅ Lettura robusta del prezzo e dello stato a pagamento
-  const rawPrice = (course as any)?.price ?? (course as any)?.price_amount ?? (course as any)?.cost;
-  const coursePrice = rawPrice !== undefined && rawPrice !== null ? parseFloat(String(rawPrice)) : 0;
+  const coursePrice = (course as any).price ?? 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/30">

@@ -1,146 +1,237 @@
 /**
  * GCPROF AI ACADEMY - SERVICE: CHECKOUT SERVICE
  * File: features/payments/services/CheckoutService.ts
- * 
- * Servizio di dominio per l'orchestrazione del checkout.
- * Trasforma il carrello in un ordine economico immutabile con snapshot dei titoli
- * e invoca il gateway di pagamento astratto (IPaymentGateway).
+ *
+ * Gestisce l'orchestrazione del checkout:
+ * - Per carrelli > 0€: reindirizza su Stripe Checkout.
+ * - Per carrelli = 0€: effettua il bypass, crea l'ordine FULFILLED,
+ *   sblocca il corso ed elimina TASSATIVAMENTE gli elementi dal carrello.
  */
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { StripeGatewayAdapter } from "../adapters/stripe/StripeGatewayAdapter";
+import { OrderItem, OrderStatusEnum, PaymentStatusEnum } from "../types/paymentTypes";
+import { PAYMENTS_CONFIG, PAYMENT_ROUTES } from "../constants/paymentConstants";
+import { logger } from "@/lib/logger";
 import { IPaymentGateway } from "../ports/IPaymentGateway";
-import { CartService } from "./CartService";
-import { CheckoutSessionResult, Order, OrderItem } from "../types/paymentTypes";
-import { PAYMENT_ROUTES } from "../constants/paymentConstants";
+
+export interface CheckoutResult {
+  order_id: string;
+  order_number: string;
+  checkout_url: string;
+  is_free: boolean;
+  session_id: string;
+}
 
 export class CheckoutService {
-  private cartService: CartService;
-
   constructor(
     private supabase: SupabaseClient,
-    private paymentGateway: IPaymentGateway
-  ) {
-    this.cartService = new CartService(supabase);
-  }
+    private stripeGateway: IPaymentGateway | StripeGatewayAdapter
+  ) {}
 
   /**
-   * Genera un ordine immutabile e crea la sessione di checkout remota sul provider.
+   * Avvia il flusso di checkout per il carrello attivo dell'utente.
    */
   public async createCheckoutSession(
     profileId: string,
     customerEmail: string
-  ): Promise<CheckoutSessionResult> {
-    // 1. Recupera il carrello attivo dell'utente
-    const cartSummary = await this.cartService.getCartSummary(profileId);
+  ): Promise<CheckoutResult> {
+    logger.info("[CheckoutService] Avvio creazione sessione di checkout", { profileId, customerEmail });
 
-    if (!cartSummary.items || cartSummary.items.length === 0) {
-      throw new Error("Impossibile avviare il checkout: il carrello è vuoto.");
+    // 1. Recupera il carrello attivo con i relativi elementi
+    const { data: cart, error: cartError } = await this.supabase
+      .from("shopping_carts")
+      .select("id, shopping_cart_items(*, courses(id, title, price))")
+      .eq("profile_id", profileId)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    if (cartError || !cart || !cart.shopping_cart_items || cart.shopping_cart_items.length === 0) {
+      logger.warn("[CheckoutService] Tentativo di checkout con carrello vuoto o non trovato", { profileId });
+      throw new Error("Il carrello è vuoto. Aggiungi un corso prima di procedere al checkout.");
     }
 
-    // 2. Crea il record primario dell'Ordine (Stato iniziale: PENDING)
-    // Nota: order_number viene generato automaticamente dal trigger PostgreSQL
-    const { data: orderData, error: orderError } = await this.supabase
+    const items = cart.shopping_cart_items;
+    
+    // Calcolo del totale
+    const subtotal = items.reduce((acc: number, item: any) => {
+      const unitPrice = Number(item.unit_price ?? item.courses?.price ?? 0);
+      return acc + unitPrice * (item.quantity || 1);
+    }, 0);
+
+    const isFreeCheckout = subtotal === 0;
+    const now = new Date().toISOString();
+    const orderNumber = `ORD-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    // 2. Creazione dell'ordine nel database
+    const initialOrderStatus: OrderStatusEnum = isFreeCheckout ? "FULFILLED" : "CHECKOUT_CREATED";
+
+    const { data: order, error: orderError } = await this.supabase
       .from("orders")
       .insert({
+        order_number: orderNumber,
         profile_id: profileId,
-        status: "PENDING",
-        subtotal: cartSummary.subtotal,
-        discount: cartSummary.discount,
-        tax: 0.00,
-        total: cartSummary.total,
-        currency: "EUR",
-        payment_provider: this.paymentGateway.getProviderName(),
+        status: initialOrderStatus,
+        subtotal: subtotal,
+        discount: 0,
+        tax: 0,
+        total: subtotal,
+        currency: PAYMENTS_CONFIG.DEFAULT_CURRENCY,
+        payment_provider: PAYMENTS_CONFIG.DEFAULT_PROVIDER,
         metadata: {
+          cart_id: cart.id,
           customer_email: customerEmail,
-          cart_id: cartSummary.cart.id,
+          is_free_checkout: isFreeCheckout,
         },
       })
-      .select()
+      .select("*")
       .single();
 
-    if (orderError || !orderData) {
-      console.error("[CheckoutService] Errore creazione ordine:", orderError);
-      throw new Error("Impossibile creare l'ordine di acquisto.");
+    if (orderError || !order) {
+      logger.error("[CheckoutService] Impossibile creare l'ordine nel database", { error: orderError?.message });
+      throw new Error("Errore durante la creazione dell'ordine.");
     }
 
-    const order = orderData as Order;
-
-    // 3. Prepara e inserisce gli Order Items (Snapshot dei corsi e dei prezzi)
-    const orderItemsToInsert = cartSummary.items.map((item) => ({
-      order_id: order.id,
-      course_id: item.course_id,
-      course_title_snapshot: item.course?.title || "Corso Academy",
-      unit_price: item.unit_price,
-      quantity: item.quantity,
-      line_total: item.unit_price * item.quantity,
-      metadata: {
-        image_url: item.course?.image_url || null,
-      },
-    }));
-
-    const { data: itemsData, error: itemsError } = await this.supabase
-      .from("order_items")
-      .insert(orderItemsToInsert)
-      .select();
-
-    if (itemsError || !itemsData) {
-      console.error("[CheckoutService] Errore inserimento order items:", itemsError);
-      // Rollback logico dello stato dell'ordine
-      await this.supabase.from("orders").update({ status: "FAILED" }).eq("id", order.id);
-      throw new Error("Impossibile associare i corsi all'ordine.");
-    }
-
-    const orderItems = itemsData as OrderItem[];
-
-    // 4. Invoca l'adattatore del Gateway di Pagamento
-    let gatewaySession;
-    try {
-      gatewaySession = await this.paymentGateway.createCheckoutSession({
-        order,
-        items: orderItems,
-        customerEmail,
-        successUrl: PAYMENT_ROUTES.SUCCESS_URL,
-        cancelUrl: PAYMENT_ROUTES.CANCEL_URL,
-      });
-    } catch (gatewayError) {
-      console.error("[CheckoutService] Errore risposta Payment Gateway:", gatewayError);
-      await this.supabase.from("orders").update({ status: "FAILED" }).eq("id", order.id);
-      throw new Error("Impossibile comunicare con il gateway di pagamento.");
-    }
-
-    // 5. Aggiorna lo stato dell'ordine a CHECKOUT_CREATED
-    await this.supabase
-      .from("orders")
-      .update({
-        status: "CHECKOUT_CREATED",
-        payment_provider_order_id: gatewaySession.providerOrderId || null,
-      })
-      .eq("id", order.id);
-
-    // 6. Registra il record di tracciamento iniziale nella tabella payments
-    const { error: paymentError } = await this.supabase
-      .from("payments")
-      .insert({
+    // 3. Inserimento degli Order Items (utilizzando 'line_total' per lo schema DB di Supabase)
+    const orderItemsPayload = items.map((item: any) => {
+      const unitPrice = Number(item.unit_price ?? item.courses?.price ?? 0);
+      const qty = item.quantity || 1;
+      return {
         order_id: order.id,
-        provider: this.paymentGateway.getProviderName(),
-        provider_checkout_session_id: gatewaySession.sessionId,
-        provider_payment_id: gatewaySession.providerOrderId || null,
-        status: "CREATED",
-        amount: order.total,
-        currency: order.currency,
-        raw_response: gatewaySession.rawResponse,
+        course_id: item.course_id,
+        course_title_snapshot: item.courses?.title || "Corso Academy",
+        unit_price: unitPrice,
+        quantity: qty,
+        line_total: unitPrice * qty, // <-- Nome colonna corretto per il DB
+      };
+    });
+
+    const { data: insertedOrderItems, error: itemsError } = await this.supabase
+      .from("order_items")
+      .insert(orderItemsPayload)
+      .select("*");
+
+    if (itemsError) {
+      logger.error("[CheckoutService] Errore durante il salvataggio dei dettagli ordine", { error: itemsError.message });
+      throw new Error("Impossibile registrare i dettagli dell'ordine.");
+    }
+
+    // Mappatura sicura su tipo OrderItem[] per soddisfare le interfacce Gateway
+    const orderItems: OrderItem[] = (insertedOrderItems && insertedOrderItems.length > 0
+      ? insertedOrderItems
+      : orderItemsPayload
+    ).map((item: any, index: number) => {
+      const calculatedTotal = Number(item.line_total ?? item.total_price ?? 0);
+      return {
+        id: item.id || `item_${order.id}_${index}`,
+        order_id: item.order_id || order.id,
+        course_id: item.course_id,
+        course_title_snapshot: item.course_title_snapshot || "Corso Academy",
+        unit_price: Number(item.unit_price ?? 0),
+        quantity: Number(item.quantity ?? 1),
+        line_total: calculatedTotal,
+        total_price: calculatedTotal,
+        metadata: item.metadata ?? {},
+        created_at: item.created_at ?? now,
+      };
+    });
+
+    // ------------------------------------------------------------------------
+    // CASE A: CHECKOUT A 0€ (BYPASS STRIPE & SVUOTAMENTO CARRELLO)
+    // ------------------------------------------------------------------------
+    if (isFreeCheckout) {
+      logger.info("[CheckoutService] Rilevato checkout a 0€. Esecuzione evasione immediata e svuotamento carrello.", {
+        orderId: order.id,
       });
 
-    if (paymentError) {
-      console.warn("[CheckoutService] Avviso: Impossibile registrare la transazione iniziale in payments:", paymentError);
-      // Non blocchiamo il redirect dell'utente poiché l'ordine e la sessione Stripe esistono già
+      // A1. Registra pagamento a 0€
+      await this.supabase.from("payments").insert({
+        order_id: order.id,
+        amount: 0.00,
+        currency: PAYMENTS_CONFIG.DEFAULT_CURRENCY,
+        status: "CAPTURED" as PaymentStatusEnum,
+        provider: PAYMENTS_CONFIG.DEFAULT_PROVIDER,
+        provider_payment_id: `free_perm_${order.id}`,
+        paid_at: now,
+      });
+
+      // A2. Iscrizione dell'utente ai corsi acquistati
+      for (const item of items) {
+        await this.supabase.from("profile_courses").upsert(
+          {
+            profile_id: profileId,
+            course_id: item.course_id,
+            status: "ACTIVE",
+            enrolled_at: now,
+            updated_at: now,
+          },
+          { onConflict: "profile_id,course_id" }
+        );
+      }
+
+      // A3. SVUOTAMENTO TASSATIVO DEL CARRELLO
+      await this.clearCart(cart.id, profileId);
+
+      const freeSessionId = `free_session_${order.id}`;
+      const redirectUrl = `${PAYMENT_ROUTES.SUCCESS_URL.replace("{CHECKOUT_SESSION_ID}", freeSessionId)}&order_id=${order.id}&is_free=true`;
+
+      return {
+        order_id: order.id,
+        order_number: orderNumber,
+        checkout_url: redirectUrl,
+        is_free: true,
+        session_id: freeSessionId,
+      };
     }
+
+    // ------------------------------------------------------------------------
+    // CASE B: CHECKOUT A PAGAMENTO (> 0€)
+    // ------------------------------------------------------------------------
+    const stripeSession = await this.stripeGateway.createCheckoutSession({
+      order: order,
+      items: orderItems,
+      customerEmail: customerEmail,
+      successUrl: PAYMENT_ROUTES.SUCCESS_URL,
+      cancelUrl: PAYMENT_ROUTES.CANCEL_URL,
+    });
 
     return {
       order_id: order.id,
-      order_number: order.order_number,
-      checkout_url: gatewaySession.checkoutUrl,
-      session_id: gatewaySession.sessionId,
+      order_number: orderNumber,
+      checkout_url: stripeSession.checkoutUrl,
+      is_free: false,
+      session_id: stripeSession.sessionId,
     };
+  }
+
+  /**
+   * Elimina definitivamente tutti gli elementi dal carrello dell'utente.
+   */
+  private async clearCart(cartId: string, profileId: string): Promise<void> {
+    try {
+      // Elimina tutti gli items associati al cartId
+      await this.supabase
+        .from("shopping_cart_items")
+        .delete()
+        .eq("cart_id", cartId);
+
+      // Sicurezza aggiuntiva: pulisce qualsiasi elemento associato a carrelli ACTIVE dell'utente
+      const { data: activeCarts } = await this.supabase
+        .from("shopping_carts")
+        .select("id")
+        .eq("profile_id", profileId);
+
+      if (activeCarts && activeCarts.length > 0) {
+        const ids = activeCarts.map((c) => c.id);
+        await this.supabase
+          .from("shopping_cart_items")
+          .delete()
+          .in("cart_id", ids);
+      }
+
+      logger.info("[CheckoutService] Carrello svuotato con successo", { cartId, profileId });
+    } catch (err) {
+      logger.error("[CheckoutService] Errore durante lo svuotamento del carrello", { cartId, profileId, err });
+    }
   }
 }

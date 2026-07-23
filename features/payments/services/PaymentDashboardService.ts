@@ -19,17 +19,22 @@ export class PaymentDashboardService {
    * Restituisce il DTO completo aggregando KPI, grafico e ultimi ordini.
    */
   async getOverview(): Promise<PaymentDashboardDTO> {
-    const [overviewData, revenueChart, latestOrders] = await Promise.all([
-      this.repository.getOverview(),
-      this.repository.getRevenueChart(),
-      this.repository.getLatestOrders(10),
-    ]);
+    try {
+      const [overviewData, revenueChart, latestOrders] = await Promise.all([
+        this.repository.getOverview(),
+        this.repository.getRevenueChart(),
+        this.repository.getLatestOrders(10),
+      ]);
 
-    return {
-      ...overviewData,
-      revenueChart,
-      latestOrders,
-    };
+      return {
+        ...overviewData,
+        revenueChart,
+        latestOrders,
+      };
+    } catch (error) {
+      console.error("❌ [PaymentDashboardService Error - getOverview]:", error);
+      throw error;
+    }
   }
 
   /**

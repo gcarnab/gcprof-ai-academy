@@ -25,7 +25,7 @@ export async function getLiveCourses(
   role?: "admin" | "student",
 ): Promise<Course[]> {
   try {
-    // 1. 🟢 QUERY: Recupera i corsi con is_preview sui moduli (non presente su course_lessons)
+    // 1. 🟢 QUERY: Recupera i corsi includendo price e is_paid
     const { data: coursesData, error: coursesError } = await supabaseAdmin.from(
       "courses",
     ).select(`
@@ -39,6 +39,8 @@ export async function getLiveCourses(
         estimated_hours, 
         cover_image, 
         published,
+        price,
+        is_paid,
         course_classes (
           academy_classes ( name )
         ),
@@ -154,6 +156,13 @@ export async function getLiveCourses(
 
       logger.debug(`[COURSES] Mapping corso "${dbCourse.title}" completato`);
 
+      // ✅ Estrazione e parsing sicuro del prezzo
+      const numPrice = dbCourse.price !== undefined && dbCourse.price !== null
+        ? parseFloat(String(dbCourse.price))
+        : 0;
+
+      const isPaidCourse = dbCourse.is_paid ?? (numPrice > 0);
+
       return {
         id: dbCourse.id,
         title: dbCourse.title,
@@ -170,6 +179,11 @@ export async function getLiveCourses(
           dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_01.png",
         published: dbCourse.published ?? true,
         allowedClasses: allowedClassesNames,
+
+        // ✅ Inseriamo i campi prezzo e is_paid nel mapping ritornato
+        price: numPrice,
+        is_paid: isPaidCourse,
+        isPaid: isPaidCourse,
 
         quiz_assignments: associatedQuizzes.map((qa: any) => ({
           id: qa.id,
@@ -232,7 +246,7 @@ export async function getLiveCourses(
  * 🟢 CRUD: CORSI (COURSES)
  * ========================================================================== */
 
-export async function upsertCourse(course: Partial<Course>) {
+export async function upsertCourse(course: Partial<Course> & Record<string, any>) {
   const payload: Record<string, any> = {
     title: course.title,
     slug:
@@ -245,6 +259,16 @@ export async function upsertCourse(course: Partial<Course>) {
     cover_image: course.coverImage,
     published: course.published,
   };
+
+  // ✅ Gestione salvataggio prezzo e flag a pagamento
+  if (course.price !== undefined) {
+    payload.price = course.price;
+  }
+  if (course.is_paid !== undefined) {
+    payload.is_paid = course.is_paid;
+  } else if (course.price !== undefined) {
+    payload.is_paid = Number(course.price) > 0;
+  }
 
   if (course.id) {
     payload.id = course.id;

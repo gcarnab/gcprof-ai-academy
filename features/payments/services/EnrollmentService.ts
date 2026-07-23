@@ -9,6 +9,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { OrderItem } from "../types/paymentTypes";
+import { logger } from "@/lib/logger";
 
 export class EnrollmentService {
   constructor(private supabase: SupabaseClient) {}
@@ -22,6 +23,7 @@ export class EnrollmentService {
     courseIds: string[],
   ): Promise<void> {
     if (!courseIds || courseIds.length === 0) {
+      logger.info("[EnrollmentService.enrollUserInCourses] Nessun corso fornito per l'iscrizione.");
       return;
     }
 
@@ -38,14 +40,20 @@ export class EnrollmentService {
       .upsert(enrollments, { onConflict: "profile_id,course_id" });
 
     if (error) {
-      console.error(
-        "[EnrollmentService.enrollUserInCourses] Errore durante l'iscrizione ai corsi:",
-        error,
-      );
+      logger.error("[EnrollmentService.enrollUserInCourses] Errore durante l'iscrizione ai corsi", {
+        profileId,
+        courseIds,
+        error: error.message,
+      });
       throw new Error(
-        `Impossibile completare l'iscrizione ai corsi per l'utente ${profileId}.`,
+        `Impossibile completare l'iscrizione ai corsi per l'utente ${profileId}.`
       );
     }
+
+    logger.info("[EnrollmentService.enrollUserInCourses] Iscrizione completata con successo", {
+      profileId,
+      coursesCount: courseIds.length,
+    });
   }
 
   /**
@@ -53,6 +61,8 @@ export class EnrollmentService {
    * e aggiorna lo stato dell'ordine a FULFILLED.
    */
   public async fulfillOrder(orderId: string): Promise<void> {
+    logger.info("[EnrollmentService.fulfillOrder] Avvio evasione ordine", { orderId });
+
     // 1. Recupera l'ordine
     const { data: order, error: orderError } = await this.supabase
       .from("orders")
@@ -61,18 +71,13 @@ export class EnrollmentService {
       .single();
 
     if (orderError || !order) {
-      console.error(
-        "[EnrollmentService.fulfillOrder] Ordine non trovato:",
-        orderError,
-      );
+      logger.error("[EnrollmentService.fulfillOrder] Ordine non trovato", { orderId, error: orderError?.message });
       throw new Error(`Ordine ${orderId} non trovato.`);
     }
 
     // Se l'ordine è già stato evaso, usciamo in sicurezza per idempotenza
     if (order.status === "FULFILLED") {
-      console.log(
-        `[EnrollmentService.fulfillOrder] Ordine ${orderId} già evaso.`,
-      );
+      logger.info("[EnrollmentService.fulfillOrder] Ordine già evaso in precedenza.", { orderId });
       return;
     }
 
@@ -83,15 +88,12 @@ export class EnrollmentService {
       .eq("order_id", orderId);
 
     if (itemsError || !items || items.length === 0) {
-      console.error(
-        "[EnrollmentService.fulfillOrder] Errore recupero elementi ordine:",
-        itemsError,
-      );
+      logger.error("[EnrollmentService.fulfillOrder] Errore recupero elementi ordine", { orderId, error: itemsError?.message });
       throw new Error(`Nessun corso trovato per l'ordine ${orderId}.`);
     }
 
     const courseIds = (items as Pick<OrderItem, "course_id">[]).map(
-      (item) => item.course_id,
+      (item) => item.course_id
     );
 
     // 3. Iscrive l'utente a tutti i corsi presenti nell'ordine
@@ -107,17 +109,19 @@ export class EnrollmentService {
       .eq("id", orderId);
 
     if (updateError) {
-      console.error(
-        "[EnrollmentService.fulfillOrder] Errore aggiornamento stato ordine:",
-        updateError,
-      );
+      logger.error("[EnrollmentService.fulfillOrder] Errore aggiornamento stato ordine a FULFILLED", {
+        orderId,
+        error: updateError.message,
+      });
       throw new Error(
-        `Impossibile aggiornare lo stato dell'ordine ${orderId} a FULFILLED.`,
+        `Impossibile aggiornare lo stato dell'ordine ${orderId} a FULFILLED.`
       );
     }
 
-    console.log(
-      `✅ [EnrollmentService] Ordine ${orderId} evaso con successo. Studente iscritto a ${courseIds.length} corsi.`,
-    );
+    logger.info("[EnrollmentService.fulfillOrder] Ordine evaso con successo", {
+      orderId,
+      profileId: order.profile_id,
+      coursesCount: courseIds.length,
+    });
   }
 }

@@ -46,6 +46,18 @@ export default function Navbar() {
     }
   }, [user, refreshCartCount]);
 
+  useEffect(() => {
+    const handleCartUpdated = () => {
+      refreshCartCount();
+    };
+
+    window.addEventListener("cart-updated", handleCartUpdated);
+
+    return () => {
+      window.removeEventListener("cart-updated", handleCartUpdated);
+    };
+  }, [refreshCartCount]);
+
   // =====================================================
   // CONFIGURAZIONI DA AMBIENTE (.env)
   // =====================================================

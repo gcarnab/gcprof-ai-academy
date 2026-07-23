@@ -1,8 +1,6 @@
 import Stripe from "stripe";
 
-export const stripe = new Stripe(
-  process.env.STRIPE_SECRET_KEY!,
-  {
-    apiVersion: process.env.STRIPE_API_VERSION as Stripe.LatestApiVersion
-  }
-);
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  // Non specificare apiVersion: l'SDK userà la sua versione nativa corretta
+  typescript: true,
+});

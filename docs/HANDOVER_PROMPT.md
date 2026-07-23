@@ -43,6 +43,11 @@ GCPROF-AI-ACADEMY
 |   |   +---enrollments
 |   |   |       page.tsx
 |   |   |       
+|   |   +---payments
+|   |   |       actions.ts
+|   |   |       layout.tsx
+|   |   |       page.tsx
+|   |   |       
 |   |   \---quiz
 |   |       |   actions.ts
 |   |       |   
@@ -188,11 +193,14 @@ GCPROF-AI-ACADEMY
 |   |       quiz_Python_base_01.md
 |   |       
 |   \---supabase
-|       |   db_scripts.sql
 |       |   payments_schema.sql
 |       |   
 |       \---backup
 |           +---payments
+|           |       20260722_data.sql
+|           |       20260722_roles.sql
+|           |       20260722_schema.sql
+|           |       
 |           \---stable_before_payments
 |                   20260721_data.sql
 |                   20260721_roles.sql
@@ -457,6 +465,7 @@ GCPROF-AI-ACADEMY
 |   +---payments
 |   |   +---actions
 |   |   |       getPaymentsDashboardAction.ts
+|   |   |       orderActions.ts
 |   |   |       paymentActions.ts
 |   |   |       
 |   |   +---adapters
@@ -467,12 +476,21 @@ GCPROF-AI-ACADEMY
 |   |   |       AddToCartButton.tsx
 |   |   |       CartBadge.tsx
 |   |   |       CartDrawer.tsx
+|   |   |       CouponManager.tsx
+|   |   |       CoursePricingManager.tsx
+|   |   |       OrderDetailDrawer.tsx
+|   |   |       OrdersList.tsx
+|   |   |       OrdersTabContent.tsx
+|   |   |       OverviewComponents.tsx
 |   |   |       PaymentFeedbackBanner.tsx
+|   |   |       PaymentsNav.tsx
+|   |   |       PaymentsTabContent.tsx
 |   |   |       
 |   |   +---constants
 |   |   |       paymentConstants.ts
 |   |   |       
 |   |   +---dto
+|   |   |       OrderDetailDTO.ts
 |   |   |       PaymentDashboardDTO.ts
 |   |   |       
 |   |   +---factories
@@ -487,9 +505,12 @@ GCPROF-AI-ACADEMY
 |   |   +---services
 |   |   |       CartService.ts
 |   |   |       CheckoutService.ts
+|   |   |       CouponService.ts
+|   |   |       CoursePricingService.ts
 |   |   |       EnrollmentService.ts
 |   |   |       PaymentDashboardService.ts
 |   |   |       PaymentService.ts
+|   |   |       StripeWebhookService.ts
 |   |   |       
 |   |   \---types
 |   |           paymentTypes.ts
@@ -567,6 +588,7 @@ GCPROF-AI-ACADEMY
 |               ThemeContext.tsx
 |               
 +---lib
+|       auth-guard.ts
 |       logger.ts
 |       stripe.ts
 |       supabase.ts
@@ -657,7 +679,8 @@ GCPROF-AI-ACADEMY
 \---types
         database.types.ts
         
-        
+
+            
 
 ### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
@@ -1394,20 +1417,16 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-sono loggato con utente esterno abilitato già da admin. vado nella sezione corsi vedo correttamente 
-solo i corsi che hanno un modulo di preview. quando faccio click sul pulsante "iscriviti gratuitamente"
-il corso si vede correttamente completo nella sezione /courses ed anche correttamente nella dashboard
-utente http://localhost:3000/dashboard?tab=courses il problema che quando ritorno sul corso lo stato
-di iscrizione è sparito ed il corso ritorna in modalità preview e si rivede il pulsante "iscriviti gratuitamente".
-l'obiettivo finale è quello di avere una sezione della admindashboard chiamata "Payments" dove l'admin 
-può gestire ogni aspetto dei corsi pagati.per adesso riusciamo a simulare il processo di pagamento completo 
-con STRIPE anche se a prezzo €0 ?
+stiamo sviluppando la sezione della admin dashboard chiamata "Payments" dove l'admin 
+può gestire ogni aspetto dei pagamenti effettuati sulla piattaforma. per adesso dobbiamo fare in modo
+che il processo di pagamento dei corsi in preview per gli utenti esterni vada a buon fine e che i dati
+si vedano nella apposita sezione della dashboard con STRIPE anche se a prezzo €0
 
 SITUAZIONE ATTUALE :
 0. feature in fase di svilippo (app stabile) 
 
 VINCOLI: 
-1. chiedimi quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
+1. chiedimi sempre quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
 2. ricorda di aspettare sempre la mia conferma per scrivere il codice
 3. fai riferimento al tree del filesystem del progetto ed allo schema del DB allegati in questa chat
 4. intercetta sempre i punti hardcoded che adrebbero spostati nel file .env come variabili
@@ -1416,6 +1435,4 @@ VINCOLI:
 7. usa sempre il logger disponibile nel codice che scrivi 
 8. fare il refactoring essenziale e puntare a risolvere il problema mantenendo quanto più possibile la logica attuale senza regredire
 9. adotta sempre il metodo di spezzare i file (part1, part2...) quando sono troppo grandi per riscriverli per intero non darmi le modifiche puntuali che mi fanno perdere più tempo
-
-
 

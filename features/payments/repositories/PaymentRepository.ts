@@ -7,10 +7,7 @@
  */
 
 import { SupabaseClient } from "@supabase/supabase-js";
-import {
-  LatestOrderDTO,
-  RevenuePointDTO,
-} from "../dto/PaymentDashboardDTO";
+import { LatestOrderDTO, RevenuePointDTO } from "../dto/PaymentDashboardDTO";
 
 export interface PaymentOverviewData {
   totalRevenue: number;
@@ -27,6 +24,23 @@ export class PaymentRepository {
   constructor(private readonly supabase: SupabaseClient) {}
 
   /**
+   * Helper interno: Verifica se un ordine è pagato (case-insensitive)
+   */
+  private isOrderPaid(status?: string): boolean {
+    if (!status) return false;
+    const s = status.toUpperCase();
+    return s === "PAID" || s === "FULFILLED" || s === "COMPLETED";
+  }
+
+  /**
+   * Helper interno: Verifica se un ordine è rimborsato (case-insensitive)
+   */
+  private isOrderRefunded(status?: string): boolean {
+    if (!status) return false;
+    return status.toUpperCase() === "REFUNDED";
+  }
+
+  /**
    * Recupera i KPI principali della dashboard Payments.
    */
   async getOverview(): Promise<PaymentOverviewData> {
@@ -39,45 +53,64 @@ export class PaymentRepository {
     // -----------------------------
     const { data: orders, error: ordersError } = await this.supabase
       .from("orders")
-      .select("status,total,created_at");
+      .select("status, total, created_at");
 
     if (ordersError) {
+      console.error(
+        "❌ [DB Repository Error - getOverview Orders]:",
+        ordersError,
+      );
       throw new Error(ordersError.message);
     }
+
+    // 🧪 LOG ESSENZIALE: Stampa gli ordini grezzi trovati nel DB
+    console.log("📊 [DB Repository] RAW ORDERS trovati nel DB:", orders);
 
     const totalOrders = orders?.length ?? 0;
 
     const paidOrders =
-      orders?.filter((o) => o.status === "PAID" || o.status === "FULFILLED")
-        .length ?? 0;
+      orders?.filter((o) => this.isOrderPaid(o.status)).length ?? 0;
 
     const refundedOrders =
-      orders?.filter((o) => o.status === "REFUNDED").length ?? 0;
+      orders?.filter((o) => this.isOrderRefunded(o.status)).length ?? 0;
 
     const totalRevenue =
       orders
-        ?.filter((o) => o.status === "PAID" || o.status === "FULFILLED")
+        ?.filter((o) => this.isOrderPaid(o.status))
         .reduce((sum, o) => sum + Number(o.total ?? 0), 0) ?? 0;
 
     const monthlyRevenue =
       orders
         ?.filter(
           (o) =>
-            (o.status === "PAID" || o.status === "FULFILLED") &&
-            new Date(o.created_at) >= monthStart,
+            this.isOrderPaid(o.status) && new Date(o.created_at) >= monthStart,
         )
         .reduce((sum, o) => sum + Number(o.total ?? 0), 0) ?? 0;
 
     // -----------------------------
-    // CARRELLI ABBANDONATI
+    // CARRELLI ABBANDONATI (Fix per Postgres ENUM)
     // -----------------------------
-    const { count: abandonedCarts, error: cartError } = await this.supabase
-      .from("shopping_carts")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "ABANDONED");
+    let abandonedCarts = 0;
+    try {
+      // Usiamo .eq() con 'ABANDONED' coerente con il tipo enum (cart_status_enum)
+      const { count, error: cartError } = await this.supabase
+        .from("shopping_carts")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "ABANDONED");
 
-    if (cartError) {
-      throw new Error(cartError.message);
+      if (cartError) {
+        console.warn(
+          "⚠️ [DB Repository Warning - Cart Detail]:",
+          JSON.stringify(cartError, null, 2),
+        );
+      } else {
+        abandonedCarts = count ?? 0;
+      }
+    } catch (e) {
+      console.warn(
+        "⚠️ [DB Repository Warning - Cart]: Query carrelli saltata.",
+        e,
+      );
     }
 
     // -----------------------------
@@ -86,9 +119,15 @@ export class PaymentRepository {
     const { count: activeStudents, error: profileError } = await this.supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
-      .in("role", ["student", "external_student"]);
+      .in("role", [
+        "student",
+        "external_student",
+        "STUDENT",
+        "EXTERNAL_STUDENT",
+      ]);
 
     if (profileError) {
+      console.error("❌ [DB Repository Error - Profiles]:", profileError);
       throw new Error(profileError.message);
     }
 
@@ -134,8 +173,11 @@ export class PaymentRepository {
       .limit(limit);
 
     if (error) {
+      console.error("❌ [DB Repository Error - getLatestOrders]:", error);
       throw new Error(error.message);
     }
+
+    console.log("📊 [DB Repository] RAW LATEST ORDERS:", orders);
 
     return (orders ?? []).map((order: any) => this.mapLatestOrder(order));
   }
@@ -165,6 +207,7 @@ export class PaymentRepository {
       .order("created_at", { ascending: false });
 
     if (error) {
+      console.error("❌ [DB Repository Error - searchOrders]:", error);
       throw new Error(error.message);
     }
 
@@ -192,10 +235,11 @@ export class PaymentRepository {
           )
         `,
       )
-      .eq("status", status)
+      .ilike("status", status)
       .order("created_at", { ascending: false });
 
     if (error) {
+      console.error("❌ [DB Repository Error - getOrdersByStatus]:", error);
       throw new Error(error.message);
     }
 
@@ -220,6 +264,7 @@ export class PaymentRepository {
       .single();
 
     if (error) {
+      console.error("❌ [DB Repository Error - getOrderDetails]:", error);
       throw new Error(error.message);
     }
 
@@ -236,17 +281,18 @@ export class PaymentRepository {
 
     const { data, error } = await this.supabase
       .from("orders")
-      .select("total,status,created_at")
+      .select("total, status, created_at")
       .gte("created_at", startDate.toISOString());
 
     if (error) {
+      console.error("❌ [DB Repository Error - getRevenueChart]:", error);
       throw new Error(error.message);
     }
 
     const map = new Map<string, number>();
 
     for (const order of data ?? []) {
-      if (order.status !== "PAID" && order.status !== "FULFILLED") {
+      if (!this.isOrderPaid(order.status)) {
         continue;
       }
 
@@ -255,7 +301,8 @@ export class PaymentRepository {
         month: "2-digit",
       });
 
-      map.set(day, (map.get(day) ?? 0) + Number(order.total));
+      const amount = Number(order.total ?? 0);
+      map.set(day, (map.get(day) ?? 0) + amount);
     }
 
     return [...map.entries()]
@@ -286,10 +333,10 @@ export class PaymentRepository {
 
     return {
       id: order.id,
-      orderNumber: order.order_number,
+      orderNumber: order.order_number || order.id?.slice(0, 8),
       customerName,
-      total: Number(order.total),
-      currency: order.currency,
+      total: Number(order.total ?? 0),
+      currency: order.currency || "EUR",
       status: order.status,
       createdAt: order.created_at,
     };

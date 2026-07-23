@@ -1,75 +1,101 @@
-/**
- * GCPROF AI ACADEMY - API ROUTE: STRIPE WEBHOOK HANDLER
- * File: app/api/webhooks/stripe/route.ts
- * 
- * Endpoint HTTP POST per la ricezione delle notifiche asincrone da Stripe.
- * Verifica la firma crittografica ed elabora i pagamenti con privilegi Admin (Service Role).
- */
-
 import { NextRequest, NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import { StripeGatewayAdapter } from "@/features/payments/adapters/stripe/StripeGatewayAdapter";
 import { PaymentService } from "@/features/payments/services/PaymentService";
+import { logger } from "@/lib/logger";
 
-// Forziamo l'esecuzione dinamica senza caching
-export const dynamic = "force-dynamic";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function POST(req: NextRequest) {
-  try {
-    // 1. Estrazione dell'header stripe-signature
-    const signature = req.headers.get("stripe-signature");
+  logger.info("[Stripe Webhook] Ricevuta notifica evento Stripe");
 
-    if (!signature) {
-      console.error("❌ [Webhook Route] Intestazione stripe-signature mancante.");
-      return NextResponse.json(
-        { error: "Intestazione stripe-signature mancante" },
-        { status: 400 }
-      );
-    }
-
-    // 2. Lettura del corpo della richiesta in formato testo grezzo (Raw Text)
-    const rawBody = await req.text();
-
-    // 3. Istanziazione dell'Adapter per la verifica della firma crittografica
-    const stripeAdapter = new StripeGatewayAdapter();
-    const webhookEvent = await stripeAdapter.constructWebhookEvent(
-      rawBody,
-      signature
+  // 1. Verifica presenza delle chiavi Supabase essenziali
+  if (!supabaseUrl || !supabaseServiceKey) {
+    logger.error("[Stripe Webhook] Variabili Supabase (URL/Service Key) non configurate.");
+    return NextResponse.json(
+      { error: "Errore di configurazione del server (Supabase Key mancante)." },
+      { status: 500 }
     );
+  }
 
-    // 4. Inizializzazione del client Supabase con Service Role Key
-    // Necessario perché le chiamate dei Webhook avvengono fuori dalla sessione utente
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // 2. Lettura dell'intestazione e del body raw per la verifica della firma crittografica
+  const headersList = await headers();
+  const signature = headersList.get("stripe-signature");
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("❌ [Webhook Route] SUPABASE_SERVICE_ROLE_KEY non configurata.");
-      return NextResponse.json(
-        { error: "Configurazione del server incompleta" },
-        { status: 500 }
-      );
-    }
+  if (!signature) {
+    logger.warn("[Stripe Webhook] Intestazione stripe-signature mancante.");
+    return NextResponse.json(
+      { error: "Firma Stripe mancante." },
+      { status: 400 }
+    );
+  }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
+  let rawBody: string;
+  try {
+    rawBody = await req.text();
+  } catch (readError) {
+    logger.error("[Stripe Webhook] Errore durante la lettura del body della richiesta", { error: readError });
+    return NextResponse.json(
+      { error: "Impossibile leggere il payload della richiesta." },
+      { status: 400 }
+    );
+  }
+
+  // 3. Inizializzazione dei servizi necessari con privilegio Service Role (bypass RLS)
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  const stripeGateway = new StripeGatewayAdapter();
+  // Invocazione corretta con 1 solo argomento (supabaseAdmin)
+  const paymentService = new PaymentService(supabaseAdmin);
+
+  // 4. Decodifica e validazione dell'evento tramite l'adapter
+  let eventPayload;
+  try {
+    eventPayload = await stripeGateway.constructWebhookEvent(rawBody, signature);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Firma non valida.";
+    logger.error("[Stripe Webhook] Verifica firma crittografica fallita", { error: errorMessage });
+    return NextResponse.json(
+      { error: `Verifica firma Webhook fallita: ${errorMessage}` },
+      { status: 400 }
+    );
+  }
+
+  logger.info("[Stripe Webhook] Evento autenticato con successo", {
+    eventId: eventPayload.id,
+    eventType: eventPayload.type,
+  });
+
+  // 5. Elaborazione dell'evento tramite PaymentService
+  try {
+    await paymentService.processWebhookEvent(eventPayload);
+
+    logger.info("[Stripe Webhook] Elaborazione evento completata con successo", {
+      eventId: eventPayload.id,
+      eventType: eventPayload.type,
     });
 
-    // 5. Elaborazione dell'evento di dominio tramite PaymentService
-    const paymentService = new PaymentService(supabaseAdmin);
-    await paymentService.processWebhookEvent(webhookEvent);
-
-    // 6. Conferma di ricezione con HTTP 200 OK a Stripe
     return NextResponse.json({ received: true }, { status: 200 });
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto";
-    console.error("❌ [Webhook Route] Errore nella gestione del webhook:", errorMessage);
+  } catch (processError) {
+    const errorMessage =
+      processError instanceof Error ? processError.message : "Errore sconosciuto";
+
+    logger.error("[Stripe Webhook] Errore durante l'elaborazione dell'evento", {
+      eventId: eventPayload.id,
+      eventType: eventPayload.type,
+      error: errorMessage,
+    });
 
     return NextResponse.json(
-      { error: `Webhook Handler Error: ${errorMessage}` },
-      { status: 400 }
+      { error: `Errore elaborazione webhook: ${errorMessage}` },
+      { status: 500 }
     );
   }
 }

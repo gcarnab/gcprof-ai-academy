@@ -8,7 +8,7 @@ interface AccessNoticeBannerProps {
   isPendingUser: boolean;
   hasAccess: boolean;
   courseId: string;
-  price: number;
+  price: number | string;
   isEnrolling: boolean;
   enrollError: string | null;
   onFreeEnroll: () => void;
@@ -24,17 +24,30 @@ export function AccessNoticeBanner({
   enrollError,
   onFreeEnroll,
 }: AccessNoticeBannerProps) {
+  // Conversione sicura e verifica prezzo
+  const numericPrice =
+    typeof price === "number" ? price : parseFloat(String(price || 0));
+  const isPaidCourse = !isNaN(numericPrice) && numericPrice > 0;
+
   if (!user) {
     return (
       <div className="rounded-2xl border border-yellow-200 bg-yellow-50/50 p-6 text-center shadow-sm space-y-4 mb-6">
         <span className="text-4xl">🔒</span>
-        <h3 className="text-xl font-bold text-yellow-800">Autenticazione Richiesta</h3>
+        <h3 className="text-xl font-bold text-yellow-800">
+          Autenticazione Richiesta
+        </h3>
         <p className="text-sm text-yellow-700 max-w-md mx-auto">
           Accedi con il tuo account o registrati per completare l'iscrizione ed accedere ai moduli didattici.
         </p>
         <div className="pt-2 flex flex-col sm:flex-row justify-center items-center gap-3">
           <LoginDialog />
-          <CourseCTA courseId={courseId} price={price} isEnrolling={isEnrolling} onFreeEnroll={onFreeEnroll} />
+          <CourseCTA
+            courseId={courseId}
+            price={numericPrice}
+            isPaid={isPaidCourse}
+            isEnrolling={isEnrolling}
+            onFreeEnroll={onFreeEnroll}
+          />
         </div>
       </div>
     );
@@ -44,7 +57,9 @@ export function AccessNoticeBanner({
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-6 text-center shadow-sm mb-6">
         <span className="text-4xl">⏳</span>
-        <h3 className="text-xl font-bold text-amber-800 mt-2">Account in fase di verifica</h3>
+        <h3 className="text-xl font-bold text-amber-800 mt-2">
+          Account in fase di verifica
+        </h3>
         <p className="text-sm text-amber-700 mt-2 max-w-md mx-auto">
           Il tuo account è attualmente in attesa di attivazione da parte dello staff.
         </p>
@@ -62,10 +77,18 @@ export function AccessNoticeBanner({
           Stai consultando l'anteprima del corso. Iscriviti per sbloccare l'accesso completo a tutti i moduli e le verifiche.
         </p>
         {enrollError && (
-          <p className="text-sm font-semibold text-red-600 bg-red-50 p-2 rounded-lg">{enrollError}</p>
+          <p className="text-sm font-semibold text-red-600 bg-red-50 p-2 rounded-lg">
+            {enrollError}
+          </p>
         )}
         <div className="pt-2 max-w-xs mx-auto">
-          <CourseCTA courseId={courseId} price={price} isEnrolling={isEnrolling} onFreeEnroll={onFreeEnroll} />
+          <CourseCTA
+            courseId={courseId}
+            price={numericPrice}
+            isPaid={isPaidCourse}
+            isEnrolling={isEnrolling}
+            onFreeEnroll={onFreeEnroll}
+          />
         </div>
       </div>
     );

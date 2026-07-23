@@ -30,8 +30,6 @@ export const PAYMENTS_CONFIG = {
       ? process.env.NEXT_PUBLIC_LOCAL_URL || "http://localhost:3000"
       : process.env.NEXT_PUBLIC_SITE_URL || "https://gcprof-academy.com",
 
-  /** Versione API Stripe usata */
-  STRIPE_API_VERSION: process.env.STRIPE_API_VERSION || "2026-06-24",
 } as const;
 
 // =============================================================================

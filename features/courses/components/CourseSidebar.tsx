@@ -6,7 +6,7 @@ import { CourseCTA } from "./CourseCTA";
 interface CourseSidebarProps {
   course: Course;
   hasAccess: boolean;
-  coursePrice: number;
+  coursePrice: number | string;
   isEnrolling: boolean;
   onFreeEnroll: () => void;
 }
@@ -18,6 +18,23 @@ export function CourseSidebar({
   isEnrolling,
   onFreeEnroll,
 }: CourseSidebarProps) {
+
+  console.log("🔍 DATI RICEVUTI NEL SIDEBAR:", { coursePrice, coursePriceType: typeof coursePrice, course });
+  
+  // Parsing e conversione sicura del prezzo
+  const numericPrice =
+    typeof coursePrice === "number"
+      ? coursePrice
+      : parseFloat(String(coursePrice || (course as any)?.price || 0));
+
+  // Verifica se il corso è a pagamento (controlla il flag is_paid o il prezzo)
+  const isPaidCourse =
+    (course as any)?.is_paid ??
+    (course as any)?.isPaid ??
+    (!isNaN(numericPrice) && numericPrice > 0);
+
+  const isFree = !isPaidCourse;
+
   return (
     <div className="relative">
       <div className="space-y-6 rounded-2xl border border-border bg-background p-6 shadow-sm sticky top-6">
@@ -26,7 +43,9 @@ export function CourseSidebar({
         </h3>
 
         <div className="bg-muted/40 rounded-xl p-4 border border-border/50">
-          <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sintesi</h4>
+          <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+            Sintesi
+          </h4>
           <p className="text-sm text-foreground/90 leading-relaxed">
             {course.description
               ? course.description.length > 160
@@ -39,11 +58,15 @@ export function CourseSidebar({
         <div className="space-y-1 text-sm pt-2">
           <div className="flex justify-between items-center py-2.5 border-b border-border/40">
             <span className="text-muted-foreground">Categoria</span>
-            <span className="font-medium text-foreground text-right">{course.category || "Generale"}</span>
+            <span className="font-medium text-foreground text-right">
+              {course.category || "Generale"}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-b border-border/40">
             <span className="text-muted-foreground">Livello</span>
-            <span className="font-medium text-foreground text-right">{course.difficulty || "Non specificato"}</span>
+            <span className="font-medium text-foreground text-right">
+              {course.difficulty || "Non specificato"}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-b border-border/40">
             <span className="text-muted-foreground">Durata stimata</span>
@@ -53,21 +76,26 @@ export function CourseSidebar({
           </div>
           <div className="flex justify-between items-center py-2.5">
             <span className="text-muted-foreground">Docente</span>
-            <span className="font-medium text-foreground text-right">{course.teacher || "Team Academy"}</span>
+            <span className="font-medium text-foreground text-right">
+              {course.teacher || "Team Academy"}
+            </span>
           </div>
         </div>
 
         {!hasAccess && (
           <div className="pt-4 border-t border-border flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">Prezzo Iscrizione</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                Prezzo Iscrizione
+              </span>
               <span className="text-2xl font-extrabold text-foreground">
-                {coursePrice === 0 ? "Gratuito" : `€${coursePrice}`}
+                {isFree ? "Gratuito" : `€${numericPrice.toFixed(2)}`}
               </span>
             </div>
             <CourseCTA
               courseId={String(course.id)}
-              price={coursePrice}
+              price={numericPrice}
+              isPaid={isPaidCourse}
               isEnrolling={isEnrolling}
               onFreeEnroll={onFreeEnroll}
             />

@@ -7,6 +7,7 @@
  */
 
 import Stripe from "stripe";
+import { stripe } from "@/lib/stripe";
 import {
   IPaymentGateway,
   CreateCheckoutSessionInput,
@@ -15,6 +16,7 @@ import {
 } from "../../ports/IPaymentGateway";
 import { PaymentProviderEnum } from "../../types/paymentTypes";
 import { PAYMENTS_CONFIG } from "../../constants/paymentConstants";
+import { logger } from "@/lib/logger";
 
 export class StripeGatewayAdapter implements IPaymentGateway {
   private stripe: Stripe;
@@ -23,18 +25,12 @@ export class StripeGatewayAdapter implements IPaymentGateway {
     const apiKey = process.env.STRIPE_SECRET_KEY;
 
     if (!apiKey && PAYMENTS_CONFIG.IS_ENABLED) {
-      console.warn(
-        "⚠️ [StripeGatewayAdapter] STRIPE_SECRET_KEY non configurata nelle variabili d'ambiente.",
+      logger.warn(
+        "[StripeGatewayAdapter] STRIPE_SECRET_KEY non configurata nelle variabili d'ambiente.",
       );
     }
 
-    this.stripe = new Stripe(apiKey || "", {
-      apiVersion: PAYMENTS_CONFIG.STRIPE_API_VERSION as Stripe.LatestApiVersion,
-      appInfo: {
-        name: "GCProf AI Academy",
-        version: "1.0.0",
-      },
-    });
+    this.stripe = stripe;
   }
 
   /**
@@ -100,9 +96,9 @@ export class StripeGatewayAdapter implements IPaymentGateway {
         rawResponse: session as unknown as Record<string, unknown>,
       };
     } catch (error) {
-      console.error(
-        "[StripeGatewayAdapter] Errore durante la creazione della sessione Stripe:",
-        error,
+      logger.error(
+        "[StripeGatewayAdapter] Errore durante la creazione della sessione Stripe",
+        { error },
       );
       throw error;
     }
@@ -134,16 +130,15 @@ export class StripeGatewayAdapter implements IPaymentGateway {
         id: stripeEvent.id,
         type: stripeEvent.type,
         provider: "STRIPE",
-        // Doppio cast sicuro via unknown per evitare l'errore di sovrapposizione tipi
         data: stripeEvent.data.object as unknown as Record<string, unknown>,
         rawEvent: stripeEvent,
       };
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Firma webhook non valida";
-      console.error(
-        `[StripeGatewayAdapter] Webhook signature verification failed: ${errorMessage}`,
-      );
+      logger.error("[StripeGatewayAdapter] Validazione firma webhook fallita", {
+        error: errorMessage,
+      });
       throw new Error(`Firma Webhook non valida: ${errorMessage}`);
     }
   }
