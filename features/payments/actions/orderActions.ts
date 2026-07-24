@@ -8,6 +8,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { PaymentRepository } from "../repositories/PaymentRepository";
 import { OrderDetailDTO } from "../dto/OrderDetailDTO";
+import { logger } from "@/lib/logger";
 
 /**
  * Recupera l'elenco filtrato degli ordini per la tabella.
@@ -17,21 +18,42 @@ export async function getFilteredOrdersAction(search = "", status = "ALL") {
     const supabase = getSupabaseAdmin();
     const repository = new PaymentRepository(supabase);
 
-    let orders;
-    if (search.trim()) {
-      orders = await repository.searchOrders(search.trim());
-    } else if (status !== "ALL") {
-      orders = await repository.getOrdersByStatus(status);
+    const cleanSearch = search.trim();
+    const cleanStatus = status.trim().toUpperCase();
+
+    let orders = [];
+
+    if (cleanSearch) {
+      orders = await repository.searchOrders(cleanSearch);
+
+      // Filtraggio combinato in memoria rispettando gli stati equivalenti a PAID
+      if (cleanStatus !== "ALL") {
+        if (cleanStatus === "PAID") {
+          orders = orders.filter((o) =>
+            ["PAID", "FULFILLED", "COMPLETED"].includes(o.status?.toUpperCase())
+          );
+        } else {
+          orders = orders.filter(
+            (o) => o.status?.toUpperCase() === cleanStatus
+          );
+        }
+      }
+    } else if (cleanStatus !== "ALL") {
+      orders = await repository.getOrdersByStatus(cleanStatus);
     } else {
       orders = await repository.getLatestOrders(50);
     }
 
     return { success: true, data: orders };
   } catch (error) {
-    console.error("[getFilteredOrdersAction]", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Errore nel recupero degli ordini.";
+
+    logger.error("[getFilteredOrdersAction] Errore", { error: errorMessage });
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Errore nel recupero degli ordini.",
+      error: errorMessage,
     };
   }
 }
@@ -75,7 +97,9 @@ export async function getOrderDetailsAction(orderId: string) {
       providerPaymentId: payment?.provider_payment_id,
       receiptUrl: payment?.receipt_url,
       couponCode: rawOrder.coupon_code,
-      discountAmount: rawOrder.discount_amount ? Number(rawOrder.discount_amount) : 0,
+      discountAmount: rawOrder.discount_amount
+        ? Number(rawOrder.discount_amount)
+        : 0,
       items: (rawOrder.order_items || []).map((item: any) => ({
         id: item.id,
         courseId: item.course_id,
@@ -86,10 +110,16 @@ export async function getOrderDetailsAction(orderId: string) {
 
     return { success: true, data: formattedDetail };
   } catch (error) {
-    console.error("[getOrderDetailsAction]", error);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Errore durante il recupero del dettaglio ordine.";
+
+    logger.error("[getOrderDetailsAction] Errore", { error: errorMessage });
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Errore durante il recupero del dettaglio ordine.",
+      error: errorMessage,
     };
   }
 }

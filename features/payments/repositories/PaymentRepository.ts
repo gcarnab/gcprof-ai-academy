@@ -1,13 +1,11 @@
 /**
  * GCPROF AI ACADEMY
  * File: features/payments/repositories/PaymentRepository.ts
- *
- * Repository della feature Payments.
- * Incapsula tutte le query verso Supabase utilizzate dalla Dashboard.
  */
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { LatestOrderDTO, RevenuePointDTO } from "../dto/PaymentDashboardDTO";
+import { logger } from "@/lib/logger";
 
 export interface PaymentOverviewData {
   totalRevenue: number;
@@ -48,23 +46,14 @@ export class PaymentRepository {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    // -----------------------------
-    // ORDINI
-    // -----------------------------
     const { data: orders, error: ordersError } = await this.supabase
       .from("orders")
       .select("status, total, created_at");
 
     if (ordersError) {
-      console.error(
-        "❌ [DB Repository Error - getOverview Orders]:",
-        ordersError,
-      );
+      logger.error("❌ [DB Repository Error - getOverview Orders]:", ordersError);
       throw new Error(ordersError.message);
     }
-
-    // 🧪 LOG ESSENZIALE: Stampa gli ordini grezzi trovati nel DB
-    console.log("📊 [DB Repository] RAW ORDERS trovati nel DB:", orders);
 
     const totalOrders = orders?.length ?? 0;
 
@@ -83,39 +72,24 @@ export class PaymentRepository {
       orders
         ?.filter(
           (o) =>
-            this.isOrderPaid(o.status) && new Date(o.created_at) >= monthStart,
+            this.isOrderPaid(o.status) && new Date(o.created_at) >= monthStart
         )
         .reduce((sum, o) => sum + Number(o.total ?? 0), 0) ?? 0;
 
-    // -----------------------------
-    // CARRELLI ABBANDONATI (Fix per Postgres ENUM)
-    // -----------------------------
     let abandonedCarts = 0;
     try {
-      // Usiamo .eq() con 'ABANDONED' coerente con il tipo enum (cart_status_enum)
       const { count, error: cartError } = await this.supabase
         .from("shopping_carts")
         .select("*", { count: "exact", head: true })
         .eq("status", "ABANDONED");
 
-      if (cartError) {
-        console.warn(
-          "⚠️ [DB Repository Warning - Cart Detail]:",
-          JSON.stringify(cartError, null, 2),
-        );
-      } else {
+      if (!cartError) {
         abandonedCarts = count ?? 0;
       }
     } catch (e) {
-      console.warn(
-        "⚠️ [DB Repository Warning - Cart]: Query carrelli saltata.",
-        e,
-      );
+      logger.warn("⚠️ [DB Repository Warning - Cart]: Query carrelli saltata.", e);
     }
 
-    // -----------------------------
-    // STUDENTI
-    // -----------------------------
     const { count: activeStudents, error: profileError } = await this.supabase
       .from("profiles")
       .select("*", { count: "exact", head: true })
@@ -127,7 +101,7 @@ export class PaymentRepository {
       ]);
 
     if (profileError) {
-      console.error("❌ [DB Repository Error - Profiles]:", profileError);
+      logger.error("❌ [DB Repository Error - Profiles]:", profileError);
       throw new Error(profileError.message);
     }
 
@@ -167,17 +141,15 @@ export class PaymentRepository {
             first_name,
             last_name
           )
-        `,
+        `
       )
       .order("created_at", { ascending: false })
       .limit(limit);
 
     if (error) {
-      console.error("❌ [DB Repository Error - getLatestOrders]:", error);
+      logger.error("❌ [DB Repository Error - getLatestOrders]:", error);
       throw new Error(error.message);
     }
-
-    console.log("📊 [DB Repository] RAW LATEST ORDERS:", orders);
 
     return (orders ?? []).map((order: any) => this.mapLatestOrder(order));
   }
@@ -201,13 +173,13 @@ export class PaymentRepository {
             first_name,
             last_name
           )
-        `,
+        `
       )
       .ilike("order_number", `%${search}%`)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("❌ [DB Repository Error - searchOrders]:", error);
+      logger.error("❌ [DB Repository Error - searchOrders]:", error);
       throw new Error(error.message);
     }
 
@@ -215,35 +187,56 @@ export class PaymentRepository {
   }
 
   /**
-   * Ordini filtrati per stato.
+   * Recupera gli ordini filtrati per stato.
+   * ✅ Mappatura corretta per ENUM PostgreSQL (PAID include anche FULFILLED e COMPLETED)
    */
   async getOrdersByStatus(status: string): Promise<LatestOrderDTO[]> {
-    const { data: orders, error } = await this.supabase
-      .from("orders")
-      .select(
-        `
+    try {
+      const cleanStatus = status.toUpperCase();
+
+      let query = this.supabase
+        .from("orders")
+        .select(
+          `
           id,
           order_number,
           total,
           currency,
           status,
           created_at,
-          profiles(
-            display_name,
+          profiles (
             first_name,
-            last_name
+            last_name,
+            display_name
           )
-        `,
-      )
-      .ilike("status", status)
-      .order("created_at", { ascending: false });
+        `
+        );
 
-    if (error) {
-      console.error("❌ [DB Repository Error - getOrdersByStatus]:", error);
-      throw new Error(error.message);
+      // Gestione sinonimi di stato per la query DB
+      if (cleanStatus === "PAID") {
+        query = query.in("status", ["PAID", "FULFILLED", "COMPLETED"]);
+      } else if (cleanStatus === "REFUNDED") {
+        query = query.in("status", ["REFUNDED"]);
+      } else if (cleanStatus === "PENDING") {
+        query = query.in("status", ["PENDING"]);
+      } else {
+        query = query.eq("status", status);
+      }
+
+      const { data, error } = await query.order("created_at", {
+        ascending: false,
+      });
+
+      if (error) {
+        logger.error("❌ [DB Repository Error - getOrdersByStatus]:", error);
+        throw error;
+      }
+
+      return (data || []).map((o: any) => this.mapLatestOrder(o));
+    } catch (error) {
+      logger.error("[PaymentRepository.getOrdersByStatus]", error);
+      return [];
     }
-
-    return (orders ?? []).map((order: any) => this.mapLatestOrder(order));
   }
 
   /**
@@ -258,13 +251,13 @@ export class PaymentRepository {
           profiles(*),
           order_items(*),
           payments(*)
-        `,
+        `
       )
       .eq("id", orderId)
       .single();
 
     if (error) {
-      console.error("❌ [DB Repository Error - getOrderDetails]:", error);
+      logger.error("❌ [DB Repository Error - getOrderDetails]:", error);
       throw new Error(error.message);
     }
 
@@ -285,7 +278,7 @@ export class PaymentRepository {
       .gte("created_at", startDate.toISOString());
 
     if (error) {
-      console.error("❌ [DB Repository Error - getRevenueChart]:", error);
+      logger.error("❌ [DB Repository Error - getRevenueChart]:", error);
       throw new Error(error.message);
     }
 
@@ -329,7 +322,7 @@ export class PaymentRepository {
     const customerName =
       profile?.display_name ||
       [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") ||
-      "Utente";
+      "Utente Sconosciuto";
 
     return {
       id: order.id,

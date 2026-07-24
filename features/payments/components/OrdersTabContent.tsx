@@ -30,6 +30,8 @@ export function OrdersTabContent() {
     const res = await getFilteredOrdersAction(search, selectedStatus);
     if (res.success && res.data) {
       setOrders(res.data);
+    } else {
+      setOrders([]);
     }
     setLoading(false);
   };
@@ -127,13 +129,13 @@ export function OrdersTabContent() {
                     onClick={() => handleOpenDrawer(o.id)}
                   >
                     <td className="px-4 py-3 font-mono font-bold text-foreground">
-                      {o.orderNumber}
+                      {o.orderNumber || "-"}
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {o.customerName}
+                      {o.customerName || "Cliente Anonimo"}
                     </td>
                     <td className="px-4 py-3 font-bold text-foreground">
-                      € {o.total.toFixed(2)} {o.currency}
+                      € {(o.total ?? 0).toFixed(2)} {o.currency || "EUR"}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -145,17 +147,19 @@ export function OrdersTabContent() {
                             : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
                         }`}
                       >
-                        {o.status}
+                        {o.status || "N/D"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(o.createdAt).toLocaleString("it-IT", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {o.createdAt
+                        ? new Date(o.createdAt).toLocaleString("it-IT", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "-"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button

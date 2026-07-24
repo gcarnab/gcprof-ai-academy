@@ -103,6 +103,7 @@ GCPROF-AI-ACADEMY
 |   |   |   
 |   |   \---[slug]
 |   |       |   page.tsx
+|   |       |   page.tsx_nostripe
 |   |       |   
 |   |       +---modules
 |   |       |   \---[moduleId]
@@ -166,9 +167,11 @@ GCPROF-AI-ACADEMY
 |   |   README-DB.md
 |   |   
 |   +---courses
+|   |   |   AI_Guide_FULL.md
 |   |   |   Blockchain_Guide_Full.md
 |   |   |   ProblemSolving_Guide_Full.md
 |   |   |   Python_Practice_Full.md
+|   |   |   test.md
 |   |   |   WebProgramming_Base_HTML_CSS_Full.md
 |   |   |   
 |   |   \---preview
@@ -441,6 +444,7 @@ GCPROF-AI-ACADEMY
 |   |   |       
 |   |   +---services
 |   |   |       checkExternalCourseAccessAction.ts
+|   |   |       checkExternalCourseAccessAction.ts_nostripe
 |   |   |       courseActions.ts
 |   |   |       courseService.ts
 |   |   |       
@@ -680,9 +684,10 @@ GCPROF-AI-ACADEMY
         database.types.ts
         
 
+
             
 
-### 💾 3. SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
+### 💾 SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
 ## Table `academy_classes`
 
@@ -1406,6 +1411,13 @@ Audit trail dei webhook ricevuti
 |--------|---------|-------|--------|-------|------------|
 | `payments_admin_settings` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles p   WHERE ((p.id = auth.uid()) AND ((p.role)::text = 'admin'::text))))` | — |
 
+### `profile_courses`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Utenti possono leggere le proprie iscrizioni` | SELECT | public | PERMISSIVE | `(auth.uid() = profile_id)` | — |
+| `Service role può gestire tutte le iscrizioni` | ALL | public | PERMISSIVE | `true` | — |
+
 
 
 
@@ -1417,10 +1429,8 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-stiamo sviluppando la sezione della admin dashboard chiamata "Payments" dove l'admin 
-può gestire ogni aspetto dei pagamenti effettuati sulla piattaforma. per adesso dobbiamo fare in modo
-che il processo di pagamento dei corsi in preview per gli utenti esterni vada a buon fine e che i dati
-si vedano nella apposita sezione della dashboard con STRIPE anche se a prezzo €0
+dobbiamo sabilizzare e completare la sezione della admin dashboard chiamata "Payments" dove l'admin 
+può gestire ogni aspetto dei pagamenti effettuati sulla piattaforma. 
 
 SITUAZIONE ATTUALE :
 0. feature in fase di svilippo (app stabile) 

@@ -10,34 +10,43 @@ interface OverviewProps {
 }
 
 export function OverviewCards({ data }: OverviewProps) {
+  const totalRevenue = data?.totalRevenue ?? 0;
+  const monthlyRevenue = data?.monthlyRevenue ?? 0;
+  const totalOrders = data?.totalOrders ?? 0;
+  const paidOrders = data?.paidOrders ?? 0;
+  const refundedOrders = data?.refundedOrders ?? 0;
+  const activeStudents = data?.activeStudents ?? 0;
+  const conversionRate = data?.conversionRate ?? 0;
+  const abandonedCarts = data?.abandonedCarts ?? 0;
+
   const cards = [
     {
       title: "Ricavi Totali",
-      value: `€ ${data.totalRevenue.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`,
-      subtitle: `Mese corrente: € ${data.monthlyRevenue.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`,
+      value: `€ ${totalRevenue.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      subtitle: `Mese corrente: € ${monthlyRevenue.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: "💰",
     },
     {
       title: "Ordini Totali",
-      value: data.totalOrders,
-      subtitle: `${data.paidOrders} pagati, ${data.refundedOrders} rimborsati`,
+      value: totalOrders,
+      subtitle: `${paidOrders} pagati, ${refundedOrders} rimborsati`,
       icon: "🛒",
     },
     {
       title: "Studenti Attivi",
-      value: data.activeStudents,
+      value: activeStudents,
       subtitle: "Iscritti in piattaforma",
       icon: "🎓",
     },
     {
       title: "Conversione",
-      value: `${data.conversionRate}%`,
+      value: `${conversionRate}%`,
       subtitle: "Tasso ordini completati",
       icon: "📈",
     },
     {
       title: "Carrelli Abbandonati",
-      value: data.abandonedCarts,
+      value: abandonedCarts,
       subtitle: "Sessioni non concluse",
       icon: "⚠️",
     },
@@ -69,7 +78,8 @@ export function OverviewCards({ data }: OverviewProps) {
 }
 
 export function SalesChart({ data }: OverviewProps) {
-  const maxRevenue = Math.max(...data.revenueChart.map((p) => p.revenue), 1);
+  const chartPoints = data?.revenueChart ?? [];
+  const maxRevenue = Math.max(...chartPoints.map((p) => p.revenue || 0), 1);
 
   return (
     <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm space-y-4">
@@ -77,14 +87,17 @@ export function SalesChart({ data }: OverviewProps) {
         Vendite ultimi 30 giorni
       </h3>
 
-      {data.revenueChart.length === 0 ? (
+      {chartPoints.length === 0 ? (
         <p className="text-sm text-gray-500 py-10 text-center">
           Nessuna vendita registrata negli ultimi 30 giorni.
         </p>
       ) : (
         <div className="h-48 flex items-end gap-2 pt-6">
-          {data.revenueChart.map((point, idx) => {
-            const heightPercent = Math.max((point.revenue / maxRevenue) * 100, 4);
+          {chartPoints.map((point, idx) => {
+            const heightPercent = Math.max(
+              ((point.revenue || 0) / maxRevenue) * 100,
+              4
+            );
 
             return (
               <div
@@ -93,7 +106,7 @@ export function SalesChart({ data }: OverviewProps) {
               >
                 {/* Tooltip hover */}
                 <div className="absolute -top-8 hidden group-hover:block bg-gray-900 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-10 shadow">
-                  {point.label}: €{point.revenue}
+                  {point.label}: €{(point.revenue || 0).toFixed(2)}
                 </div>
 
                 <div
@@ -113,6 +126,8 @@ export function SalesChart({ data }: OverviewProps) {
 }
 
 export function RecentOrdersTable({ data }: OverviewProps) {
+  const latestOrders = data?.latestOrders ?? [];
+
   return (
     <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm space-y-4">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -131,15 +146,18 @@ export function RecentOrdersTable({ data }: OverviewProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {data.latestOrders.length === 0 ? (
+            {latestOrders.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
                   Nessun ordine presente.
                 </td>
               </tr>
             ) : (
-              data.latestOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+              latestOrders.map((order) => (
+                <tr
+                  key={order.id}
+                  className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                >
                   <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                     {order.orderNumber}
                   </td>
@@ -147,7 +165,7 @@ export function RecentOrdersTable({ data }: OverviewProps) {
                     {order.customerName}
                   </td>
                   <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">
-                    € {order.total.toFixed(2)} {order.currency}
+                    € {(order.total ?? 0).toFixed(2)} {order.currency || "EUR"}
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -163,13 +181,15 @@ export function RecentOrdersTable({ data }: OverviewProps) {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">
-                    {new Date(order.createdAt).toLocaleDateString("it-IT", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {order.createdAt
+                      ? new Date(order.createdAt).toLocaleDateString("it-IT", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "-"}
                   </td>
                 </tr>
               ))

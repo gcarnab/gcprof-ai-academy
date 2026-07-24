@@ -60,7 +60,7 @@ export function OrderDetailDrawer({
                 <div>
                   <p className="text-xs text-muted-foreground">Totale Pagato</p>
                   <p className="text-2xl font-black text-foreground">
-                    € {order.total.toFixed(2)} {order.currency}
+                    € {(order.total ?? 0).toFixed(2)} {order.currency || "EUR"}
                   </p>
                 </div>
                 <span
@@ -72,7 +72,7 @@ export function OrderDetailDrawer({
                       : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
                   }`}
                 >
-                  {order.status}
+                  {order.status || "N/D"}
                 </span>
               </div>
 
@@ -82,10 +82,10 @@ export function OrderDetailDrawer({
                   Acquirente
                 </h3>
                 <div className="text-sm">
-                  <p className="font-medium text-foreground">{order.customerName}</p>
-                  <p className="text-muted-foreground text-xs">{order.customerEmail}</p>
+                  <p className="font-medium text-foreground">{order.customerName || "Utente Anonimo"}</p>
+                  <p className="text-muted-foreground text-xs">{order.customerEmail || "N/D"}</p>
                   <p className="text-[11px] font-mono text-muted-foreground mt-1">
-                    ID Profile: {order.profileId}
+                    ID Profile: {order.profileId || "N/D"}
                   </p>
                 </div>
               </div>
@@ -96,7 +96,7 @@ export function OrderDetailDrawer({
                   Prodotti / Corsi Acquistati
                 </h3>
                 <div className="space-y-2">
-                  {order.items.length === 0 ? (
+                  {!order.items || order.items.length === 0 ? (
                     <p className="text-xs text-muted-foreground italic">Nessun elemento collegato.</p>
                   ) : (
                     order.items.map((item) => (
@@ -111,7 +111,7 @@ export function OrderDetailDrawer({
                           </p>
                         </div>
                         <span className="font-semibold text-foreground">
-                          € {item.price.toFixed(2)}
+                          € {(item.price ?? 0).toFixed(2)}
                         </span>
                       </div>
                     ))
@@ -126,7 +126,7 @@ export function OrderDetailDrawer({
                     Coupon Applicato: {order.couponCode}
                   </p>
                   <p className="text-muted-foreground">
-                    Sconto: € {order.discountAmount?.toFixed(2)}
+                    Sconto: € {(order.discountAmount ?? 0).toFixed(2)}
                   </p>
                 </div>
               )}
@@ -134,7 +134,7 @@ export function OrderDetailDrawer({
               {/* Dettagli Tecnici Gateway */}
               <div className="space-y-2 border-b border-border pb-4 text-xs font-mono">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-sans">
-                  Identificativi Gateway ({order.provider})
+                  Identificativi Gateway ({order.provider || "stripe"})
                 </h3>
                 <div className="p-3 bg-muted/30 rounded-lg space-y-1 break-all">
                   <p>
@@ -147,7 +147,7 @@ export function OrderDetailDrawer({
                   </p>
                   <p>
                     <span className="text-muted-foreground">Data:</span>{" "}
-                    {new Date(order.createdAt).toLocaleString("it-IT")}
+                    {order.createdAt ? new Date(order.createdAt).toLocaleString("it-IT") : "-"}
                   </p>
                 </div>
               </div>

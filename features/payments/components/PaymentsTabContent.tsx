@@ -13,6 +13,7 @@ import {
   RecentOrdersTable,
 } from "./OverviewComponents";
 import { OrdersTabContent } from "./OrdersTabContent";
+import { SettingsTabContent } from "./SettingsTabContent";
 
 const SUB_TABS = [
   { id: "overview", label: "Overview", icon: "📊" },
@@ -141,19 +142,9 @@ export async function PaymentsTabContent({
           </div>
         )}
 
-        {/* 7. SETTINGS (Fase 7) */}
-        {subtab === "settings" && (
-          <div className="p-12 text-center text-muted-foreground border border-dashed rounded-xl bg-card/50">
-            <span className="text-3xl block mb-2">⚙️</span>
-            <h3 className="font-semibold text-foreground">
-              Impostazioni Pagamenti
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Fase 7: Configurazione chiavi API Stripe, PayPal e dati
-              fatturazione.
-            </p>
-          </div>
-        )}
+        {/* SETTINGS */}
+        {subtab === "settings" && <SettingsTabContent />}
+
       </div>
     </div>
   );
