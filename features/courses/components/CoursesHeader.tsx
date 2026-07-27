@@ -28,7 +28,7 @@ export default function CoursesHeader() {
           TITOLO PRINCIPALE
       ============================================================ */}
       
-      <h1 className="text-3xl font-bold text-foreground md:text-4xl">
+      <h1 className="text-3xl font-bold text-blue-600 md:text-4xl">
         Catalogo Corsi
       </h1>
 

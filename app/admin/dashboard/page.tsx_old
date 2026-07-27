@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic";
 interface Props {
   searchParams: Promise<{
     tab?: string;
-    subtab?: string;
+    subtab?: string; // 👈 Aggiunto subtab
   }>;
 }
 
@@ -39,83 +39,38 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const supabase = getSupabaseAdmin();
 
-  // 📡 Esecuzione in parallelo delle chiamate principali
-  const [stats, trackingStats, resources, quizzesRes, coursesRes, courseStatsRes] = await Promise.all([
-    getAdminDashboardStats(),
-    getTrackingStats(),
-    getAllResourcesAdmin(),
-    supabase
-      .from("quizzes")
-      .select("id, title, status, passing_score, created_at")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("courses")
-      .select("id, title, slug, published, difficulty, created_at")
-      .order("title", { ascending: true }),
-    supabase
-      .from("user_course_stats")
-      .select("course_id, user_id, total_xp, total_minutes_active, course_level")
-  ]);
+  const stats = await getAdminDashboardStats();
+  const trackingStats = await getTrackingStats();
 
-  if (quizzesRes.error) {
+  const { data: quizzes, error: quizzesError } = await supabase
+    .from("quizzes")
+    .select(
+      `
+    id,
+    title,
+    status,
+    passing_score,
+    created_at
+  `
+    )
+    .order("created_at", { ascending: false });
+
+  if (quizzesError) {
     console.error(
       "Errore nel recupero dei quiz nella rotta admin page:",
-      quizzesRes.error.message
+      quizzesError.message
     );
   }
-
-  if (coursesRes.error) {
-    console.error(
-      "Errore nel recupero dei corsi per le statistiche admin:",
-      coursesRes.error.message
-    );
-  }
-
-  // 🧮 Aggregazione delle metriche di Gamification e Utilizzo per Singolo Corso
-  const coursesList = coursesRes.data || [];
-  const rawCourseStats = courseStatsRes.data || [];
-
-  const courseStats = coursesList.map((course) => {
-    const statsForCourse = rawCourseStats.filter(
-      (s) => String(s.course_id) === String(course.id)
-    );
-
-    const enrolledStudentsCount = statsForCourse.length;
-    const totalXp = statsForCourse.reduce((acc, curr) => acc + (curr.total_xp || 0), 0);
-    const totalMinutesStudied = statsForCourse.reduce(
-      (acc, curr) => acc + (curr.total_minutes_active || 0),
-      0
-    );
-    const averageLevel =
-      enrolledStudentsCount > 0
-        ? Math.round(
-            (statsForCourse.reduce((acc, curr) => acc + (curr.course_level || 1), 0) /
-              enrolledStudentsCount) *
-              10
-          ) / 10
-        : 1;
-
-    return {
-      courseId: course.id,
-      title: course.title,
-      slug: course.slug,
-      isPublished: course.published ?? true,
-      difficulty: course.difficulty || "Facile",
-      enrolledStudentsCount,
-      totalXp,
-      totalMinutesStudied,
-      averageLevel,
-    };
-  });
 
   const enrichedStats = {
     ...stats,
-    courseStats,
     raw: {
       ...(stats?.raw || {}),
-      quizzes: quizzesRes.data || [],
+      quizzes: quizzes || [],
     },
   };
+
+  const resources = await getAllResourcesAdmin();
 
   return (
     <div className="flex min-h-screen flex-col bg-muted">

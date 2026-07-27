@@ -1,73 +1,209 @@
 "use server";
 
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
+
+export interface AwardBadgeResult {
+  awarded: boolean;
+  badge_code: string;
+  badge_title: string;
+  xp_reward: number;
+  course_xp: number;
+  course_level: number;
+  global_total_xp: number;
+  global_level: number;
+}
 
 /**
- * Incrementa il tempo di studio dello studente e aggiorna lo stato di avanzamento della lezione corrente.
+ * Registra immediatamente l'accesso/cambio di una lezione aggiornando last_accessed_at (0 minuti aggiunti).
  */
-export async function incrementStudentMinutes(
-  userId: string, 
-  courseId?: string, 
-  lessonId?: string
+export async function touchLessonAccess(
+  userId: string,
+  courseId: string,
+  lessonId: string,
 ) {
-  if (!userId) return { success: false, error: "Missing User ID" };
+  if (!userId || !courseId || !lessonId) {
+    return { success: false, error: "Parametri mancanti" };
+  }
 
   const supabase = getSupabaseAdmin();
 
   try {
-    // 1. Incrementiamo i minuti totali sul profilo dell'utente (Logica preesistente)
-    const { data: profile, error: profileErr } = await supabase
-      .rpc("increment_profile_minutes", { user_id: userId }); 
-      
-    // Nota didattica: se l'RPC 'increment_profile_minutes' non è configurato nel DB, 
-    // puoi usare una query di update standard come fallback:
-    if (profileErr) {
-      await supabase
-        .from("profiles")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", userId);
-        // Nota: per fare incrementi puri senza RPC nativi si estrae il dato e si fa +1, 
-        // oppure si usa l'estensione dell'update di Supabase.
+    const { data, error } = await supabase.rpc("track_lesson_activity", {
+      p_user_id: userId,
+      p_course_id: courseId,
+      p_lesson_id: lessonId,
+      p_minutes_to_add: 0,
+    });
+
+    if (error) {
+      logger.error("touchLessonAccess: errore RPC", { error: error.message });
+      return { success: false, error: error.message };
     }
 
-    // 2. Se siamo all'interno di una lezione, tracciamo l'avanzamento analitico
-    if (courseId && lessonId) {
-      
-      // Controlliamo se esiste già un record di progresso per questa lezione
-      const { data: existingProgress } = await supabase
-        .from("profile_lessons_progress")
-        .select("minutes_watched, is_completed")
-        .eq("profile_id", userId)
-        .eq("lesson_id", lessonId)
-        .single();
+    const result = Array.isArray(data) ? data[0] : data;
 
-      const newMinutes = (existingProgress?.minutes_watched || 0) + 1;
-      
-      // REGOLE DI COMPLETAMENTO (Esercitazione / Personalizzabile):
-      // Es: Se lo studente spende almeno 1 minuto sulla risorsa, la consideriamo "Completata". 
-      // Puoi aumentare questo valore in base alle tue esigenze didattiche.
-      const shouldComplete = existingProgress?.is_completed || newMinutes >= 60;
+    const minutesWatched = Number(result?.minutes_watched ?? 0);
+    const lessonCompleted = Boolean(result?.is_completed);
 
-      const { error: progressErr } = await supabase
-        .from("profile_lessons_progress")
-        .upsert({
-          profile_id: userId,
-          lesson_id: lessonId,
-          course_id: courseId,
-          minutes_watched: newMinutes,
-          is_completed: shouldComplete,
-          last_accessed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: "profile_id,lesson_id"
-        });
+    logger.info("touchLessonAccess ===> Lesson tracking result", {
+      userId,
+      courseId,
+      lessonId,
+      minutesWatched,
+      lessonCompleted,
+    });
 
-      if (progressErr) throw progressErr;
+    logger.info("touchLessonAccess: accesso lezione registrato con successo", {
+      userId,
+      courseId,
+      lessonId,
+      data,
+    });
+
+    return { success: true, data };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Internal Server Error";
+    logger.error("touchLessonAccess: eccezione non gestita", {
+      error: message,
+    });
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Incrementa il tempo di studio dello studente e aggiorna lo stato della lezione tramite la RPC atomica.
+ * Se la lezione risulta completata, innesca l'assegnazione del badge di modulo e l'aggiornamento XP per corso e globale via award_module_badge.
+ */
+export async function incrementStudentMinutes(
+  userId: string,
+  courseId?: string,
+  lessonId?: string,
+  minutesToAdd: number = 1,
+) {
+  logger.warn("SERVER ACTION incrementStudentMinutes", {
+    userId,
+    courseId,
+    lessonId,
+    minutesToAdd,
+  });
+
+  if (!userId || !courseId || !lessonId) {
+    logger.debug("incrementStudentMinutes: Parametri mancanti", {
+      userId,
+      courseId,
+      lessonId,
+    });
+    return { success: false, error: "Parametri mancanti" };
+  }
+
+  if (minutesToAdd <= 0) {
+    return { success: true, message: "Nessun minuto da aggiungere" };
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  try {
+    const { data, error } = await supabase.rpc("track_lesson_activity", {
+      p_user_id: userId,
+      p_course_id: courseId,
+      p_lesson_id: lessonId,
+      p_minutes_to_add: minutesToAdd,
+    });
+
+    if (error) {
+      logger.error("incrementStudentMinutes: errore RPC", {
+        userId,
+        courseId,
+        lessonId,
+        error: error.message,
+      });
+      return { success: false, error: error.message };
     }
 
-    return { success: true, message: "Heartbeat memorizzato con successo" };
-  } catch (error: any) {
-    console.error("❌ Errore in incrementStudentMinutes Server Action:", error);
-    return { success: false, error: error.message || "Internal Server Error" };
+    const result = Array.isArray(data) ? data[0] : data;
+
+    const minutesWatched = Number(result?.minutes_watched ?? 0);
+    const lessonCompleted = Boolean(result?.is_completed);
+
+    logger.info("incrementStudentMinutes ===> Lesson tracking result", {
+      userId,
+      courseId,
+      lessonId,
+      minutesWatched,
+      lessonCompleted,
+    });
+
+    let badgeAwarded: AwardBadgeResult | null = null;
+
+    // Se la lezione è completata, inneschiamo l'assegnazione del badge di modulo
+    if (lessonCompleted) {
+      const { data: badgeData, error: badgeError } = await supabase.rpc(
+        "award_module_badge",
+        {
+          p_user_id: userId,
+          p_lesson_id: lessonId,
+        },
+      );
+
+      if (badgeError) {
+        // Gestione errore non bloccante: logghiamo l'errore senza fallire l'heartbeat
+        logger.error(
+          "incrementStudentMinutes: errore RPC award_module_badge",
+          {
+            userId,
+            lessonId,
+            error: badgeError.message,
+          },
+        );
+      } else {
+        const badgeResult = Array.isArray(badgeData)
+          ? badgeData[0]
+          : badgeData;
+
+        if (badgeResult?.awarded) {
+          badgeAwarded = badgeResult as AwardBadgeResult;
+          logger.info(
+            "incrementStudentMinutes: Badge modulo sbloccato con successo!",
+            {
+              userId,
+              lessonId,
+              badge: badgeResult,
+            },
+          );
+        }
+      }
+    }
+
+    logger.info(
+      "incrementStudentMinutes: attività registrata con successo via RPC",
+      {
+        userId,
+        courseId,
+        lessonId,
+        minutesToAdd,
+        result: data,
+        badgeUnlocked: badgeAwarded,
+      },
+    );
+
+    return {
+      success: true,
+      message: "Heartbeat memorizzato con successo",
+      data,
+      badge: badgeAwarded,
+    };
+  } catch (error: unknown) {
+    logger.error("incrementStudentMinutes: unexpected exception", {
+      userId,
+      courseId,
+      lessonId,
+      error: String(error),
+    });
+
+    const message =
+      error instanceof Error ? error.message : "Internal Server Error";
+    return { success: false, error: message };
   }
 }

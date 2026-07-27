@@ -142,10 +142,11 @@ export async function getLiveCourses(
         (a: any, b: any) => a.order_index - b.order_index,
       );
 
+      /*
       logger.debug(
         `[COURSES] ${dbCourse.title}: ${sortedModules.filter((m: any) => m.is_preview).length} preview module(s) su ${sortedModules.length}`,
       );
-
+*/
       // Mappiamo i nomi delle classi abilitate a questo specifico corso
       const allowedClassesNames = (dbCourse.course_classes || [])
         .map((cc: any) => cc.academy_classes?.name)
@@ -154,7 +155,7 @@ export async function getLiveCourses(
       // Recuperiamo i quiz associati a questo ID corso (se presenti)
       const associatedQuizzes = quizzesByCourse[dbCourse.id] || [];
 
-      logger.debug(`[COURSES] Mapping corso "${dbCourse.title}" completato`);
+      //logger.debug(`[COURSES] Mapping corso "${dbCourse.title}" completato`);
 
       // ✅ Estrazione e parsing sicuro del prezzo
       const numPrice = dbCourse.price !== undefined && dbCourse.price !== null

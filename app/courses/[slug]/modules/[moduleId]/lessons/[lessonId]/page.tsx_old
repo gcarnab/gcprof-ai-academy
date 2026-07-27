@@ -192,12 +192,12 @@ export default function LessonPage() {
 
   const pageContent = (
     <div className="flex min-h-screen flex-col bg-muted">
-      {/* 🎯 Tracciamento attività abilitato con passa-parametri ID Corso esplicito per la Gamification Multi-Corso */}
+      {/* 🎯 Tracciamento attività abilitato se l'utente è autenticato */}
       {user && (
         <ActivityTracker
           key={lesson.id}
-          courseId={String(course.id)}
-          lessonId={String(lesson.id)}
+          courseId={course.id}
+          lessonId={lesson.id}
         />
       )}
 
@@ -272,7 +272,7 @@ export default function LessonPage() {
     </div>
   );
 
-  // 🎯 Se è un'anteprima, non blocchiamo con ProtectedRoute
+  // 🎯 Se è un'anteprima, non blocchiamo con ProtectedRoute (consente anche la fruizione libera dell'anteprima)
   if (isPreview) {
     return pageContent;
   }

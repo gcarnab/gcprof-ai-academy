@@ -25,7 +25,7 @@ export default function SectionTitle({
 }: SectionTitleProps) {
   return (
     <div className="mb-12 text-center">
-      <h2 className="text-3xl font-bold text-foreground">
+      <h2 className="text-3xl font-bold text-blue-600">
         {title}
       </h2>
 

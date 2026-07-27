@@ -27,7 +27,8 @@ export default function HowItWorks({ id }:HowItWorksProps) {
     <section id={id} className="py-24 bg-background">
       <PageContainer>
         <div className="mx-auto mb-16 max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          {/* className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl" */}
+          <h2 className="mt-6 text-3xl font-black tracking-tight bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent md:text-6xl xl:text-4xl">
             Come funziona
           </h2>
           <p className="mt-4 text-muted-foreground">

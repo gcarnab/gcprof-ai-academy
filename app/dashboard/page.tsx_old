@@ -6,11 +6,11 @@ import { getStudentCoursesAction } from "@/features/courses/queries/getStudentCo
 import { getLiveCourses } from "@/features/courses/services/courseActions";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { StudentQuizDashboard } from "@/features/quiz/components/StudentQuizDashboard";
+import { getUserGamificationData } from "@/features/gamification/actions/badgeActions";
 import GamificationBar from "@/features/gamification/components/GamificationBar";
 import BadgeGrid from "@/features/gamification/components/BadgeGrid";
 import type { Metadata } from "next";
 import { GamificationTestButton } from "@/features/gamification/components/GamificationTestButton";
-import { getUserGamificationOverview } from "@/features/gamification/actions/gamification";
 
 export const metadata: Metadata = {
   title: "Dashboard Studente",
@@ -29,7 +29,7 @@ interface PageProps {
 export default async function StudentDashboardPage({ searchParams }: PageProps) {
   const cookieService = new NextCookieService();
   const tokenService = new JoseTokenService();
-
+  
   const token = await cookieService.getSession();
   const user = token ? (tokenService.decode(token) as any) : null;
 
@@ -58,22 +58,17 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
       .select("total_minutes_active, total_xp, current_level")
       .eq("id", userId)
       .single(),
-    getUserGamificationOverview(userId),
+    getUserGamificationData(userId),
     getStudentCoursesAction(userId),
     getLiveCourses()
   ]);
 
   const profileData = profileRes.data;
   const totalMinutesStudied = profileData?.total_minutes_active || 0;
+  const totalXp = profileData?.total_xp || 0;
+  const currentLevel = profileData?.current_level || 1;
 
-  // Dati Gamification Multi-Corso
-  const gamificationOverview = gamificationRes.success && gamificationRes.data ? gamificationRes.data : null;
-  const totalXp = gamificationOverview?.global.total_xp ?? profileData?.total_xp ?? 0;
-  const currentLevel = gamificationOverview?.global.global_level ?? profileData?.current_level ?? 1;
-  const courseStatsList = gamificationOverview?.courses || [];
-
-  // Mappa comoda per accedere velocemente alle metriche del corso
-  const courseStatsMap = new Map(courseStatsList.map((c) => [c.course_id, c]));
+  const badges = gamificationRes.success && gamificationRes.data ? gamificationRes.data.badges : [];
 
   // ==========================================
   // 📡 FLUSSO DATI CORSI
@@ -141,7 +136,7 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
     }
   }
 
-  // 🧮 LOGICA PROGRESSO % + GAMIFICATION PER CORSO
+  // 🧮 LOGICA PROGRESSO %
   const coursesWithRealMetrics = allowedCourses.map((allowedCourse: any) => {
     const structuralCourse = catalog.find(
       (c) => String(c.id) === String(allowedCourse.course_id) || c.slug === allowedCourse.course_slug
@@ -164,16 +159,12 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
     }
 
     const percentage = totalLessons > 0 ? Math.round((completedLessonsCount / totalLessons) * 100) : 0;
-    const courseGamification = courseStatsMap.get(allowedCourse.course_id);
 
     return {
       ...allowedCourse,
       totalLessons,
       completedLessons: completedLessonsCount,
-      percentage,
-      courseXp: courseGamification?.course_xp || 0,
-      courseLevel: courseGamification?.course_level || 1,
-      courseBadges: courseGamification?.badges || []
+      percentage
     };
   });
 
@@ -207,7 +198,7 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-100 transition-colors duration-200">
       <div className="p-8 max-w-7xl mx-auto space-y-8">
-
+        
         {/* SCHEDA PROFILO + GAMIFICATION */}
         <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl transition-colors">
           <div className="flex items-center gap-4">
@@ -215,9 +206,7 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
               {user.displayName?.substring(0, 2).toUpperCase() || "ST"}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Bentornato, {user.displayName}
-              </h1>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Bentornato, {user.displayName}</h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Email di studio: <span className="text-slate-700 dark:text-slate-300 font-medium">{user.email}</span>
               </p>
@@ -240,7 +229,7 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
               </div>
             </div>
 
-            {/* WIDGET COMPATTO GAMIFICATION GLOBALE */}
+            {/* WIDGET COMPATTO GAMIFICATION */}
             <div className="border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-3 sm:pt-0 sm:pl-6">
               <GamificationBar totalXp={totalXp} currentLevel={currentLevel} compact />
             </div>
@@ -249,21 +238,21 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
 
         {/* TAB SWITCHER */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
-          <Link
-            href="/dashboard?tab=courses"
+          <Link 
+            href="/dashboard?tab=courses" 
             className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 ${
-              activeTab === "courses"
-                ? "border-blue-500 text-slate-900 dark:text-white"
+              activeTab === "courses" 
+                ? "border-blue-500 text-slate-900 dark:text-white" 
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
             <span>📖</span> I Miei Corsi
           </Link>
-          <Link
-            href="/dashboard?tab=quizzes"
+          <Link 
+            href="/dashboard?tab=quizzes" 
             className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 ${
-              activeTab === "quizzes"
-                ? "border-blue-500 text-slate-900 dark:text-white"
+              activeTab === "quizzes" 
+                ? "border-blue-500 text-slate-900 dark:text-white" 
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
@@ -274,11 +263,11 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
               </span>
             )}
           </Link>
-          <Link
-            href="/dashboard?tab=badges"
+          <Link 
+            href="/dashboard?tab=badges" 
             className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 ${
-              activeTab === "badges"
-                ? "border-amber-500 text-amber-500 dark:text-amber-400"
+              activeTab === "badges" 
+                ? "border-amber-500 text-amber-500 dark:text-amber-400" 
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
@@ -313,8 +302,8 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {coursesWithRealMetrics.map((course: any) => (
-                  <div
-                    key={course.course_id}
+                  <div 
+                    key={course.course_id} 
                     className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-md group"
                   >
                     <div className="p-5 flex-1 space-y-3">
@@ -322,13 +311,7 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
                         <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-900/40 uppercase tracking-wider">
                           {course.difficulty || "Base"}
                         </span>
-                        
-                        {/* WIDGET XP PER SINGOLO CORSO */}
-                        <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 px-2 py-0.5 rounded-full">
-                          Lvl {course.courseLevel} • {course.courseXp} XP
-                        </span>
                       </div>
-                      
                       <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
                         {course.course_title}
                       </h3>
@@ -342,19 +325,19 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
 
                     <div className="px-5 pb-5 pt-2 border-t border-slate-100 dark:border-slate-800/50">
                       <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-1.5">
-                        <span>Avanzamento Lezioni</span>
+                        <span>Avanzamento</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{course.percentage}%</span>
                       </div>
                       <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-500"
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-500" 
                           style={{ width: `${course.percentage}%` }}
                         />
                       </div>
                       <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 mt-1">
                         {course.completedLessons} di {course.totalLessons} lezioni completate
                       </p>
-
+                      
                       <Link
                         href={`/courses/${course.course_slug}`}
                         className="w-full mt-4 inline-flex items-center justify-center bg-slate-50 dark:bg-slate-800/80 hover:bg-blue-600 dark:hover:bg-blue-600 text-slate-800 dark:text-slate-200 hover:text-white dark:hover:text-white font-semibold py-2 px-4 rounded-lg text-xs transition-all tracking-wide uppercase border border-slate-200 dark:border-transparent"
@@ -376,63 +359,20 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
         )}
 
         {activeTab === "badges" && (
-          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl space-y-8">
+          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
               <div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">I Tuoi Badge &amp; Traguardi Multi-Corso</h2>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">I Tuoi Badge &amp; Traguardi</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Visualizza i traguardi e i badge sbloccati per ciascuno dei tuoi corsi!
+                  Sblocca tutti e 18 i badge per diventare un <strong className="text-amber-400">Python Creative Master</strong>!
                 </p>
               </div>
               <GamificationBar totalXp={totalXp} currentLevel={currentLevel} />
             </div>
 
-            {/* SEZIONE BADGE E STATISTICHE PER SINGOLO CORSO */}
-            <div className="space-y-6">
-              {courseStatsList.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
-                  Nessun corso attivo per la gamification.
-                </div>
-              ) : (
-                courseStatsList.map((courseStat) => (
-                  <div
-                    key={courseStat.course_id}
-                    className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800/80 pb-3">
-                      <div>
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                          {courseStat.course_title}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {courseStat.badges.length} Badge sbloccati per questo corso
-                        </p>
-                      </div>
+            <BadgeGrid badges={badges} />
 
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50">
-                          Livello Corso: {courseStat.course_level}
-                        </span>
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">
-                          {courseStat.course_xp} XP Corso
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* GRIGLIA BADGE DEL CORSO */}
-                    {courseStat.badges.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic py-2">
-                        Nessun badge ancora ottenuto in questo corso. Completa le lezioni per sbloccarli!
-                      </p>
-                    ) : (
-                      <BadgeGrid badges={courseStat.badges as any} />
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-
-            <GamificationTestButton />
+            <GamificationTestButton/>
           </div>
         )}
 

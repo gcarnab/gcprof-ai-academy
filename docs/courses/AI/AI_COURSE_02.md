@@ -3,6 +3,20 @@
 ### Materiale didattico — Prof. Giuseppe Carnabuci per la piattaforma gcprof-academy.com
 ### Ottimizzata per Google Colab · Aggiornata al Luglio 2026
 
+---
+
+**Livello:** 🟡 Base
+
+**Codice Modulo:** M2
+
+**Versione:** 1.0
+
+**Tempo di studio stimato:** 15–20 ore
+
+**Difficoltà:** ★★☆☆☆
+
+---
+
 <a id="indice"></a>
 
 # Indice Modulo 2

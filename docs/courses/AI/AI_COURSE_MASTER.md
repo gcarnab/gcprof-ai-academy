@@ -1,5 +1,8 @@
-# AI_COURSE_MASTER.md
+# AI Master Document
+### Materiale didattico — Prof. Giuseppe Carnabuci per la piattaforma gcprof-academy.com
+### Ottimizzata per Google Colab · Aggiornata al Luglio 2026
 
+---
 # Corso Professionale di Intelligenza Artificiale
 ## Master Plan Didattico
 

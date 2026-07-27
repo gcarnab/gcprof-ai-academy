@@ -38,7 +38,6 @@ export default function HeroSection({
     href: "/courses",
   },
 }: HeroSectionProps) {
-
   const appName = process.env.NEXT_PUBLIC_SITE_NAME || "GCPROF Academy";
 
   return (
@@ -62,7 +61,8 @@ export default function HeroSection({
               Piattaforma didattica intelligente
             </div>
 
-            <h1 className="mt-6 text-5xl font-black tracking-tight text-foreground md:text-6xl xl:text-7xl">
+            {/** className="mt-6 text-5xl font-black tracking-tight text-blue-600 md:text-6xl xl:text-7xl" */}
+            <h1 className="mt-6 text-5xl font-black tracking-tight bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent md:text-6xl xl:text-7xl">
               {title}
             </h1>
 

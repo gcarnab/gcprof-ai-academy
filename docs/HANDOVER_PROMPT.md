@@ -1,9 +1,10 @@
 Agisci come un Esperto Senior Software Architect specializzato in Next.js, React e Clean Architecture. Dobbiamo riprendere il refactoring Enterprise v2 dell'applicazione "gcprof-ai-academy". Stiamo lavorando al progetto "GCPROF Academy", una piattaforma LMS avanzata basata su Next.js (App Router, TypeScript, Turbopack) e Supabase (Auth, PostgreSQL, RLS).
-Di seguito trovi il contesto completo, lo schema del database e la struttura del progetto "gcprof-ai-academy". Il tuo compito è assorbire queste informazioni e attendere le mie prossime istruzioni operative per continuare lo sviluppo.
+Di seguito trovi il contesto completo, lo schema del database e la struttura del progetto "gcprof-ai-academy". 
+Il tuo compito è assorbire queste informazioni e attendere le mie prossime istruzioni operative per continuare lo sviluppo.
 
 ### 1. PANORAMICA DEL PROGETTO
 
-Il progetto è una piattaforma Academy ("gcprof-ai-academy") per la gestione di corsi, moduli e lezioni multimediali, con un controllo degli accessi granulare basato sulle classi scolastiche. L'applicazione utilizza Next.js con Server Actions (`"use server"`) e Supabase come backend tramite `supabaseAdmin` (`@supabase/supabase-js`).
+Il progetto è una piattaforma LMS ("gcprof-ai-academy") per la gestione di corsi, moduli e lezioni multimediali, con un controllo degli accessi granulare basato sulle classi scolastiche. L'applicazione utilizza Next.js con Server Actions e Supabase come backend. utilizza github e Vercel per il deploy ed un dominio su cloudflare gcprof-academy.com 
 
 ### 📂 2. FILE SYSTEM TREE DEL PROGETTO
 
@@ -13,6 +14,7 @@ GCPROF-AI-ACADEMY
 |   .env.local
 |   .gitignore
 |   components.json
+|   data.sql
 |   eslint.config.mjs
 |   next-env.d.ts
 |   next.config.ts
@@ -21,6 +23,8 @@ GCPROF-AI-ACADEMY
 |   postcss.config.mjs
 |   proxy.ts
 |   README.md
+|   roles.sql
+|   schema.sql
 |   tree.txt
 |   tsconfig.json
 |   vitest.config.ts
@@ -122,6 +126,7 @@ GCPROF-AI-ACADEMY
 |   +---dashboard
 |   |       layout.tsx
 |   |       page.tsx
+|   |       page.tsx_old
 |   |       
 |   +---login
 |   |       page.tsx
@@ -167,22 +172,39 @@ GCPROF-AI-ACADEMY
 |   |   README-DB.md
 |   |   
 |   +---courses
-|   |   |   AI_Guide_FULL.md
 |   |   |   Blockchain_Guide_Full.md
 |   |   |   ProblemSolving_Guide_Full.md
 |   |   |   Python_Practice_Full.md
 |   |   |   test.md
 |   |   |   WebProgramming_Base_HTML_CSS_Full.md
 |   |   |   
-|   |   \---preview
-|   |           AI_01_preview.md
-|   |           Blockchain_01_preview.md
-|   |           DataBase_01_preview.md
-|   |           Finance_01_preview.md
-|   |           OOP_01_preview.md
-|   |           ProbleSolving_01_preview.md
-|   |           Python_01_preview.md
-|   |           WebProgramming_01_preview.md
+|   |   +---AI
+|   |   |       AI_COURSE_01.md
+|   |   |       AI_COURSE_02.md
+|   |   |       AI_COURSE_03.md
+|   |   |       AI_COURSE_04.md
+|   |   |       AI_COURSE_05.md
+|   |   |       AI_COURSE_06.md
+|   |   |       AI_COURSE_MASTER.md
+|   |   |       AI_Guide_FULL.md
+|   |   |       AI_GUIDE_STYLE.md
+|   |   |       
+|   |   +---preview
+|   |   |       AI_COURSE_preview.md
+|   |   |       Blockchain_01_preview.md
+|   |   |       DataBase_01_preview.md
+|   |   |       Finance_01_preview.md
+|   |   |       OOP_01_preview.md
+|   |   |       ProbleSolving_01_preview.md
+|   |   |       Python_01_preview.md
+|   |   |       WebProgramming_01_preview.md
+|   |   |       
+|   |   \---Python Creative Lab
+|   |           PCL_00.md
+|   |           PCL_01.md
+|   |           PCL_02.md
+|   |           PCL_MASTER_PLAN.md
+|   |           PCL_PREVIEW.md
 |   |           
 |   +---dev
 |   |       gcprof-academy_index_gem.md
@@ -199,16 +221,17 @@ GCPROF-AI-ACADEMY
 |       |   payments_schema.sql
 |       |   
 |       \---backup
-|           +---payments
+|           +---01_stable_before_payments
+|           |       20260721_data.sql
+|           |       20260721_roles.sql
+|           |       20260721_schema.sql
+|           |       
+|           +---02_payments
 |           |       20260722_data.sql
 |           |       20260722_roles.sql
 |           |       20260722_schema.sql
 |           |       
-|           \---stable_before_payments
-|                   20260721_data.sql
-|                   20260721_roles.sql
-|                   20260721_schema.sql
-|                   
+|           \---03_tracking
 +---e2e
 |   +---admin
 |   +---auth
@@ -330,6 +353,7 @@ GCPROF-AI-ACADEMY
 |   |   \---users
 |   |       +---actions
 |   |       |       activityActions.ts
+|   |       |       activityActions.ts_old
 |   |       |       adminUserActions.ts
 |   |       |       bulkActivateUsersAction.ts
 |   |       |       bulkUpdateUsersClassAction.ts
@@ -338,10 +362,10 @@ GCPROF-AI-ACADEMY
 |   |       |       
 |   |       +---components
 |   |       |       ActivityTracker.tsx
+|   |       |       ActivityTracker.tsx_old
 |   |       |       AdminUsersClassesEditor.tsx
 |   |       |       AdminUsersHeader.tsx
 |   |       |       AdminUsersRow.tsx
-|   |       |       AdminUsersRow.tsx_old
 |   |       |       AdminUsersTable.tsx
 |   |       |       AdminUsersToolbar.tsx
 |   |       |       UsersTab.tsx
@@ -411,6 +435,7 @@ GCPROF-AI-ACADEMY
 |   |   |   
 |   |   +---actions
 |   |   |       courseActions.ts
+|   |   |       courseActions.ts_old
 |   |   |       
 |   |   +---components
 |   |   |   |   AccessNoticeBanner.tsx
@@ -452,6 +477,17 @@ GCPROF-AI-ACADEMY
 |   |           course.ts
 |   |           lessonContent.ts
 |   |           
+|   +---gamification
+|   |   +---actions
+|   |   |       awardXpAction.ts
+|   |   |       badgeActions.ts
+|   |   |       
+|   |   \---components
+|   |           BadgeGrid.tsx
+|   |           BadgeUnlockModal.tsx
+|   |           GamificationBar.tsx
+|   |           GamificationTestButton.tsx
+|   |           
 |   +---home
 |   |   \---components
 |   |           CoursePreview.tsx
@@ -471,6 +507,7 @@ GCPROF-AI-ACADEMY
 |   |   |       getPaymentsDashboardAction.ts
 |   |   |       orderActions.ts
 |   |   |       paymentActions.ts
+|   |   |       paymentSettingsActions.ts
 |   |   |       
 |   |   +---adapters
 |   |   |   \---stripe
@@ -487,8 +524,10 @@ GCPROF-AI-ACADEMY
 |   |   |       OrdersTabContent.tsx
 |   |   |       OverviewComponents.tsx
 |   |   |       PaymentFeedbackBanner.tsx
+|   |   |       PaymentSettingsForm.tsx
 |   |   |       PaymentsNav.tsx
 |   |   |       PaymentsTabContent.tsx
+|   |   |       SettingsTabContent.tsx
 |   |   |       
 |   |   +---constants
 |   |   |       paymentConstants.ts
@@ -505,6 +544,7 @@ GCPROF-AI-ACADEMY
 |   |   |       
 |   |   +---repositories
 |   |   |       PaymentRepository.ts
+|   |   |       PaymentSettingsRepository.ts
 |   |   |       
 |   |   +---services
 |   |   |       CartService.ts
@@ -514,6 +554,7 @@ GCPROF-AI-ACADEMY
 |   |   |       EnrollmentService.ts
 |   |   |       PaymentDashboardService.ts
 |   |   |       PaymentService.ts
+|   |   |       PaymentSettingsService.ts
 |   |   |       StripeWebhookService.ts
 |   |   |       
 |   |   \---types
@@ -600,7 +641,7 @@ GCPROF-AI-ACADEMY
 |       
 +---logs
 |       app.log
-|               
+|          
 +---public
 |   |   file.svg
 |   |   gcprof-ai-academy_logo_01.png
@@ -684,9 +725,6 @@ GCPROF-AI-ACADEMY
         database.types.ts
         
 
-
-            
-
 ### 💾 SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
 
 ## Table `academy_classes`
@@ -722,6 +760,8 @@ GCPROF-AI-ACADEMY
 | `user_type` | `varchar` |  |
 | `school_track` | `text` |  Nullable |
 | `school_section` | `text` |  Nullable |
+| `total_xp` | `int4` |  Nullable |
+| `current_level` | `int4` |  Nullable |
 
 ## Table `profile_classes`
 
@@ -1251,6 +1291,42 @@ Audit trail dei webhook ricevuti
 | `error` | `text` |  Nullable |
 | `created_at` | `timestamptz` |  |
 
+## Table `system_settings`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `key` | `varchar` | Primary |
+| `value` | `text` |  |
+| `description` | `text` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+
+## Table `badges`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `code` | `varchar` |  Unique |
+| `title` | `varchar` |  |
+| `description` | `text` |  Nullable |
+| `icon` | `varchar` |  |
+| `xp_reward` | `int4` |  |
+| `created_at` | `timestamptz` |  Nullable |
+
+## Table `user_badges`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `profile_id` | `uuid` |  |
+| `badge_id` | `uuid` |  |
+| `awarded_at` | `timestamptz` |  Nullable |
+
 ## Custom Types / Enums
 
 ### `quiz_status`
@@ -1418,6 +1494,14 @@ Audit trail dei webhook ricevuti
 | `Utenti possono leggere le proprie iscrizioni` | SELECT | public | PERMISSIVE | `(auth.uid() = profile_id)` | — |
 | `Service role può gestire tutte le iscrizioni` | ALL | public | PERMISSIVE | `true` | — |
 
+### `profile_lessons_progress`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Utenti gestiscono proprio progresso lezioni` | ALL | authenticated | PERMISSIVE | `(auth.uid() = profile_id)` | `(auth.uid() = profile_id)` |
+| `Admin lettura totale progressi lezioni` | SELECT | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND ((profiles.role)::text = 'admin'::text))))` | — |
+
+
 
 
 
@@ -1429,8 +1513,11 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-dobbiamo sabilizzare e completare la sezione della admin dashboard chiamata "Payments" dove l'admin 
-può gestire ogni aspetto dei pagamenti effettuati sulla piattaforma. 
+se vogliamo usare la gamification per qualsiasi corso devo avere un modo per 
+differenziare i vari risultati xp e badge per il particolare corso e nella 
+dashboard utente devo essere in grado di vedere tutte le informazioni relative 
+alla gamification differenziate per corso e poi un totale generale queste informazioni 
+andranno anche rese disponibili nella dashbora admin per eventuali statistiche
 
 SITUAZIONE ATTUALE :
 0. feature in fase di svilippo (app stabile) 
@@ -1444,5 +1531,5 @@ VINCOLI:
 6. ricorda di predisporre i nomi delle classi per la feature già abilitata theme light/dark
 7. usa sempre il logger disponibile nel codice che scrivi 
 8. fare il refactoring essenziale e puntare a risolvere il problema mantenendo quanto più possibile la logica attuale senza regredire
-9. adotta sempre il metodo di spezzare i file (part1, part2...) quando sono troppo grandi per riscriverli per intero non darmi le modifiche puntuali che mi fanno perdere più tempo
+9. se non puoi riscriverli per intero adotta sempre il metodo di spezzare i file (part1, part2...) quando sono troppo grandi scegliendo tu la grandezza e il numero delle parti
 

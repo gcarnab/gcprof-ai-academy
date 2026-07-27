@@ -5,14 +5,15 @@
 
 ---
 
-> **Livello:** 🟢 Base  
-> **Codice Modulo:** M1  
-> **Versione:** 1.0  
-> **Durata stimata:** 8–10 ore  
-> **Lezioni:** 3  
-> **Laboratori:** 2  
-> **Quiz:** 1  
-> **Project Work:** Mini Project
+**Livello:** 🟢 Base
+
+**Codice Modulo:** M1
+
+**Versione:** 1.0
+
+**Tempo di studio stimato:** 15–20 ore
+
+**Difficoltà:** ★★☆☆☆
 
 ---
 

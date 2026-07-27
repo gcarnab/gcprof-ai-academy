@@ -63,6 +63,36 @@ export type Database = {
         }
         Relationships: []
       }
+      badges: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          icon: string
+          id: string
+          title: string
+          xp_reward: number
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          icon: string
+          id?: string
+          title: string
+          xp_reward: number
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string
+          id?: string
+          title?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       coupon_redemptions: {
         Row: {
           coupon_id: string
@@ -271,6 +301,7 @@ export type Database = {
           created_at: string
           id: string
           is_preview: boolean
+          module_code: string
           order_index: number
           title: string
         }
@@ -279,6 +310,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_preview?: boolean
+          module_code: string
           order_index?: number
           title: string
         }
@@ -287,6 +319,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_preview?: boolean
+          module_code?: string
           order_index?: number
           title?: string
         }
@@ -1046,6 +1079,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          current_level: number | null
           display_name: string | null
           email: string | null
           first_name: string | null
@@ -1057,12 +1091,14 @@ export type Database = {
           school_track: string | null
           status: string
           total_minutes_active: number
+          total_xp: number | null
           updated_at: string
           user_type: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          current_level?: number | null
           display_name?: string | null
           email?: string | null
           first_name?: string | null
@@ -1074,12 +1110,14 @@ export type Database = {
           school_track?: string | null
           status?: string
           total_minutes_active?: number
+          total_xp?: number | null
           updated_at?: string
           user_type?: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          current_level?: number | null
           display_name?: string | null
           email?: string | null
           first_name?: string | null
@@ -1091,6 +1129,7 @@ export type Database = {
           school_track?: string | null
           status?: string
           total_minutes_active?: number
+          total_xp?: number | null
           updated_at?: string
           user_type?: string
         }
@@ -1538,6 +1577,132 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          awarded_at: string | null
+          badge_id: string
+          course_id: string | null
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          awarded_at?: string | null
+          badge_id: string
+          course_id?: string | null
+          id?: string
+          profile_id: string
+        }
+        Update: {
+          awarded_at?: string | null
+          badge_id?: string
+          course_id?: string | null
+          id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "student_courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "user_badges_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_course_stats: {
+        Row: {
+          course_id: string
+          course_level: number
+          course_xp: number
+          created_at: string | null
+          id: string
+          profile_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          course_id: string
+          course_level?: number
+          course_xp?: number
+          created_at?: string | null
+          id?: string
+          profile_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          course_id?: string
+          course_level?: number
+          course_xp?: number
+          created_at?: string | null
+          id?: string
+          profile_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_course_stats_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_course_stats_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "student_courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "user_course_stats_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_page_views: {
         Row: {
           course_slug: string | null
@@ -1652,11 +1817,59 @@ export type Database = {
       }
     }
     Functions: {
+      award_module_badge: {
+        Args: { p_lesson_id: string; p_user_id: string }
+        Returns: {
+          awarded: boolean
+          badge_code: string
+          badge_title: string
+          course_level: number
+          course_xp: number
+          global_level: number
+          global_total_xp: number
+          xp_reward: number
+        }[]
+      }
+      get_admin_courses_gamification_stats: {
+        Args: never
+        Returns: {
+          avg_xp_per_student: number
+          course_id: string
+          course_title: string
+          total_badges_awarded: number
+          total_students_active: number
+          total_xp_awarded: number
+        }[]
+      }
+      get_user_gamification_overview: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      increment_coupon_redemptions: {
+        Args: { coupon_id_param: string }
+        Returns: undefined
+      }
       increment_profile_minutes: {
         Args: { user_id: string }
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
+      track_lesson_activity: {
+        Args: {
+          p_completion_threshold?: number
+          p_course_id: string
+          p_lesson_id: string
+          p_minutes_to_add: number
+          p_user_id: string
+        }
+        Returns: {
+          is_completed: boolean
+          last_accessed_at: string
+          minutes_watched: number
+          total_minutes_active: number
+          updated_at: string
+        }[]
+      }
     }
     Enums: {
       attempt_status: "submitted" | "graded"
