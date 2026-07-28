@@ -199,6 +199,7 @@ export async function testAddXpAction(amount: number = 50) {
 
 /**
  * Completa una lezione per l'utente loggato, assegna gli XP e controlla lo sblocco Badge di Modulo (M0-M17).
+ * Restituisce i dettagli completi per attivare modali o toast di congratulazioni nel frontend.
  */
 export async function completeLessonAction(
   input: string | CompleteLessonParams,
@@ -229,7 +230,6 @@ export async function completeLessonAction(
       allLessonIdsInModule = allLessonIdsInModuleArg;
     }
 
-    // --- AGGIUNTO LOG PER VERIFICARE I PARAMETRI IN INGRESSO ---
     console.log(
       `📥 [completeLesson] Ricevuto modulo: ${moduleCode}, Lezioni da completare: ${allLessonIdsInModule?.length}`,
     );
@@ -277,6 +277,7 @@ export async function completeLessonAction(
     const XP_PER_LESSON = 50;
     let updatedXp = 0;
     let updatedLevel = 1;
+    let leveledUp = false;
 
     const { data: profile } = await adminSupabase
       .from("profiles")
@@ -285,20 +286,30 @@ export async function completeLessonAction(
       .single();
 
     const currentXp = profile?.total_xp || 0;
+    const oldLevel = profile?.current_level || 1;
 
     if (isFirstTime) {
       updatedXp = currentXp + XP_PER_LESSON;
       updatedLevel = Math.floor(updatedXp / 100) + 1;
+      leveledUp = updatedLevel > oldLevel;
+
       await adminSupabase
         .from("profiles")
         .update({ total_xp: updatedXp, current_level: updatedLevel })
         .eq("id", userId);
     } else {
       updatedXp = currentXp;
-      updatedLevel = profile?.current_level || 1;
+      updatedLevel = oldLevel;
     }
 
-    let unlockedBadgeTitle: string | null = null;
+    let unlockedBadgeObject: {
+      id: string;
+      title: string;
+      description?: string | null;
+      iconUrl?: string | null;
+      xpReward?: number;
+    } | null = null;
+    
     let isModuleComplete = false;
 
     // 5. CONTROLLO SBLOCCO BADGE MODULO
@@ -313,6 +324,7 @@ export async function completeLessonAction(
       const completedSet = new Set(
         (completedLessons || []).map((p) => String(p.lesson_id)),
       );
+
       isModuleComplete = allLessonIdsInModule.every((id) =>
         completedSet.has(String(id)),
       );
@@ -324,7 +336,7 @@ export async function completeLessonAction(
       if (isModuleComplete) {
         const { data: badgeData, error: badgeFetchError } = await adminSupabase
           .from("badges")
-          .select("id, title, xp_reward")
+          .select("id, title, description, icon_url, icon, xp_reward")
           .eq("code", moduleCode)
           .single();
 
@@ -346,7 +358,6 @@ export async function completeLessonAction(
               { onConflict: "profile_id, badge_id" },
             );
 
-          // --- AGGIUNTO CONTROLLO ERRORI ESPLICITO ---
           if (badgeInsertErr) {
             console.error(
               `❌ [completeLesson] ERRORE GRAVE DURANTE L'INSERIMENTO DEL BADGE IN user_badges:`,
@@ -356,15 +367,28 @@ export async function completeLessonAction(
             console.log(
               `✅ [completeLesson] Badge '${badgeData.title}' assegnato con successo all'utente!`,
             );
-            unlockedBadgeTitle = badgeData.title;
 
-            if (badgeData.xp_reward > 0) {
+            unlockedBadgeObject = {
+              id: badgeData.id,
+              title: badgeData.title,
+              description: badgeData.description || null,
+              iconUrl: badgeData.icon_url || badgeData.icon || null,
+              xpReward: badgeData.xp_reward || 0,
+            };
+
+            if (badgeData.xp_reward && badgeData.xp_reward > 0) {
               updatedXp += badgeData.xp_reward;
-              updatedLevel = Math.floor(updatedXp / 100) + 1;
+              const levelWithBonus = Math.floor(updatedXp / 100) + 1;
+              if (levelWithBonus > updatedLevel) {
+                updatedLevel = levelWithBonus;
+                leveledUp = true;
+              }
+
               await adminSupabase
                 .from("profiles")
                 .update({ total_xp: updatedXp, current_level: updatedLevel })
                 .eq("id", userId);
+
               console.log(
                 `🎁 [completeLesson] Aggiunti ${badgeData.xp_reward} XP bonus per il completamento modulo.`,
               );
@@ -378,7 +402,9 @@ export async function completeLessonAction(
       );
     }
 
+    // Revalidate della dashboard e della sezione corsi
     revalidatePath("/dashboard");
+    revalidatePath("/courses");
 
     return {
       success: true,
@@ -386,8 +412,10 @@ export async function completeLessonAction(
       xpGained: isFirstTime ? XP_PER_LESSON : 0,
       totalXp: updatedXp,
       level: updatedLevel,
+      leveledUp,
       isModuleComplete,
-      unlockedBadge: unlockedBadgeTitle,
+      unlockedBadgeTitle: unlockedBadgeObject?.title || null, // Per retrocompatibilità
+      unlockedBadge: unlockedBadgeObject,                     // Dati estesi per il Modal
     };
   } catch (error: any) {
     console.error("❌ [completeLesson] Errore critico:", error);

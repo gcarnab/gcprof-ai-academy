@@ -87,7 +87,7 @@ export default function ActivityTracker({
               accumulatedSecondsRef.current -= pendingMinutes * 60;
               logger.warn("✅ Batch inviato e confermato dal DB", res);
 
-              // 🔔 Notifica Evento Globale per aggiornare al volo i widget della Gamification
+              // 🔔 Notifica Evento Globale per aggiornare al volo i widget della Gamification e il Modal
               if (typeof window !== "undefined") {
                 window.dispatchEvent(
                   new CustomEvent("gamification:updated", {
@@ -96,6 +96,7 @@ export default function ActivityTracker({
                       lessonId,
                       minutesAdded: pendingMinutes,
                       result: res.data,
+                      badge: res.badge,
                     },
                   })
                 );
@@ -123,7 +124,13 @@ export default function ActivityTracker({
           if (res?.success && typeof window !== "undefined") {
             window.dispatchEvent(
               new CustomEvent("gamification:updated", {
-                detail: { courseId, lessonId, minutesAdded: remainingMinutes, result: res.data },
+                detail: {
+                  courseId,
+                  lessonId,
+                  minutesAdded: remainingMinutes,
+                  result: res.data,
+                  badge: res.badge,
+                },
               })
             );
           }

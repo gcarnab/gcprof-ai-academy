@@ -3,6 +3,9 @@ type Props = {
   totalCourses?: number;
   totalModules?: number;
   totalLessons?: number;
+  totalXp?: number;
+  totalHoursActive?: number;
+  averageLevel?: number;
 };
 
 export default function StatsKpiCards({
@@ -10,6 +13,9 @@ export default function StatsKpiCards({
   totalCourses,
   totalModules,
   totalLessons,
+  totalXp = 0,
+  totalHoursActive = 0,
+  averageLevel = 1,
 }: Props) {
   const cards = [
     {
@@ -32,23 +38,40 @@ export default function StatsKpiCards({
       value: totalLessons ?? "--",
       icon: "🎬",
     },
+    {
+      title: "XP Totali",
+      value: totalXp.toLocaleString("it-IT"),
+      icon: "⚡",
+    },
+    {
+      title: "Tempo Cumulato",
+      value: `${totalHoursActive}h`,
+      icon: "⏱️",
+    },
+    {
+      title: "Livello Medio",
+      value: averageLevel,
+      icon: "🏆",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
       {cards.map((card) => (
         <div
           key={card.title}
-          className="rounded-xl border bg-background p-5 shadow-sm"
+          className="rounded-xl border bg-background p-4 shadow-sm"
         >
           <div className="flex items-center justify-between">
-            <span className="text-3xl">{card.icon}</span>
-            <span className="text-3xl font-bold text-blue-600">
+            <span className="text-2xl">{card.icon}</span>
+            <span className="text-2xl font-bold text-blue-600">
               {card.value}
             </span>
           </div>
 
-          <p className="mt-3 text-sm text-muted-foreground">{card.title}</p>
+          <p className="mt-2 text-xs font-medium text-muted-foreground">
+            {card.title}
+          </p>
         </div>
       ))}
     </div>

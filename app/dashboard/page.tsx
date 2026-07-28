@@ -312,9 +312,9 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {coursesWithRealMetrics.map((course: any) => (
+                {coursesWithRealMetrics.map((course: any, index: number) => (
                   <div
-                    key={course.course_id}
+                    key={course.course_id ? `course-${course.course_id}` : `course-${index}`}
                     className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-md group"
                   >
                     <div className="p-5 flex-1 space-y-3">
@@ -394,9 +394,9 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
                   Nessun corso attivo per la gamification.
                 </div>
               ) : (
-                courseStatsList.map((courseStat) => (
+                courseStatsList.map((courseStat, index) => (
                   <div
-                    key={courseStat.course_id}
+                    key={courseStat.course_id ? `course-stat-${courseStat.course_id}` : `course-stat-${index}`}
                     className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800/80 pb-3">

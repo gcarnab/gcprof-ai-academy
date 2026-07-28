@@ -57,11 +57,15 @@ export default function AdminStatsDashboard({ stats }: Props) {
           📊 SEZIONE KPI PRINCIPALI & METRICHE RAPIDE
           ========================================== */}
       <div className="relative">
+        
         <StatsKpiCards
           totalUsers={stats?.totals?.users || 0}
           totalCourses={stats?.totals?.courses || 0}
           totalModules={stats?.totals?.modules || 0}
           totalLessons={stats?.totals?.lessons || 0}
+          totalXp={stats?.totals?.totalXp || 0}
+          totalHoursActive={stats?.totals?.totalHoursActive || 0}
+          averageLevel={stats?.totals?.averageLevel || 1}
         />
 
         <div className="mt-4 flex flex-wrap items-center justify-end gap-3 text-xs font-medium">

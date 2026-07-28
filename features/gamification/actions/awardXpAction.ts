@@ -2,7 +2,10 @@
 
 import { getSupabaseAdmin } from "@/lib/supabase";
 
-// Esempio soglie livello: Livello 1 = 0-99 XP, Livello 2 = 100-249 XP, Livello 3 = 250+ XP
+// ======================================================
+// CALCOLO LIVELLO
+// ======================================================
+
 function calculateLevel(xp: number): number {
   if (xp >= 1000) return 5;
   if (xp >= 500) return 4;
@@ -11,10 +14,20 @@ function calculateLevel(xp: number): number {
   return 1;
 }
 
-export async function onLessonCompletedAction(userId: string, lessonId: string, courseId: string) {
+// ======================================================
+// COMPLETAMENTO LEZIONE
+// ======================================================
+
+interface LessonCompletedPayload {
+  userId: string;
+  lessonId: string;
+  courseId: string;
+}
+
+export async function onLessonCompletedAction(payload: LessonCompletedPayload) {
+  const { userId, lessonId, courseId } = payload;
   const supabase = getSupabaseAdmin();
 
-  // 1. Verifichiamo se la lezione era già stata completata in precedenza
   const { data: existingProgress } = await supabase
     .from("profile_lessons_progress")
     .select("is_completed")
@@ -22,36 +35,34 @@ export async function onLessonCompletedAction(userId: string, lessonId: string, 
     .eq("lesson_id", lessonId)
     .single();
 
-  // Se era già completata, non riassegniamo XP
   if (existingProgress?.is_completed) {
-    return { success: true, xpGained: 0, newBadge: null };
+    return {
+      success: true,
+      xpGained: 0,
+      newBadge: null,
+    };
   }
 
-  // 2. Segnamo la lezione come completata
-  await supabase
-    .from("profile_lessons_progress")
-    .upsert({
-      profile_id: userId,
-      lesson_id: lessonId,
-      course_id: courseId,
-      is_completed: true,
-      completed_at: new Date().toISOString(),
-      last_accessed_at: new Date().toISOString(),
-    });
+  await supabase.from("profile_lessons_progress").upsert({
+    profile_id: userId,
+    lesson_id: lessonId,
+    course_id: courseId,
+    is_completed: true,
+    completed_at: new Date().toISOString(),
+    last_accessed_at: new Date().toISOString(),
+  });
 
-  // 3. Leggiamo gli XP attuali dell'utente
   const { data: profile } = await supabase
     .from("profiles")
-    .select("total_xp, current_level")
+    .select("total_xp,current_level")
     .eq("id", userId)
     .single();
 
-  const currentXp = profile?.total_xp || 0;
-  const xpGained = 50; // 50 XP per ogni lezione completata
+  const currentXp = profile?.total_xp ?? 0;
+  const xpGained = 50;
   const newXp = currentXp + xpGained;
   const newLevel = calculateLevel(newXp);
 
-  // 4. Aggiorniamo il profilo con i nuovi XP e Livello
   await supabase
     .from("profiles")
     .update({
@@ -60,23 +71,24 @@ export async function onLessonCompletedAction(userId: string, lessonId: string, 
     })
     .eq("id", userId);
 
-  // 5. Controllo ed eventuale sblocco Badge (Es. "Prima Lezione Completata")
   const { count: completedCount } = await supabase
     .from("profile_lessons_progress")
-    .select("id", { count: "exact", head: true })
+    .select("id", {
+      count: "exact",
+      head: true,
+    })
     .eq("profile_id", userId)
     .eq("is_completed", true);
 
   let unlockedBadge = null;
 
-  // Se è la prima lezione in assoluto sblocchiamo il Badge con ID "first_lesson"
   if (completedCount === 1) {
-    const { data: badgeData } = await supabase
-      .from("user_badges")
-      .insert({ profile_id: userId, badge_id: "first_lesson", unlocked_at: new Date().toISOString() })
-      .select()
-      .single();
-    
+    await supabase.from("user_badges").insert({
+      profile_id: userId,
+      badge_id: "first_lesson",
+      unlocked_at: new Date().toISOString(),
+    });
+
     unlockedBadge = "Primo Passo nell'AI";
   }
 
@@ -86,5 +98,84 @@ export async function onLessonCompletedAction(userId: string, lessonId: string, 
     newTotalXp: newXp,
     newLevel,
     unlockedBadge,
+  };
+}
+
+// ======================================================
+// COMPLETAMENTO QUIZ
+// Viene chiamata SOLO quando il docente conclude
+// definitivamente la correzione.
+// ======================================================
+
+interface QuizCompletedPayload {
+  userId: string;
+  quizId: string;
+  finalScore: number;
+}
+
+export async function onQuizCompletedAction(payload: QuizCompletedPayload) {
+  const { userId, quizId, finalScore } = payload;
+  const supabase = getSupabaseAdmin();
+
+  // Evita doppia assegnazione XP
+  const { data: reward } = await supabase
+    .from("profile_quiz_rewards")
+    .select("id")
+    .eq("profile_id", userId)
+    .eq("quiz_id", quizId)
+    .maybeSingle();
+
+  if (reward) {
+    return {
+      success: true,
+      alreadyRewarded: true,
+      xpGained: 0,
+    };
+  }
+
+  let xpGained = 20;
+
+  if (finalScore >= 9) {
+    xpGained = 100;
+  } else if (finalScore >= 8) {
+    xpGained = 80;
+  } else if (finalScore >= 7) {
+    xpGained = 60;
+  } else if (finalScore >= 6) {
+    xpGained = 40;
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("total_xp,current_level")
+    .eq("id", userId)
+    .single();
+
+  const currentXp = profile?.total_xp ?? 0;
+  const newTotalXp = currentXp + xpGained;
+  const newLevel = calculateLevel(newTotalXp);
+
+  await supabase
+    .from("profiles")
+    .update({
+      total_xp: newTotalXp,
+      current_level: newLevel,
+    })
+    .eq("id", userId);
+
+  await supabase.from("profile_quiz_rewards").insert({
+    profile_id: userId,
+    quiz_id: quizId,
+    xp_awarded: xpGained,
+    final_score: finalScore,
+    created_at: new Date().toISOString(),
+  });
+
+  return {
+    success: true,
+    xpGained,
+    newTotalXp,
+    newLevel,
+    alreadyRewarded: false,
   };
 }

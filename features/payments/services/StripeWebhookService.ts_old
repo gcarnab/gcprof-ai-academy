@@ -2,19 +2,17 @@
  * GCPROF AI ACADEMY - SERVICE: STRIPE WEBHOOK SERVICE
  * File: features/payments/services/StripeWebhookService.ts
  * 
- * Gestore degli eventi Webhook di Stripe integrato con EnrollmentService.
+ * Gestore degli eventi Webhook di Stripe per l'evasione automatica
+ * degli ordini e l'iscrizione ai corsi.
  */
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { CouponService } from "./CouponService";
-import { EnrollmentService } from "./EnrollmentService";
 import { OrderStatusEnum, PaymentStatusEnum } from "../types/paymentTypes";
-import { logger } from "@/lib/logger";
 
 export class StripeWebhookService {
   private couponService: CouponService;
-  private enrollmentService: EnrollmentService;
 
   constructor(
     private supabase: SupabaseClient,
@@ -22,7 +20,6 @@ export class StripeWebhookService {
     private webhookSecret: string
   ) {
     this.couponService = new CouponService(supabase);
-    this.enrollmentService = new EnrollmentService(supabase);
   }
 
   /**
@@ -43,7 +40,7 @@ export class StripeWebhookService {
       );
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Firma non valida";
-      logger.error("[StripeWebhookService] Errore verifica firma Webhook:", { error: errorMessage });
+      console.error("[StripeWebhookService] Errore verifica firma Webhook:", errorMessage);
       throw new Error(`Webhook Error: ${errorMessage}`);
     }
 
@@ -65,7 +62,7 @@ export class StripeWebhookService {
       }
 
       default:
-        logger.info(`[StripeWebhookService] Evento ignorato: ${event.type}`);
+        console.log(`[StripeWebhookService] Evento ignorato: ${event.type}`);
     }
 
     return { received: true, eventType: event.type };
@@ -82,25 +79,25 @@ export class StripeWebhookService {
     const profileId = session.metadata?.profile_id;
 
     if (!orderId || !profileId) {
-      logger.error("[StripeWebhookService] Metadata mancanti nella sessione Checkout:", { sessionId: session.id });
+      console.error("[StripeWebhookService] Metadata mancanti nella sessione Checkout:", session.id);
       return;
     }
 
-    // 1. Recupera l'ordine
+    // 1. Recupera l'ordine e i relativi articoli
     const { data: order, error: orderError } = await this.supabase
       .from("orders")
-      .select("status, coupon_id")
+      .select("*, order_items(*)")
       .eq("id", orderId)
       .single();
 
     if (orderError || !order) {
-      logger.error("[StripeWebhookService] Ordine non trovato:", { orderId, error: orderError });
+      console.error("[StripeWebhookService] Ordine non trovato:", orderId);
       return;
     }
 
     // Protezione contro elaborazioni duplicate (Idempotenza)
     if (order.status === "PAID" || order.status === "FULFILLED") {
-      logger.info(`[StripeWebhookService] Ordine ${orderId} già elaborato.`);
+      console.log(`[StripeWebhookService] Ordine ${orderId} già elaborato.`);
       return;
     }
 
@@ -112,7 +109,7 @@ export class StripeWebhookService {
       .update({
         status: "CAPTURED" as PaymentStatusEnum,
         paid_at: now,
-        provider_payment_id: (session.payment_intent as string) || session.id,
+        provider_payment_id: session.payment_intent as string || session.id,
         raw_response: session as unknown as Record<string, unknown>,
         updated_at: now,
       })
@@ -123,17 +120,29 @@ export class StripeWebhookService {
       try {
         await this.couponService.redeemCoupon(order.coupon_id, orderId, profileId);
       } catch (err) {
-        logger.error("[StripeWebhookService] Errore riscatto coupon:", { error: err });
+        console.error("[StripeWebhookService] Errore riscatto coupon:", err);
       }
     }
 
-    // 4. Delega l'evasione dell'ordine e l'iscrizione a EnrollmentService
-    await this.enrollmentService.fulfillOrder(orderId);
+    // 4. Effettua l'iscrizione (Enrollment) dell'utente ai corsi acquistati
+    const orderItems = order.order_items || [];
+    for (const item of orderItems) {
+      await this.enrollUserInCourse(profileId, item.course_id);
+    }
 
-    // 5. Svuota il carrello attivo dell'utente
+    // 5. Aggiorna lo stato dell'ordine a FULFILLED
+    await this.supabase
+      .from("orders")
+      .update({
+        status: "FULFILLED" as OrderStatusEnum,
+        updated_at: now,
+      })
+      .eq("id", orderId);
+
+    // 6. Svuota il carrello attivo dell'utente
     await this.clearUserCart(profileId);
 
-    // 6. Segna il log dell'evento come processato
+    // 7. Segna il log dell'evento come processato
     await this.markLogProcessed(eventId);
   }
 
@@ -167,6 +176,26 @@ export class StripeWebhookService {
       .eq("id", orderId);
 
     await this.markLogProcessed(eventId);
+  }
+
+  /**
+   * Iscrive l'utente al corso acquistato nella tabella `enrollments`.
+   */
+  private async enrollUserInCourse(profileId: string, courseId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from("enrollments")
+      .upsert(
+        {
+          profile_id: profileId,
+          course_id: courseId,
+          enrolled_at: new Date().toISOString(),
+        },
+        { onConflict: "profile_id,course_id" }
+      );
+
+    if (error) {
+      console.error(`[StripeWebhookService] Errore iscrizione utente ${profileId} al corso ${courseId}:`, error);
+    }
   }
 
   /**

@@ -1513,11 +1513,11 @@ CONTESTO :
 dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
 
 OBIETTIVO : 
-se vogliamo usare la gamification per qualsiasi corso devo avere un modo per 
-differenziare i vari risultati xp e badge per il particolare corso e nella 
-dashboard utente devo essere in grado di vedere tutte le informazioni relative 
-alla gamification differenziate per corso e poi un totale generale queste informazioni 
-andranno anche rese disponibili nella dashbora admin per eventuali statistiche
+stiamo stabilizzando e completando la feature della gamification
+trasversale a tutti i corsi e visualizzabile dalla dashboard sia dallo studente che
+dall'amministratore che può vedere statistiche e KPI nella sezione STATS della dashboard admin
+dobbiamo risolvere i bug attuali per esempio i dati relativi alla gamification nella sezione STATS non
+si aggiornano 
 
 SITUAZIONE ATTUALE :
 0. feature in fase di svilippo (app stabile) 

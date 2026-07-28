@@ -3,7 +3,7 @@ import { getAdminUsersList } from "../../users/services/adminService";
 import { getAvailableClassesForCourses } from "../../courses/services/adminCourseService";
 import { getAllCoursesList } from "../../courses/services/adminStructureService";
 import { getCourseClasses } from "@/features/courses/services/courseActions";
-import { logger } from "@/lib/logger"; // Utilizzo rigoroso del logger minuscolo
+import { logger } from "@/lib/logger";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -17,7 +17,6 @@ export interface ChartDataPoint {
 }
 
 export async function getAdminDashboardStats() {
-  // Variable d'ambiente configurata per la finestra temporale
   const statsWindowDays = parseInt(
     process.env.NEXT_PUBLIC_ADMIN_STATS_WINDOW_DAYS || "14",
     10,
@@ -69,6 +68,37 @@ export async function getAdminDashboardStats() {
   const totalClasses = classes.length;
 
   // ============================================================================
+  // 🏆 CALCOLO GAMIFICATION & TEMPO CUMULATO
+  // ============================================================================
+  let totalXp = 0;
+  let totalMinutesActive = 0;
+  let totalLevelSum = 0;
+  let studentCount = 0;
+
+  users.forEach((u: any) => {
+    // Aggregazione XP
+    const userXp = Number(u.xp ?? u.total_xp ?? u.experience_points ?? 0);
+    totalXp += userXp;
+
+    // Aggregazione Minuti Attivi
+    const minutes = Number(u.total_minutes_active ?? u.minutes_active ?? 0);
+    totalMinutesActive += minutes;
+
+    // Calcolo Livello Medio per gli studenti
+    if (u.role === "student" || !u.role) {
+      const userLevel = Number(u.level ?? u.user_level ?? 1);
+      totalLevelSum += userLevel;
+      studentCount++;
+    }
+  });
+
+  const totalHoursActive = Math.round(totalMinutesActive / 60);
+  const averageLevel =
+    studentCount > 0
+      ? Number((totalLevelSum / studentCount).toFixed(1))
+      : 1;
+
+  // ============================================================================
   // 👥 USERS CHARTS
   // ============================================================================
   const usersByRole = users.reduce((acc: any, u: any) => {
@@ -93,14 +123,12 @@ export async function getAdminDashboardStats() {
     return acc;
   }, {});
 
-  // 🟢 NUOVO: Aggregazione per Indirizzo (schoolTrack)
   const studentsByTrack = users.reduce((acc: any, u: any) => {
     const track = u.schoolTrack || u.school_track || "Non Specificato";
     acc[track] = (acc[track] || 0) + 1;
     return acc;
   }, {});
 
-  // 🟢 NUOVO: Aggregazione per Sezione (schoolSection)
   const studentsBySection = users.reduce((acc: any, u: any) => {
     const section = u.schoolSection || u.school_section || "Non Specificata";
     acc[section] = (acc[section] || 0) + 1;
@@ -128,7 +156,7 @@ export async function getAdminDashboardStats() {
     .slice(0, engagementLimit);
 
   // ============================================================================
-  // 🛰️ TRACKING & TRAFFIC CHARTS (Unificato ed efficiente)
+  // 🛰️ TRACKING & TRAFFIC CHARTS
   // ============================================================================
   const hourlyTraffic: Record<string, number> = {};
   for (let i = 0; i < 24; i++) {
@@ -157,30 +185,25 @@ export async function getAdminDashboardStats() {
     Altro: 0,
   };
 
-  // Ciclo unico di iterazione per estrarre traffico temporale, durate e user-agent
   sessions.forEach((s) => {
     if (!s.login_at) return;
     const loginDate = new Date(s.login_at);
 
-    // 1. Traffico Orario
     const hourStr = `${String(loginDate.getHours()).padStart(2, "0")}:00`;
     if (hourlyTraffic[hourStr] !== undefined) hourlyTraffic[hourStr]++;
 
-    // 2. Trend Giornaliero
     const dayStr = loginDate.toLocaleDateString("it-IT", {
       day: "2-digit",
       month: "2-digit",
     });
     if (dailyTrend[dayStr] !== undefined) dailyTrend[dayStr]++;
 
-    // 3. Durata Sessioni
     const duration = s.session_duration_seconds ?? 0;
     if (duration <= 120) sessionDurationDist["0-2 min"]++;
     else if (duration <= 600) sessionDurationDist["2-10 min"]++;
     else if (duration <= 1800) sessionDurationDist["10-30 min"]++;
     else sessionDurationDist["30+ min"]++;
 
-    // 4. Mappatura Dispositivi
     const ua = (s.user_agent || "").toLowerCase();
     if (
       ua.includes("mobi") ||
@@ -201,10 +224,8 @@ export async function getAdminDashboardStats() {
   });
 
   // ============================================================================
-  // 🚀 TRASFORMAZIONE IN OGGETTI PIATTI PER COMPONENTI GRAFICI ({})
+  // 🚀 TRASFORMAZIONE IN OGGETTI PIATTI PER COMPONENTI GRAFICI
   // ============================================================================
-
-  // A. Aggregazione Corsi più visti
   const courseViewsMap = pageViews.reduce((acc: Record<string, number>, pv) => {
     if (pv.course_slug) acc[pv.course_slug] = (acc[pv.course_slug] || 0) + 1;
     return acc;
@@ -229,9 +250,6 @@ export async function getAdminDashboardStats() {
     mostViewedCourses["Nessun dato di navigazione"] = 0;
   }
 
-  // ============================================================================
-  // 🗺️ MAPPA DI SUPPORTO PER IL LOOKUP DEI TITOLI DELLE LEZIONI
-  // ============================================================================
   const lessonTitleMap = new Map<string, string>();
   const lessonSlugsList: string[] = [];
 
@@ -248,24 +266,13 @@ export async function getAdminDashboardStats() {
 
   lessonSlugsList.sort((a, b) => b.length - a.length);
 
-  // DEBUG di controllo per verificare cosa contiene path nel database
-  if (pageViews.length > 0) {
-    logger.info(
-      `DEBUG - Esempio path salvati in pageViews: ${JSON.stringify(pageViews.slice(0, 3).map((p: any) => p.path))}`,
-    );
-  }
-
-  // B. Aggregazione Lezioni più viste con fallback di sicurezza
   const lessonViewsMap = pageViews.reduce(
     (acc: Record<string, number>, pv: any) => {
       let matchedTitle = "";
 
-      // 1. Controllo lesson_slug diretto
       if (pv.lesson_slug && lessonTitleMap.has(pv.lesson_slug)) {
         matchedTitle = lessonTitleMap.get(pv.lesson_slug)!;
-      }
-      // 2. Controllo all'interno del path
-      else if (pv.path) {
+      } else if (pv.path) {
         const foundSlug = lessonSlugsList.find((slug) =>
           pv.path.includes(slug),
         );
@@ -274,14 +281,9 @@ export async function getAdminDashboardStats() {
         }
       }
 
-      // 3. FALLBACK DI SICUREZZA: se non trova il match pulito con il titolo,
-      // usiamo il lesson_slug o il path stesso per non perdere il dato nel grafico
       if (!matchedTitle) {
         if (!pv.path && !pv.lesson_slug) return acc;
-
-        // Filtriamo via le pagine di sistema o dashboard generali se vogliamo focalizzarci solo sui contenuti
         const rawKey = pv.lesson_slug || pv.path;
-        // Puliamo un po' il path rimuovendo slash superflui se è un URL
         matchedTitle = rawKey.split("/").filter(Boolean).pop() || rawKey;
         matchedTitle = matchedTitle.replace(/-/g, " ");
       }
@@ -361,9 +363,7 @@ export async function getAdminDashboardStats() {
   };
 
   courses.forEach((c: any) => {
-    // Normalizziamo il testo per evitare problemi di maiuscole/minuscole
     const diff = (c.difficulty || "Facile").toLowerCase();
-
     if (diff.includes("medio") || diff.includes("intermedio")) {
       courseComplexity["Intermedio"]++;
     } else if (diff.includes("avanzato") || diff.includes("difficile")) {
@@ -382,13 +382,16 @@ export async function getAdminDashboardStats() {
       classes: totalClasses,
       modules: totalModules,
       lessons: totalLessons,
+      totalXp,
+      totalHoursActive,
+      averageLevel,
     },
     charts: {
       usersByRole,
       usersByStatus,
       studentsByClass,
-      studentsByTrack, // 👈 Aggiunto
-      studentsBySection, // 👈 Aggiunto
+      studentsByTrack,
+      studentsBySection,
       studentEngagement,
       coursesByCategory,
       publishedCourses,
@@ -397,8 +400,8 @@ export async function getAdminDashboardStats() {
       courseComplexity,
       hourlyTraffic,
       dailyTrend,
-      sessionDurationDist, // Adesso integrato e mappato per DonutChartCard
-      deviceDistribution, // Adesso integrato e mappato per DonutChartCard
+      sessionDurationDist,
+      deviceDistribution,
       mostViewedCourses,
       mostViewedLessons,
     },
@@ -406,12 +409,10 @@ export async function getAdminDashboardStats() {
   };
 }
 
-// Helper nativo per formattare la data in DD/MM
 function formatDateKey(date: Date): string {
   return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
 }
 
-// Helper nativo per sottrarre giorni
 function subDaysNative(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() - days);
@@ -422,7 +423,6 @@ export async function getDashboardChartStats(days: number = 14) {
   const startDate = subDaysNative(new Date(), days);
   const startDateIso = startDate.toISOString();
 
-  // Fetch dei dati da Supabase
   const [viewsRes, progressRes] = await Promise.all([
     supabaseAdmin
       .from("user_page_views")
@@ -438,7 +438,6 @@ export async function getDashboardChartStats(days: number = 14) {
   const viewsData = viewsRes.data ?? [];
   const completionsData = progressRes.data ?? [];
 
-  // Inizializziamo la mappa dei giorni per coprire l'intera finestra
   const aggregatedData: Record<string, { views: number; completions: number }> =
     {};
 
@@ -448,7 +447,6 @@ export async function getDashboardChartStats(days: number = 14) {
     aggregatedData[dateKey] = { views: 0, completions: 0 };
   }
 
-  // Popoliamo le visualizzazioni
   viewsData.forEach((v) => {
     if (!v.viewed_at) return;
     const dateKey = formatDateKey(new Date(v.viewed_at));
@@ -457,7 +455,6 @@ export async function getDashboardChartStats(days: number = 14) {
     }
   });
 
-  // Popoliamo i completamenti delle lezioni
   completionsData.forEach((c) => {
     if (!c.updated_at) return;
     const dateKey = formatDateKey(new Date(c.updated_at));
@@ -466,7 +463,6 @@ export async function getDashboardChartStats(days: number = 14) {
     }
   });
 
-  // Trasformiamo in array ordinato per il grafico Recharts
   return Object.entries(aggregatedData).map(([date, metrics]) => ({
     date,
     views: metrics.views,
@@ -474,17 +470,12 @@ export async function getDashboardChartStats(days: number = 14) {
   }));
 }
 
-// ============================================================================
-// 📈 KPI: DROP-OFF RATE / TASSO DI COMPLETAMENTO COMPLESSIVO
-// ============================================================================
 export async function getCompletionRateKPI() {
   try {
-    // 1. Contiamo le lezioni iniziate (qualunque record presenti in tabella progress)
     const { count: startedCount, error: startedError } = await supabaseAdmin
       .from("profile_lessons_progress")
       .select("*", { count: "exact", head: true });
 
-    // 2. Contiamo le lezioni effettivamente completate (is_completed = true)
     const { count: completedCount, error: completedError } = await supabaseAdmin
       .from("profile_lessons_progress")
       .select("*", { count: "exact", head: true })
@@ -502,15 +493,14 @@ export async function getCompletionRateKPI() {
       return { completionRate: 0, dropOffRate: 0 };
     }
 
-    // Calcolo delle percentuali
     const completionRate = Number(
       ((completedCount! / startedCount) * 100).toFixed(1),
     );
     const dropOffRate = Number((100 - completionRate).toFixed(1));
 
     return {
-      completionRate, // Es: 65.4% (studenti che completano le lezioni)
-      dropOffRate, // Es: 34.6% (studenti che non terminano)
+      completionRate,
+      dropOffRate,
     };
   } catch (error) {
     logger.error("Eccezione durante il calcolo del drop-off rate:", error);

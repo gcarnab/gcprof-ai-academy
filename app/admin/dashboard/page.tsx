@@ -12,8 +12,8 @@ import { getAdminDashboardStats } from "@/features/admin/stats/services/adminSta
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getAllResourcesAdmin } from "@/features/resources/actions/resourcesActions";
 import { getTrackingStats } from "@/features/admin/tracking/services/trackingQueries";
-
 import { PaymentsTabContent } from "@/features/payments/components/PaymentsTabContent";
+import { logger } from "@/lib/logger";
 
 import type { Metadata } from "next";
 
@@ -40,7 +40,14 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const supabase = getSupabaseAdmin();
 
   // 📡 Esecuzione in parallelo delle chiamate principali
-  const [stats, trackingStats, resources, quizzesRes, coursesRes, courseStatsRes] = await Promise.all([
+  const [
+    stats,
+    trackingStats,
+    resources,
+    quizzesRes,
+    coursesRes,
+    courseStatsRes,
+  ] = await Promise.all([
     getAdminDashboardStats(),
     getTrackingStats(),
     getAllResourcesAdmin(),
@@ -54,20 +61,27 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       .order("title", { ascending: true }),
     supabase
       .from("user_course_stats")
-      .select("course_id, user_id, total_xp, total_minutes_active, course_level")
+      .select("course_id, profile_id, course_xp, course_level"),
   ]);
 
   if (quizzesRes.error) {
-    console.error(
+    logger.error(
       "Errore nel recupero dei quiz nella rotta admin page:",
-      quizzesRes.error.message
+      quizzesRes.error,
     );
   }
 
   if (coursesRes.error) {
-    console.error(
+    logger.error(
       "Errore nel recupero dei corsi per le statistiche admin:",
-      coursesRes.error.message
+      coursesRes.error,
+    );
+  }
+
+  if (courseStatsRes.error) {
+    logger.error(
+      "Errore nel recupero delle statistiche gamification (user_course_stats):",
+      courseStatsRes.error,
     );
   }
 
@@ -77,21 +91,25 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
 
   const courseStats = coursesList.map((course) => {
     const statsForCourse = rawCourseStats.filter(
-      (s) => String(s.course_id) === String(course.id)
+      (s) => String(s.course_id) === String(course.id),
     );
 
     const enrolledStudentsCount = statsForCourse.length;
-    const totalXp = statsForCourse.reduce((acc, curr) => acc + (curr.total_xp || 0), 0);
-    const totalMinutesStudied = statsForCourse.reduce(
-      (acc, curr) => acc + (curr.total_minutes_active || 0),
-      0
+    const totalXp = statsForCourse.reduce(
+      (acc, curr) => acc + (curr.course_xp || 0),
+      0,
     );
+    const totalMinutesStudied = 0; // In attesa di tracciamento minuti dedicati per singolo corso
+
     const averageLevel =
       enrolledStudentsCount > 0
         ? Math.round(
-            (statsForCourse.reduce((acc, curr) => acc + (curr.course_level || 1), 0) /
+            (statsForCourse.reduce(
+              (acc, curr) => acc + (curr.course_level || 1),
+              0,
+            ) /
               enrolledStudentsCount) *
-              10
+              10,
           ) / 10
         : 1;
 

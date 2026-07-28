@@ -1,14 +1,4 @@
-/**
- * GCPROF AI ACADEMY
- * File: features/courses/components/lesson/LessonRenderer.tsx
- */
-
-"use client";
-
 import React, { useState } from "react";
-import BadgeUnlockedModal, {
-  BadgeUnlockData,
-} from "@/features/gamification/components/BadgeUnlockedModal";
 
 export type LessonContentType =
   | "video"
@@ -27,37 +17,21 @@ export interface LessonContent {
   url?: string;
   external_url?: string;
   content?: string;
-  quiz_id?: string | null;
+  quiz_id?: string | null; // 🎯 AGGIORNATO: Supporto nativo per l'ID del quiz nella lezione
 }
 
 interface Props {
   contents: LessonContent[];
-  /** 🏆 Badge opzionale sbloccato dallo studente durante la lezione */
-  unlockedBadge?: BadgeUnlockData | null;
-  /** Callback per resettare/chiudere il modal del badge */
-  onCloseBadge?: () => void;
 }
 
-export default function LessonRenderer({
-  contents,
-  unlockedBadge,
-  onCloseBadge,
-}: Props) {
+export default function LessonRenderer({ contents }: Props) {
   if (!contents || !Array.isArray(contents)) return null;
 
   // Estraiamo un eventuale quiz_id associato a questa lezione
   const activeQuizId = contents.find((item) => item.quiz_id)?.quiz_id;
 
   return (
-    <div className="space-y-8 relative">
-      {/* 🏆 MODAL NOTIFICA BADGE SBLOCCATO */}
-      {unlockedBadge && (
-        <BadgeUnlockedModal
-          badge={unlockedBadge}
-          onClose={onCloseBadge || (() => {})}
-        />
-      )}
-
+    <div className="space-y-8">
       {contents.map((item, index) => {
         const rawType = item.type || item.content_type;
         const activeType = rawType === "text" ? "markdown" : rawType;
@@ -184,12 +158,12 @@ export default function LessonRenderer({
             return (
               <div
                 key={index}
-                className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
+                className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
               >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🚀</span>
-                    <span className="text-xs uppercase tracking-wider font-bold text-blue-600 dark:text-blue-400">
+                    <span className="text-xs uppercase tracking-wider font-bold text-blue-600">
                       Google Colab Notebook
                     </span>
                   </div>
@@ -207,7 +181,7 @@ export default function LessonRenderer({
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md shadow-blue-200 dark:shadow-none transition-all transform hover:-translate-y-0.5"
+                  className="shrink-0 inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md shadow-blue-200 transition-all transform hover:-translate-y-0.5"
                 >
                   Esegui Codice su Colab
                   <span>↗️</span>
@@ -265,7 +239,7 @@ export default function LessonRenderer({
         }
       })}
 
-      {/* 🎯 Box condizionale per il Quiz in fondo alla lezione */}
+      {/* 🎯 NUOVO BLOCCO: Box condizionale di sbarramento per il Quiz in fondo alla lezione */}
       {activeQuizId && (
         <div className="mt-8 p-5 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="space-y-1 text-center sm:text-left">
@@ -309,7 +283,7 @@ function MarkdownComponent({ text }: { text: string }) {
             .trim();
           const language = header || "code";
 
-          return <CodeBlock code="{code}" key="{bIdx}" language="{language}"/>;
+          return <CodeBlock key={bIdx} code={code} language={language} />;
         }
 
         return (

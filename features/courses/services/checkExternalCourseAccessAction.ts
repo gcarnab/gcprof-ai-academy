@@ -120,3 +120,25 @@ export async function enrollFreeCourseAction(
     return { success: false, error: errorMessage };
   }
 }
+
+// Aggiungi questa funzione nel file esistente
+export async function checkInternalCourseAccessAction(courseId: string, profileId: string): Promise<boolean> {
+  try {
+    // NOTA: Usa l'istanza di supabaseAdmin o createServerActionClient che è già presente in questo file.
+    // Presumo tu stia esportando un client o inizializzando supabase nel file.
+    const { data, error } = await supabaseAdmin
+      .from("profile_courses")
+      .select("status")
+      .eq("course_id", courseId)
+      .eq("profile_id", profileId)
+      .single();
+
+    if (error || !data) return false;
+    
+    // Controlliamo che lo stato sia attivo
+    return data.status === "ACTIVE" || data.status === "COMPLETED" || data.status === "active";
+  } catch (err) {
+    console.error("Errore lettura profile_courses:", err);
+    return false;
+  }
+}

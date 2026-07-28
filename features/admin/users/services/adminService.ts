@@ -22,6 +22,11 @@ export interface AdminUserRow {
   status: "pending" | "active" | "blocked";
   created_at: string;
   total_minutes_active: number;
+
+  // === Gamification ===
+  total_xp: number;
+  current_level: number;
+
   classes: string[];
   userType?: "SCHOOL_STUDENT" | "EXTERNAL_STUDENT" | null;
   schoolTrack?: string | null;
@@ -137,6 +142,8 @@ export async function getAdminUsersPaginated({
       status: p.status,
       created_at: p.created_at,
       total_minutes_active: p.total_minutes_active || 0,
+      total_xp: p.total_xp || 0,
+      current_level: p.current_level || 1,
       classes: userClasses,
       userType: p.user_type,
       schoolTrack: p.school_track,
@@ -186,6 +193,8 @@ export async function getAdminUsersList(): Promise<AdminUserRow[]> {
       status: p.status,
       created_at: p.created_at,
       total_minutes_active: p.total_minutes_active || 0,
+      total_xp: p.total_xp || 0,
+      current_level: p.current_level || 1,      
       classes: userClasses,
       userType: p.user_type,
       schoolTrack: p.school_track,

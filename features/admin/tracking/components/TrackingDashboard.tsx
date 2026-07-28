@@ -45,24 +45,23 @@ export default function TrackingDashboard({ stats }: Props) {
 
   const sessions = stats?.sessions || [];
 
-  // 1. Gestione del cambio testo (senza useEffect distruttivi)
+  // 1. Gestione del cambio testo
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    setCurrentPage(1); // Torna istantaneamente alla pagina 1
-    setSelectedIds([]); // Svuota le selezioni precedenti per sicurezza UX
+    setCurrentPage(1);
+    setSelectedIds([]);
   };
 
-  // 2. Logica di Filtraggio Multi-campo ad alte prestazioni
+  // 2. Logica di Filtraggio Multi-campo
   const filteredSessions = sessions.filter((session: any) => {
     const searchLower = searchTerm.trim().toLowerCase();
-    if (!searchLower) return true; // Se vuoto, mostra tutto
+    if (!searchLower) return true;
 
     const name = session.profiles?.display_name?.toLowerCase() || "";
     const email = session.profiles?.email?.toLowerCase() || "";
     const ip = session.ip_address?.toLowerCase() || "";
 
-    // Cerca sia nell'User Agent grezzo del DB sia nell'emoji formattata
     const uaRaw = session.user_agent?.toLowerCase() || "";
     const uaParsed = parseUserAgent(session.user_agent).toLowerCase();
 
@@ -89,6 +88,7 @@ export default function TrackingDashboard({ stats }: Props) {
   const isAllPageSelected =
     currentItemsIds.length > 0 &&
     currentItemsIds.every((id: string) => selectedIds.includes(id));
+
   const handleSelectPageToggle = () => {
     if (isAllPageSelected) {
       setSelectedIds((prev) =>
@@ -112,7 +112,28 @@ export default function TrackingDashboard({ stats }: Props) {
     setSelectedIds(allFilteredIds);
   };
 
-  // 5. Azione di Eliminazione Massiva
+  // 5. Azione di Eliminazione Singola
+  const handleSingleDelete = (sessionId: string, userName: string) => {
+    const confirmMessage = `⚠️ ELIMINAZIONE RECORD ⚠️\nVuoi cancellare la sessione di "${userName}"? L'azione è irreversibile.`;
+    if (!confirm(confirmMessage)) return;
+
+    startDeleteTransition(async () => {
+      try {
+        const result = await deleteSessionsAction([sessionId]);
+
+        if (result.success) {
+          setSelectedIds((prev) => prev.filter((id) => id !== sessionId));
+          router.refresh();
+        } else {
+          alert(`🔴 Errore del database: ${result.error}`);
+        }
+      } catch (error: any) {
+        alert(`Errore imprevisto: ${error.message || error}`);
+      }
+    });
+  };
+
+  // 6. Azione di Eliminazione Massiva
   const handleBulkDelete = () => {
     const count = selectedIds.length;
     if (count === 0) return;
@@ -125,7 +146,6 @@ export default function TrackingDashboard({ stats }: Props) {
         const result = await deleteSessionsAction(selectedIds);
 
         if (result.success) {
-          alert(`🔥 Successo: ${count} record rimossi dal database.`);
           setSelectedIds([]);
           setSearchTerm("");
           router.refresh();
@@ -271,13 +291,16 @@ export default function TrackingDashboard({ stats }: Props) {
                 <TableHead className="font-semibold text-foreground">
                   Browser
                 </TableHead>
+                <TableHead className="font-semibold text-foreground text-right pr-6">
+                  Azioni
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {currentItems.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center py-12 text-muted-foreground text-sm"
                   >
                     Nessun dato di tracciamento trovato.
@@ -287,6 +310,9 @@ export default function TrackingDashboard({ stats }: Props) {
                 currentItems.map((session: any) => {
                   const isOnline = !session.logout_at;
                   const isChecked = selectedIds.includes(session.id);
+                  const userName =
+                    session.profiles?.display_name || "Utente sconosciuto";
+
                   return (
                     <TableRow
                       key={session.id}
@@ -342,6 +368,21 @@ export default function TrackingDashboard({ stats }: Props) {
 
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {parseUserAgent(session.user_agent)}
+                      </TableCell>
+
+                      <TableCell className="text-right pr-6 whitespace-nowrap">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={isPendingDelete}
+                          onClick={() =>
+                            handleSingleDelete(session.id, userName)
+                          }
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-500/10"
+                          title="Elimina questo record"
+                        >
+                          🗑️
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );

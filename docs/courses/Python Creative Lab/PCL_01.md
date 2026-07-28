@@ -1,37 +1,38 @@
-# 🐢 M1 — Google Colab e la prima tartaruga
+# 🐢 M1 — Benvenuti nel laboratorio di Python
 
-## La tua prima esperienza con Python
+## La prima missione: diventare creatori digitali
 
 **Python Creative Lab**
 
-* **Versione:** Luglio 2026
-* **Piattaforma:** gcprof-academy.com
-* **Livello:** Classe prima scuola secondaria di secondo grado
-* **Prerequisiti:** Aver completato M0 — Benvenuti nel laboratorio di Python
+Versione: Luglio 2026
+
+Piattaforma: gcprof-academy.com
+
+Livello: Classe prima scuola secondaria di secondo grado
+
+Prerequisiti:
+Nessuna esperienza di programmazione richiesta.
 
 ---
 
 <a id="indice"></a>
 ## Indice del modulo
 
-- [Missione M1](#missione)
-- [1. Il laboratorio del programmatore](#1)
-- [2. Che cos'è Google Colab](#2)
-- [3. Il concetto di notebook](#3)
-- [4. Le celle di Colab](#4)
-- [5. Prepariamo il nostro laboratorio](#5)
-- [6. Installiamo ColabTurtlePlus](#6)
-- [7. Conosciamo Terry](#7)
-- [8. Il primo comando Python](#8)
-- [9. Il primo disegno](#9)
-- [10. Analizziamo il codice](#10)
-- [11. Laboratorio guidato](#11)
-- [12. Missione di Terry](#12)
-- [13. Mini progetto](#13)
-- [14. Sfida pratica](#14)
-- [15. Quiz docente](#15)
-- [16. Badge e punti esperienza](#16)
-- [17. Riepilogo finale](#17)
+- [Missione](#missione)
+- [1. Che cos'è la programmazione](#1-che-cosè-la-programmazione)
+- [2. Il computer e le istruzioni](#2-il-computer-e-le-istruzioni)
+- [3. Gli algoritmi: prima di programmare bisogna pensare](#3-gli-algoritmi-prima-di-programmare-bisogna-pensare)
+- [4. Incontra Terry 🐢](#4-incontra-terry-)
+- [5. Come funziona il corso](#5-come-funziona-il-corso)
+- [6. Il metodo Osserva → Comprendi → Crea](#6-il-metodo-osserva--comprendi--crea)
+- [7. Il primo notebook](#7-il-primo-notebook)
+- [8. Laboratorio di pensiero computazionale](#8-laboratorio-di-pensiero-computazionale)
+- [9. Missione di Terry](#9-missione-di-terry)
+- [10. Mini progetto](#10-mini-progetto)
+- [11. Sfida pratica](#11-sfida-pratica)
+- [12. Quiz docente](#12-quiz-docente)
+- [13. Badge e punti esperienza](#13-badge-e-punti-esperienza)
+- [14. Riepilogo finale](#14-riepilogo-finale)
 
 ---
 
@@ -39,566 +40,482 @@
 
 ---
 
-# Missione M1
+# Missione
 
 <a id="missione"></a>
 
-## Aprire la porta del laboratorio digitale
+## Diventa un programmatore creativo
 
-Nel modulo precedente hai scoperto che cosa significa programmare.
+Immagina di avere un'idea.
 
-Ora inizierai a farlo davvero.
+Un paesaggio.
 
-La tua prima missione è preparare il tuo ambiente di lavoro.
+Un gioco.
 
-Un programmatore ha bisogno di uno spazio dove:
+Un'immagine animata.
 
-- scrivere codice;
-- eseguire programmi;
-- controllare i risultati;
-- modificare le proprie idee.
+Un progetto digitale.
 
-Il nostro laboratorio sarà:
+Il computer però non conosce la tua idea.
 
-## Google Colab
+Per realizzarla devi imparare a comunicare con lui.
 
-Qui incontrerai Terry per la prima volta.
+La programmazione è proprio questo:
+
+> Trasformare un'idea in una sequenza di istruzioni che il computer può eseguire.
+
+Durante questo corso imparerai a farlo costruendo immagini e animazioni con Python.
+
+La tua prima missione è semplice:
+
+**Imparare a pensare come un programmatore.**
 
 ---
 
-# 1. Il laboratorio del programmatore
+# 1. Che cos'è la programmazione
 
-<a id="1"></a>
+<a id="1-che-cosè-la-programmazione"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Quando uno scrittore usa un quaderno per scrivere storie, un programmatore usa un ambiente di sviluppo per scrivere programmi.
+La programmazione è il processo con cui una persona crea istruzioni per un computer.
 
-Durante questo corso utilizzeremo Google Colab.
+Un programma è quindi:
 
-È uno strumento online che permette di programmare senza installare software complessi.
+- un insieme di istruzioni;
+- scritte in un linguaggio comprensibile al computer;
+- eseguite secondo un ordine preciso.
 
-Questo significa che potrai lavorare:
+Un esempio della vita quotidiana:
 
-- a scuola;
-- a casa;
-- da qualsiasi computer collegato a Internet.
+Preparare una merenda.
+
+Una persona potrebbe pensare:
+
+"Preparo un panino."
+
+Ma un computer avrebbe bisogno di istruzioni più precise:
+
+1. Prendi il pane.
+2. Taglia il pane.
+3. Inserisci il ripieno.
+4. Chiudi il panino.
+5. Servi il risultato.
+
+Questa sequenza di azioni è molto simile a un programma.
 
 ---
 
-## 🐢 Terry consiglia
+## 🐢 Terry spiega
 
-Non pensare al codice come a qualcosa di misterioso.
+Un computer è molto veloce...
 
-Un programma nasce sempre da piccoli passi.
+ma non è intelligente come una persona.
 
-Oggi non costruiremo un paesaggio.
+Non può immaginare cosa vuoi ottenere.
 
-Oggi faremo il primo passo:
+Devi spiegargli ogni singolo passo.
 
-far muovere Terry.
+Questo è il lavoro del programmatore.
 
 ---
 
-# 2. Che cos'è Google Colab
+# 2. Il computer e le istruzioni
 
-<a id="2"></a>
+<a id="2-il-computer-e-le-istruzioni"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Google Colab è un ambiente gratuito per scrivere ed eseguire programmi Python direttamente dal browser.
+Un computer lavora seguendo istruzioni.
 
-Il nome deriva da:
+Ogni istruzione comunica un'azione.
 
-**Colaboratory**
+Ad esempio:
 
-cioè:
+- spostati;
+- calcola;
+- confronta;
+- ripeti;
+- visualizza.
 
-"laboratorio collaborativo".
+Un programma è formato da tante istruzioni organizzate.
 
-Con Colab puoi:
+Possiamo immaginarlo come una ricetta.
 
-- creare documenti di codice;
-- eseguire programmi;
-- salvare il lavoro;
-- condividere esperimenti.
+La ricetta dice al cuoco cosa fare.
 
----
-
-## Perché utilizziamo Colab?
-
-Perché permette di concentrarsi sulla programmazione senza preoccuparsi dell'installazione.
-
-Il nostro obiettivo è imparare Python.
-
-Non perdere tempo nella configurazione del computer.
+Il programma dice al computer cosa fare.
 
 ---
 
-# 3. Che cos'è un notebook
+## Un errore molto comune
 
-<a id="3"></a>
+Molti studenti pensano:
 
-[🔙 Torna all'indice](#indice)
+"Il computer capisce quello che voglio."
 
----
+Non è così.
 
-Un notebook è un documento digitale formato da celle.
+Il computer esegue solo quello che scriviamo.
 
-Puoi immaginarlo come un quaderno interattivo.
+Se l'istruzione è sbagliata, anche il risultato sarà sbagliato.
 
-Un quaderno normale contiene:
+Ed è proprio questo che rende interessante programmare:
 
-- pagine;
-- testi;
-- disegni.
-
-Un notebook contiene:
-
-- testo;
-- codice;
-- risultati.
-
----
-
-Un notebook Python permette di:
-
-1. scrivere un comando;
-2. eseguirlo;
-3. vedere immediatamente il risultato.
-
-Questo rende l'apprendimento molto più semplice.
-
----
-
-# 4. Le celle di Colab
-
-<a id="4"></a>
-
-[🔙 Torna all'indice](#indice)
-
----
-
-Un notebook è formato da celle.
-
-Esistono principalmente due tipi di celle.
-
----
-
-## Celle di testo
-
-Servono per scrivere spiegazioni.
-
-Esempio:
-
-```
-Questo è il mio primo programma Python.
-```
-
----
-
-## Celle di codice
-
-Servono per scrivere istruzioni Python.
-
-Esempio:
-
-```python
-print("Ciao Python")
-```
-
-Quando premi il pulsante ▶ la cella viene eseguita.
-
----
-
-## 🧠 Byte spiega
-
-Il computer non esegue tutto il notebook automaticamente.
-
-Esegue solamente le celle che gli chiedi di eseguire.
-
-Se una cella contiene un errore, puoi correggere solo quella.
-
----
-
-# 5. Prepariamo il nostro laboratorio
-
-<a id="5"></a>
-
-[🔙 Torna all'indice](#indice)
-
----
-
-Per iniziare servono:
-
-✅ un account Google
-
-✅ un browser aggiornato
-
-✅ una connessione Internet
-
-Apriremo un nuovo notebook.
-
-Il nome consigliato sarà:
-
-```
-PythonCreativeLab_M1_PrimaTurtle
-```
-
----
-
-## Regola del programmatore
-
-Un buon programmatore organizza sempre i propri lavori.
-
-Un nome chiaro aiuta a ritrovare facilmente i propri progetti.
-
----
-
-# 6. Installiamo ColabTurtlePlus
-
-<a id="6"></a>
-
-[🔙 Torna all'indice](#indice)
-
----
-
-Python può essere ampliato con librerie.
-
-Una libreria è una raccolta di strumenti già pronti.
-
-Per disegnare utilizzeremo:
-
-## ColabTurtlePlus
-
-È una versione adattata della classica Turtle per funzionare dentro Google Colab.
-
----
-
-Nella prima cella di codice scrivi:
-
-```python
-!pip install ColabTurtlePlus
-```
-
-Poi premi ▶.
-
----
-
-## Analizziamo il comando
-
-```python
-!
-```
-
-Dice a Colab di eseguire un comando del sistema.
-
----
-
-```python
-pip install
-```
-
-Significa:
-
-"installa una libreria Python".
-
----
-
-```python
-ColabTurtlePlus
-```
-
-È il nome dello strumento che useremo.
+ogni errore diventa un'occasione per imparare.
 
 ---
 
 ## 🐞 Bug ti avvisa
 
-Se compare un messaggio rosso durante l'installazione non sempre significa che c'è un problema.
+In programmazione un errore viene spesso chiamato:
 
-Aspetta che Colab termini l'esecuzione.
+**bug**
 
-Molti messaggi sono semplicemente informazioni tecniche.
+Un bug non è un fallimento.
+
+È un indizio che ci aiuta a capire cosa migliorare.
+
+Un buon programmatore non evita gli errori.
+
+Impara a risolverli.
 
 ---
 
-# 7. Conosciamo Terry
+# 3. Gli algoritmi: prima di programmare bisogna pensare
 
-<a id="7"></a>
+<a id="3-gli-algoritmi-prima-di-programmare-bisogna-pensare"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Ora possiamo importare gli strumenti necessari.
+Prima di scrivere codice bisogna progettare una soluzione.
 
-Scriviamo:
+Questa soluzione si chiama:
 
-```python
-from ColabTurtlePlus.Turtle import *
-```
+## Algoritmo
+
+Un algoritmo è una sequenza ordinata di passi necessari per risolvere un problema.
+
+Esempio:
+
+Problema:
+
+"Disegnare una casa."
+
+Prima di programmare dobbiamo ragionare:
+
+1. Disegnare il tetto.
+2. Disegnare le pareti.
+3. Disegnare porte e finestre.
+4. Colorare gli elementi.
+
+Solo dopo possiamo trasformare questi passi in codice.
 
 ---
 
-Questa istruzione permette al nostro programma di utilizzare i comandi della Turtle.
+## 🧠 Il pensiero computazionale
 
-Da questo momento Python conosce Terry.
+Durante il corso svilupperai quattro abilità fondamentali:
 
----
+### Scomporre
 
-## 🐢 Terry racconta
-
-La Turtle nasce negli anni '60 come strumento educativo.
-
-È stata creata per aiutare gli studenti a capire la programmazione attraverso il movimento.
-
-Ancora oggi viene utilizzata perché trasforma il codice in qualcosa di visibile.
+Dividere un problema grande in problemi più piccoli.
 
 ---
 
-# 8. Il primo comando Python
+### Riconoscere schemi
 
-<a id="8"></a>
+Trovare elementi che si ripetono.
+
+---
+
+### Creare algoritmi
+
+Organizzare una soluzione.
+
+---
+
+### Astrarre
+
+Concentrarsi sulle informazioni importanti.
+
+---
+
+# 4. Incontra Terry 🐢
+
+<a id="4-incontra-terry-"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Prima di disegnare prepariamo lo spazio.
+Terry sarà la tua compagna di viaggio.
 
-Scriviamo:
+È una tartaruga speciale.
 
-```python
-clearscreen()
-```
+Non cammina solamente.
 
----
+Esegue programmi.
 
-Questo comando pulisce il foglio.
+Quando imparerai Python potrai dirle:
 
-È come prendere un foglio bianco prima di iniziare un disegno.
-
----
-
-Ora impostiamo la finestra:
-
-```python
-setup(800,500)
-```
+- dove andare;
+- quanto muoversi;
+- quale direzione seguire;
+- cosa disegnare.
 
 ---
 
-Significa:
+## I personaggi del laboratorio
 
-* larghezza: 800 pixel
-* altezza: 500 pixel
+### 🐢 Terry
+
+La guida del corso.
+
+Ti accompagnerà nelle missioni.
 
 ---
 
-# 9. Il primo disegno
+### 🤖 Byte
 
-<a id="9"></a>
+Ti spiegherà come ragiona il computer.
+
+---
+
+### 🦉 Ada
+
+Ti racconterà curiosità sulla tecnologia e sulla storia dell'informatica.
+
+---
+
+### 🐞 Bug
+
+Ti aiuterà a riconoscere gli errori più comuni.
+
+---
+
+# 5. Come funziona il corso
+
+<a id="5-come-funziona-il-corso"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Finalmente Terry è pronta.
+Ogni modulo seguirà sempre lo stesso percorso.
 
-Scriviamo:
+## 📘 Imparo
 
-```python
-forward(100)
-```
-
-Esegui la cella.
-
-Dovresti vedere una linea.
-
-🎉 Hai appena creato il tuo primo disegno con Python.
+Scopriamo un nuovo concetto.
 
 ---
 
-# 10. Analizziamo il codice
+## 👀 Osservo
 
-<a id="10"></a>
+Vediamo un esempio semplice.
+
+---
+
+## 🧠 Capisco
+
+Analizziamo perché funziona.
+
+---
+
+## 🚀 Creo
+
+Modifico e realizzo qualcosa di personale.
+
+---
+
+Questo metodo ti accompagnerà fino al progetto finale.
+
+---
+
+# 6. Il metodo Osserva → Comprendi → Crea
+
+<a id="6-il-metodo-osserva--comprendi--crea"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-## `forward()`
+Nel laboratorio Python Creative Lab non dovrai imparare programmi a memoria.
 
-È un comando di movimento.
+Dovrai capire.
 
-Dice a Terry:
+Ogni attività seguirà questo ciclo:
 
-"Vai avanti."
+## Osserva
 
----
-
-## Il numero 100
-
-Indica la distanza.
-
-```python
-forward(100)
-```
-
-significa:
-
-"Avanza di 100 pixel."
+Guarda cosa succede.
 
 ---
 
-La struttura generale è:
+## Comprendi
 
-```python
-comando(valore)
-```
-
-Molti comandi Python funzionano in questo modo.
+Scopri perché succede.
 
 ---
 
-# 11. Laboratorio guidato
+## Modifica
 
-<a id="11"></a>
+Prova cambiamenti.
+
+---
+
+## Crea
+
+Costruisci qualcosa di tuo.
+
+---
+
+# 7. Il primo notebook
+
+<a id="7-il-primo-notebook"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-## Esperimento 1
+Nel prossimo modulo userai Google Colab.
 
-Modifica:
+Sarà il tuo laboratorio digitale.
 
-```python
-forward(100)
-```
+Con Google Colab potrai:
 
-in:
+- scrivere codice;
+- eseguire programmi;
+- salvare il lavoro;
+- condividere i risultati.
 
-```python
-forward(50)
-```
+Non dovrai installare programmi complessi.
 
-Cosa cambia?
+Ti serviranno solamente:
 
----
-
-## Esperimento 2
-
-Prova:
-
-```python
-forward(200)
-```
-
-Osserva la differenza.
+- browser;
+- connessione Internet;
+- account Google.
 
 ---
 
-## Esperimento 3
+# 8. Laboratorio di pensiero computazionale
 
-Prova a prevedere il risultato prima di eseguire.
-
-Questa è una capacità fondamentale del programmatore.
-
----
-
-# 12. Missione di Terry
-
-<a id="12"></a>
+<a id="8-laboratorio-di-pensiero-computazionale"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-## Missione: la prima passeggiata
+## Attività 1
 
-Terry vuole fare una passeggiata.
+Metti in ordine queste azioni:
 
-Crea tre programmi diversi:
+Problema:
 
-🟢 corto
+"Preparare lo zaino per la scuola."
 
-```python
-forward(50)
-```
+Azioni:
 
-🟡 medio
+- Controllare l'orario.
+- Mettere i libri.
+- Chiudere lo zaino.
+- Scegliere il materiale.
 
-```python
-forward(150)
-```
-
-🔴 lungo
-
-```python
-forward(300)
-```
-
-Confronta i risultati.
+Qual è l'ordine corretto?
 
 ---
 
-# 13. Mini progetto
+## Attività 2
 
-<a id="13"></a>
+Dividi il problema:
+
+"Creare un videogioco"
+
+in almeno cinque piccoli problemi.
+
+---
+
+# 9. Missione di Terry
+
+<a id="9-missione-di-terry"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-## Il diario di Terry
+## Missione: insegna a Terry una semplice attività
 
-Crea un notebook chiamato:
+Immagina di dover spiegare a Terry come preparare una tazza di latte.
 
-```
-Diario_di_Terry
-```
+Scrivi almeno 6 istruzioni ordinate.
 
-Inserisci:
+Ricorda:
 
-* un titolo;
-* una cella con il primo comando;
-* una cella con le tue prove.
+Terry non può inventare nulla.
 
-Questo sarà il tuo primo progetto personale.
+Devi spiegare tutto.
 
 ---
 
-# 14. Sfida pratica
+# 10. Mini progetto
 
-<a id="14"></a>
+<a id="10-mini-progetto"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-## Sfida livello 🟢
+## Il mio primo algoritmo
 
-Disegna tre linee diverse:
+Crea il tuo primo algoritmo scritto.
 
-* una corta;
-* una media;
-* una lunga.
+Scegli una situazione quotidiana:
 
-Poi rispondi:
+- preparare la colazione;
+- andare a scuola;
+- organizzare una stanza;
+- creare un disegno.
 
-Quale valore rende la linea più lunga?
+Scrivi tutti i passaggi necessari.
+
+Questo sarà il tuo primo progetto da programmatore.
 
 ---
 
-# 15. Quiz docente
+# 11. Sfida pratica
 
-<a id="15"></a>
+<a id="11-sfida-pratica"></a>
+
+[🔙 Torna all'indice](#indice)
+
+---
+
+## Sfida livello 🟡
+
+Un robot deve attraversare una stanza.
+
+Scrivi le istruzioni per:
+
+- partire dalla porta;
+- raggiungere il tavolo;
+- tornare indietro.
+
+Non usare frasi generiche.
+
+Sii preciso.
+
+---
+
+# 12. Quiz docente
+
+<a id="12-quiz-docente"></a>
 
 [🔙 Torna all'indice](#indice)
 
@@ -606,15 +523,15 @@ Quale valore rende la linea più lunga?
 
 ## Domanda 1
 
-Google Colab è:
+Che cos'è un programma?
 
-A) Un videogioco
+A) Un'immagine
 
-B) Un ambiente online per programmare
+B) Un insieme di istruzioni per il computer
 
-C) Un linguaggio di programmazione
+C) Un dispositivo elettronico
 
-D) Un sistema operativo
+D) Un gioco
 
 ✅ Risposta corretta: B
 
@@ -622,79 +539,39 @@ D) Un sistema operativo
 
 ## Domanda 2
 
-Una cella di codice serve per:
+Che cos'è un algoritmo?
 
-A) Scrivere ed eseguire programmi
+A) Un errore del computer
 
-B) Disegnare immagini manualmente
+B) Una sequenza ordinata di passi
 
-C) Salvare fotografie
+C) Un linguaggio grafico
 
-D) Navigare su Internet
+D) Un file
 
-✅ Risposta corretta: A
+✅ Risposta corretta: B
 
 ---
 
 ## Domanda 3
 
-Cosa installa il comando?
+Il computer esegue le istruzioni:
 
-```python
-!pip install ColabTurtlePlus
-```
+A) A caso
 
-A) Un browser
+B) Solo se vuole
 
-B) Una libreria Python
+C) Seguendo l'ordine indicato
 
-C) Un gioco
+D) In modo casuale
 
-D) Un sistema operativo
-
-✅ Risposta corretta: B
+✅ Risposta corretta: C
 
 ---
 
-## Domanda 4
+# 13. Badge e punti esperienza
 
-Cosa significa:
-
-```python
-forward(100)
-```
-
-A) Cambia colore
-
-B) Avanza di 100 pixel
-
-C) Cancella lo schermo
-
-D) Chiude Python
-
-✅ Risposta corretta: B
-
----
-
-## Domanda 5
-
-La Turtle permette di:
-
-A) Disegnare programmando
-
-B) Creare documenti Word
-
-C) Navigare online
-
-D) Modificare foto
-
-✅ Risposta corretta: A
-
----
-
-# 16. Badge e punti esperienza
-
-<a id="16"></a>
+<a id="13-badge-e-punti-esperienza"></a>
 
 [🔙 Torna all'indice](#indice)
 
@@ -702,19 +579,19 @@ D) Modificare foto
 
 Completando M1 ottieni:
 
-🏆 **Badge: 🐢 Primo Passo**
+🏆 **Badge: 👋 Benvenuto**
 
 XP guadagnati:
 
 ⭐ 100 XP
 
-Hai aperto il laboratorio e fatto muovere Terry per la prima volta.
+Hai iniziato il tuo viaggio nel mondo della programmazione.
 
 ---
 
-# 17. Riepilogo finale
+# 14. Riepilogo finale
 
-<a id="17"></a>
+<a id="14-riepilogo-finale"></a>
 
 [🔙 Torna all'indice](#indice)
 
@@ -722,43 +599,40 @@ Hai aperto il laboratorio e fatto muovere Terry per la prima volta.
 
 In questo modulo hai imparato:
 
-✅ cos'è Google Colab
+✅ cos'è la programmazione
 
-✅ cos'è un notebook
+✅ cosa sono le istruzioni
 
-✅ cosa sono le celle
+✅ cosa sono gli algoritmi
 
-✅ cosa sono le librerie Python
+✅ perché è importante ragionare prima di scrivere codice
 
-✅ come installare ColabTurtlePlus
+✅ chi è Terry
 
-✅ come importare Turtle
-
-✅ il primo comando di movimento
+✅ come funzionerà il corso
 
 ---
 
 ## Checklist finale
 
-Prima di passare a M2:
+Prima di passare a M1:
 
-☐ So aprire un notebook Colab.
+☐ So spiegare cos'è un programma.
 
-☐ So eseguire una cella.
+☐ So spiegare cos'è un algoritmo.
 
-☐ So installare una libreria.
+☐ Ho capito che il computer segue istruzioni precise.
 
-☐ So utilizzare `forward()`.
-
-☐ Ho creato il mio primo disegno.
+☐ Sono pronto a creare il mio primo programma Python.
 
 ---
 
-🚀 **Prossima missione: M2 — Muovere la Turtle**
+🚀 **Prossima missione: M2 — Google Colab e la prima tartaruga**
 
-Nel prossimo modulo Terry imparerà a:
+In M1 entrerai finalmente nel laboratorio digitale.
 
-* cambiare direzione;
-* girare a destra e sinistra;
-* controllare la penna;
-* costruire i primi percorsi.
+Aprirai il tuo primo notebook.
+
+Installerai gli strumenti necessari.
+
+E vedrai Terry muoversi per la prima volta.

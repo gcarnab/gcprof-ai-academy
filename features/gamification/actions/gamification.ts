@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_noStore as noStore } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
@@ -45,6 +46,7 @@ export interface AdminCourseStat {
 export async function getUserGamificationOverview(
   userId: string
 ): Promise<{ success: boolean; data?: UserGamificationOverview; error?: string }> {
+  noStore(); // Disabilita cache Next.js per dati sempre aggiornati
   if (!userId) return { success: false, error: "ID Utente mancante" };
 
   const supabase = getSupabaseAdmin();
@@ -74,14 +76,55 @@ export async function getAdminGamificationStats(): Promise<{
   data?: AdminCourseStat[];
   error?: string;
 }> {
+  noStore(); // Disabilita cache Next.js per la dashboard Admin
+
   const supabase = getSupabaseAdmin();
 
   try {
     const { data, error } = await supabase.rpc("get_admin_courses_gamification_stats");
 
     if (error) {
-      logger.error("getAdminGamificationStats: Errore RPC", { error: error.message });
-      return { success: false, error: error.message };
+      logger.error("getAdminGamificationStats: Errore RPC, avvio fallback", { error: error.message });
+      
+      // Fallback manuale via query diretta
+      const { data: courses } = await supabase.from("courses").select("id, title");
+      if (!courses || courses.length === 0) {
+        return { success: true, data: [] };
+      }
+
+      const { data: xpData } = await supabase.from("profile_course_xp").select("course_id, xp, user_id");
+      const { data: badgeData } = await supabase.from("user_badges").select("course_id, id");
+      const { data: progressData } = await supabase.from("profile_lessons_progress").select("course_id, user_id");
+
+      const stats: AdminCourseStat[] = courses.map((c) => {
+        const courseIdStr = String(c.id);
+
+        const activeStudents = new Set(
+          (progressData || [])
+            .filter((p) => String(p.course_id) === courseIdStr)
+            .map((p) => p.user_id)
+        ).size;
+
+        const totalXp = (xpData || [])
+          .filter((x) => String(x.course_id) === courseIdStr)
+          .reduce((acc, curr) => acc + (curr.xp || 0), 0);
+
+        const totalBadges = (badgeData || [])
+          .filter((b) => String(b.course_id) === courseIdStr).length;
+
+        const avgXp = activeStudents > 0 ? Math.round((totalXp / activeStudents) * 10) / 10 : 0;
+
+        return {
+          course_id: courseIdStr,
+          course_title: c.title,
+          total_students_active: activeStudents,
+          total_xp_awarded: totalXp,
+          total_badges_awarded: totalBadges,
+          avg_xp_per_student: avgXp,
+        };
+      });
+
+      return { success: true, data: stats };
     }
 
     return { success: true, data: data as AdminCourseStat[] };

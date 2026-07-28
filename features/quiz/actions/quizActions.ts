@@ -9,6 +9,9 @@ import { sendQuizSubmittedMail, sendQuizGradedMail } from "./quizMailActions";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
+// Import Gamification
+import { onQuizCompletedAction } from "@/features/gamification/actions/awardXpAction";
+
 const quizRepository = new SupabaseQuizRepository();
 const tokenService = new JoseTokenService();
 const cookieService = new NextCookieService();
@@ -53,7 +56,7 @@ export async function importQuizFromMarkdownAction(rawMarkdown: string) {
   try {
     const adminSession = await getAuthenticatedSession("admin");
 
-    // Parsing e validazione sintattico-biologica (Zod) del Markdown
+    // Parsing e validazione del Markdown
     const parsedQuiz = await parseQuizMarkdown(rawMarkdown);
 
     // Salvataggio sul database
@@ -62,7 +65,7 @@ export async function importQuizFromMarkdownAction(rawMarkdown: string) {
       adminSession.id,
     );
 
-    // Invalida la cache sia della route statica che della dashboard amministrativa attiva
+    // Invalida la cache delle route interessate
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
 
@@ -111,7 +114,10 @@ export async function assignQuizToCourseAction(
     revalidatePath("/admin/dashboard", "layout");
     return { success: true };
   } catch (error: any) {
-    logger.error(`Errore assegnazione quiz ${quizId} al corso ${courseId}`, error);
+    logger.error(
+      `Errore assegnazione quiz ${quizId} al corso ${courseId}`,
+      error,
+    );
     return { success: false, error: error.message };
   }
 }
@@ -122,12 +128,13 @@ export async function assignQuizToCourseAction(
 
 interface StudentAnswerInput {
   questionId: string;
-  selectedOptionId?: string; // Compilato se multipla
-  openAnswerText?: string; // Compilato se aperta
+  selectedOptionId?: string;
+  openAnswerText?: string;
 }
 
 /**
- * Sottomette il quiz dello studente ed elabora istantaneamente il calcolo algoritmico del punteggio delle chiuse.
+ * Sottomette il quiz dello studente ed elabora istantaneamente
+ * il calcolo algoritmico del punteggio delle risposte chiuse.
  */
 export async function submitStudentAttemptAction(
   quizId: string,
@@ -136,7 +143,6 @@ export async function submitStudentAttemptAction(
   try {
     const studentSession = await getAuthenticatedSession("student");
 
-    // Impedisci sottomissioni multiple se ha già risposto
     const alreadyAttempted = await quizRepository.hasStudentAttempted(
       quizId,
       studentSession.id,
@@ -146,17 +152,14 @@ export async function submitStudentAttemptAction(
       throw new Error("Hai già sottomesso un tentativo per questo quiz.");
     }
 
-    // Recupera la struttura del quiz dal database per verificare le risposte corrette
     const { quiz, questions } =
       await quizRepository.findFullQuizStructure(quizId);
 
     let calculatedAutoScore = 0.0;
-    let correctClosedAnswers = 0;
     let wrongClosedAnswers = 0;
 
     const finalAnswersPayload: any[] = [];
 
-    // Elaborazione e calcolo del punteggio domanda per domanda
     for (const q of questions) {
       const studentAns = userAnswers.find((ua) => ua.questionId === q.id);
 
@@ -164,18 +167,15 @@ export async function submitStudentAttemptAction(
         const correctOption = q.options?.find((o) => o.isCorrect);
         const isCorrect = correctOption?.id === studentAns?.selectedOptionId;
 
-        let scoreForQuestion = 0.0;
+        let scoreForQuestion = 0;
 
-        /********* CALCOLO PUNTEGGIO QUIZ ************/
         if (isCorrect) {
-          correctClosedAnswers++;
-        } else {
+          scoreForQuestion = Number(q.points);
+          calculatedAutoScore += scoreForQuestion;
+        } else if (studentAns?.selectedOptionId) {
+          // Incrementa solo se l'opzione è stata esplicitamente selezionata (risposta errata)
           wrongClosedAnswers++;
         }
-
-        scoreForQuestion = isCorrect ? Number(q.points) : 0;
-        calculatedAutoScore += scoreForQuestion;
-        /**********************************************/
 
         finalAnswersPayload.push({
           questionId: q.id,
@@ -184,32 +184,22 @@ export async function submitStudentAttemptAction(
           score: scoreForQuestion,
         });
       } else {
-        // Domanda aperta: memorizza il testo, il punteggio iniziale è 0.00
         finalAnswersPayload.push({
           questionId: q.id,
           openAnswerText: studentAns?.openAnswerText || "",
           isCorrect: null,
-          score: 0.0,
+          score: 0,
         });
       }
     }
 
-    // Somma massima disponibile delle domande chiuse
-    const maxClosedScore = questions
-      .filter((q) => q.type === "multiple_choice")
-      .reduce((sum, q) => sum + Number(q.points), 0);
-
-    // Applica la penalità sugli errori
+    // Calcolo corretto della penalizzazione
     if (quiz.penaltyEnabled) {
-      calculatedAutoScore =
-        maxClosedScore -
-        wrongClosedAnswers * Math.abs(Number(quiz.negativeMark));
-    } else {
-      calculatedAutoScore =
-        maxClosedScore - (maxClosedScore - calculatedAutoScore);
+      const penaltyPerWrong = Math.abs(Number(quiz.negativeMark));
+      calculatedAutoScore -= wrongClosedAnswers * penaltyPerWrong;
     }
 
-    // Evita punteggi negativi
+    // Punteggio minimo garantito: 0
     calculatedAutoScore = Math.max(0, calculatedAutoScore);
 
     const attempt = await quizRepository.createAttempt(
@@ -223,20 +213,21 @@ export async function submitStudentAttemptAction(
       calculatedAutoScore,
     );
 
-    // RECUPERO DATI ANAGRAFICI STUDENTE PER EMAIL
     const { data: studentProfile } = await getSupabaseAdmin()
       .from("profiles")
       .select("first_name,last_name,display_name")
       .eq("id", studentSession.id)
       .single();
 
-    logger.info("Variabili anagrafiche recuperate per email sottomissione studente", {
-      first_name: studentProfile?.first_name,
-      last_name: studentProfile?.last_name,
-      display_name: studentProfile?.display_name,
-    });
+    logger.info(
+      "Variabili anagrafiche recuperate per email sottomissione studente",
+      {
+        first_name: studentProfile?.first_name,
+        last_name: studentProfile?.last_name,
+        display_name: studentProfile?.display_name,
+      },
+    );
 
-    // INVIO EMAIL CONFERMA CONSEGNA QUIZ
     await sendQuizSubmittedMail(studentSession.email, {
       first_name: studentProfile?.first_name ?? "",
       last_name: studentProfile?.last_name ?? "",
@@ -254,7 +245,11 @@ export async function submitStudentAttemptAction(
       autoScore: calculatedAutoScore,
     };
   } catch (error: any) {
-    logger.error("Errore durante la sottomissione del tentativo dello studente", error);
+    logger.error(
+      "Errore durante la sottomissione del tentativo dello studente",
+      error,
+    );
+
     return {
       success: false,
       error: error.message || "Errore durante il salvataggio delle risposte.",
@@ -268,7 +263,7 @@ export async function submitStudentAttemptAction(
 
 /**
  * Consente al docente di validare la domanda aperta assegnando un voto da 0 a 6.
- * Integra la logica di calcolo del punteggio finale e l'invio della notifica di fine correzione.
+ * Integra la logica di calcolo del punteggio finale, invio notifica e gamification.
  */
 export async function gradeOpenAnswerAction(payload: {
   attemptId: string;
@@ -286,8 +281,10 @@ export async function gradeOpenAnswerAction(payload: {
       );
     }
 
-    // 1. Recupero del tentativo dello studente (chiamata singola ottimizzata)
-    const currentAttempt = await quizRepository.findAttemptById(payload.attemptId);
+    // 1. Recupero del tentativo dello studente
+    const currentAttempt = await quizRepository.findAttemptById(
+      payload.attemptId,
+    );
     if (!currentAttempt) {
       throw new Error("Tentativo dello studente non trovato.");
     }
@@ -295,7 +292,7 @@ export async function gradeOpenAnswerAction(payload: {
     // 2. Calcolo del punteggio totale combinato
     const finalScore = Number(currentAttempt.autoScore) + Number(payload.score);
 
-    // 3. Verifica dell'esistenza di una revisione precedente per la stessa domanda
+    // 3. Verifica dell'esistenza di una revisione precedente
     const existingReview = await quizRepository.findReviewByAttemptAndQuestion(
       payload.attemptId,
       payload.questionId,
@@ -309,7 +306,7 @@ export async function gradeOpenAnswerAction(payload: {
       comment: payload.comment,
     };
 
-    // 4. Persistenza dei dati su database tramite Repository
+    // 4. Salva o aggiorna la revisione
     if (existingReview) {
       await quizRepository.updateReviewAndGrade(
         existingReview.id,
@@ -320,14 +317,14 @@ export async function gradeOpenAnswerAction(payload: {
       await quizRepository.submitReviewAndGrade(reviewPayload, finalScore);
     }
 
-    // 5. Recupero informazioni del Quiz e Profilo/Email dello studente per invio notifica
+    // 5. Recupero informazioni e invio email
     const [quiz, { data: studentProfile }] = await Promise.all([
       quizRepository.findById(currentAttempt.quizId),
       getSupabaseAdmin()
         .from("profiles")
         .select("email, first_name, last_name, display_name")
         .eq("id", currentAttempt.studentId)
-        .single()
+        .single(),
     ]);
 
     const targetEmail = studentProfile?.email;
@@ -341,14 +338,36 @@ export async function gradeOpenAnswerAction(payload: {
         score: finalScore.toFixed(2),
         final_score: finalScore.toFixed(2),
         max_score: quiz?.maxScore?.toString() ?? "10",
-        comment: payload.comment ?? "Nessun commento aggiuntivo fornito dal docente.",
+        comment:
+          payload.comment ?? "Nessun commento aggiuntivo fornito dal docente.",
       });
-      logger.info(`Email di fine correzione inviata correttamente a ${targetEmail} per il tentativo ${payload.attemptId}`);
+      logger.info(
+        `Email di fine correzione inviata a ${targetEmail} per il tentativo ${payload.attemptId}`,
+      );
     } else {
-      logger.error(`Impossibile inviare la notifica di correzione: email non trovata nel profilo dello studente con ID ${currentAttempt.studentId}`);
+      logger.error(
+        `Impossibile inviare la notifica: email non trovata per lo studente ${currentAttempt.studentId}`,
+      );
     }
 
-    // 6. Invalidazione selettiva delle cache Next.js
+    // 6. Assegnazione XP Gamification (solo a correzione ultimata)
+    try {
+      await onQuizCompletedAction({
+        userId: currentAttempt.studentId,
+        quizId: currentAttempt.quizId,
+        finalScore,
+      });
+
+      logger.info("XP quiz assegnati con successo", {
+        studentId: currentAttempt.studentId,
+        quizId: currentAttempt.quizId,
+        finalScore,
+      });
+    } catch (gamificationError) {
+      logger.error("Errore assegnazione XP Gamification", gamificationError);
+    }
+
+    // 7. Invalidazione selettiva delle cache Next.js
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
     revalidatePath(`/admin/quiz/${payload.attemptId}`, "layout");
@@ -358,7 +377,10 @@ export async function gradeOpenAnswerAction(payload: {
       finalScore,
     };
   } catch (error: any) {
-    logger.error(`Errore durante la valutazione della domanda aperta per il tentativo ${payload.attemptId}`, error);
+    logger.error(
+      `Errore durante la valutazione della domanda aperta per il tentativo ${payload.attemptId}`,
+      error,
+    );
     return {
       success: false,
       error: error.message,
@@ -381,7 +403,10 @@ export async function getAttemptOpenAnswerAction(
       answerText: answer?.openAnswerText ?? "",
     };
   } catch (error: any) {
-    logger.error(`Errore nel recupero della risposta aperta del tentativo ${attemptId}`, error);
+    logger.error(
+      `Errore nel recupero della risposta aperta del tentativo ${attemptId}`,
+      error,
+    );
     return {
       success: false,
       error: error.message,

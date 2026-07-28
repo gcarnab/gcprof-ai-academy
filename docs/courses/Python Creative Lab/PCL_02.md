@@ -1,40 +1,37 @@
-# 🐢 M2 — Muovere la Turtle
+# 🐢 M2 — Google Colab e la prima tartaruga
 
-## La seconda missione: insegnare a Terry a esplorare il mondo
+## La tua prima esperienza con Python
 
 **Python Creative Lab**
 
-Versione: Luglio 2026
-
-Piattaforma: gcprof-academy.com
-
-Livello: Classe prima scuola secondaria di secondo grado
-
-Prerequisiti:
-Aver completato M1 — Google Colab e la prima tartaruga
+* **Versione:** Luglio 2026
+* **Piattaforma:** gcprof-academy.com
+* **Livello:** Classe prima scuola secondaria di secondo grado
+* **Prerequisiti:** Aver completato M0 — Benvenuti nel laboratorio di Python
 
 ---
+
 <a id="indice"></a>
 ## Indice del modulo
 
-- [Missione M2](#missione-m2)
-- [1. Terry impara a muoversi](#1-terry-impara-a-muoversi)
-- [2. La direzione della Turtle](#2-la-direzione-della-turtle)
-- [3. Il comando forward](#3-il-comando-forward)
-- [4. Tornare indietro con backward](#4-tornare-indietro-con-backward)
-- [5. Cambiare direzione](#5-cambiare-direzione)
-- [6. Girare a destra e sinistra](#6-girare-a-destra-e-sinistra)
-- [7. La penna di Terry](#7-la-penna-di-terry)
-- [8. Controllare la velocità](#8-controllare-la-velocità)
-- [9. Disegnare un percorso](#9-disegnare-un-percorso)
-- [10. Analisi del codice](#10-analisi-del-codice)
-- [11. Laboratorio guidato](#11-laboratorio-guidato)
-- [12. Missione di Terry](#12-missione-di-terry)
-- [13. Mini progetto — Il robot esploratore](#13-mini-progetto--il-robot-esploratore)
-- [14. Sfida pratica](#14-sfida-pratica)
-- [15. Quiz docente](#15-quiz-docente)
-- [16. Badge e punti esperienza](#16-badge-e-punti-esperienza)
-- [17. Riepilogo finale](#17-riepilogo-finale)
+- [Missione](#missione)
+- [1. Il laboratorio del programmatore](#1)
+- [2. Che cos'è Google Colab](#2)
+- [3. Il concetto di notebook](#3)
+- [4. Le celle di Colab](#4)
+- [5. Prepariamo il nostro laboratorio](#5)
+- [6. Installiamo ColabTurtlePlus](#6)
+- [7. Conosciamo Terry](#7)
+- [8. Il primo comando Python](#8)
+- [9. Il primo disegno](#9)
+- [10. Analizziamo il codice](#10)
+- [11. Laboratorio guidato](#11)
+- [12. Missione di Terry](#12)
+- [13. Mini progetto](#13)
+- [14. Sfida pratica](#14)
+- [15. Quiz docente](#15)
+- [16. Badge e punti esperienza](#16)
+- [17. Riepilogo finale](#17)
 
 ---
 
@@ -42,500 +39,436 @@ Aver completato M1 — Google Colab e la prima tartaruga
 
 ---
 
-# Missione M2
+# Missione
 
-<a id="missione-m2"></a>
-[🔙 Torna all'indice](#indice)
+<a id="missione"></a>
 
-## Terry vuole esplorare il mondo
+## Aprire la porta del laboratorio digitale
 
-Nel modulo precedente hai fatto muovere Terry per la prima volta.
+Nel modulo precedente hai scoperto che cosa significa programmare.
 
-Hai creato una linea.
+Ora inizierai a farlo davvero.
 
-Ora però Terry vuole qualcosa di più.
+La tua prima missione è preparare il tuo ambiente di lavoro.
 
-Vuole esplorare.
+Un programmatore ha bisogno di uno spazio dove:
 
-Vuole:
+- scrivere codice;
+- eseguire programmi;
+- controllare i risultati;
+- modificare le proprie idee.
 
-- camminare avanti;
-- tornare indietro;
-- cambiare direzione;
-- creare percorsi.
+Il nostro laboratorio sarà:
 
-La missione di oggi è:
+## Google Colab
 
-> Imparare a controllare i movimenti di Terry.
-
----
-
-# 1. Terry impara a muoversi
-
-<a id="1-terry-impara-a-muoversi"></a>
-
-[🔙 Torna all'indice](#indice)
+Qui incontrerai Terry per la prima volta.
 
 ---
 
-Quando programmiamo una Turtle dobbiamo pensare come se fossimo noi a guidarla.
+# 1. Il laboratorio del programmatore
 
-Terry ha:
-
-- una posizione;
-- una direzione;
-- una penna.
-
-Ogni comando modifica una di queste caratteristiche.
-
-Possiamo immaginare Terry come un robot esploratore.
-
-Il programmatore è il suo navigatore.
-
----
-
-## 🐢 Terry spiega
-
-Io non so dove andare.
-
-Aspetto sempre le tue istruzioni.
-
-Se scrivi:
-
-```python
-forward(100)
-```
-
-io avanzo.
-
-Se scrivi:
-
-```python
-right(90)
-```
-
-io cambio direzione.
-
----
-
-# 2. La direzione della Turtle
-
-<a id="2-la-direzione-della-turtle"></a>
+<a id="1"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Terry si muove in uno spazio.
+Quando uno scrittore usa un quaderno per scrivere storie, un programmatore usa un ambiente di sviluppo per scrivere programmi.
 
-Questo spazio può essere immaginato come una mappa.
+Durante questo corso utilizzeremo Google Colab.
 
-All'inizio Terry guarda verso l'alto.
+È uno strumento online che permette di programmare senza installare software complessi.
 
-La sua direzione iniziale è:
+Questo significa che potrai lavorare:
 
-⬆️ Nord
-
-Da questa posizione può:
-
-* avanzare;
-* ruotare;
-* cambiare percorso.
-
----
-
-Un programmatore deve sempre sapere:
-
-"Dove si trova il mio oggetto?"
-
-"Dove sta andando?"
-
-Questo modo di ragionare sarà fondamentale quando costruiremo immagini più complesse.
-
----
-
-# 3. Il comando forward()
-
-<a id="3-il-comando-forward"></a>
-
-[🔙 Torna all'indice](#indice)
-
----
-
-Abbiamo già incontrato il primo comando:
-
-```python
-forward(100)
-```
-
-Significa:
-
-"Vai avanti di 100 passi."
-
----
-
-Proviamo:
-
-```python
-from ColabTurtlePlus.Turtle import *
-
-clearscreen()
-setup(800,500)
-
-forward(150)
-```
-
----
-
-Risultato:
-
-Terry disegna una linea lunga 150 pixel.
-
----
-
-## Cambiare distanza
-
-Possiamo modificare il numero:
-
-```python
-forward(50)
-```
-
-Linea corta.
-
-```python
-forward(300)
-```
-
-Linea lunga.
-
----
-
-## 🧠 Capisco
-
-Il numero dentro le parentesi si chiama:
-
-**parametro**
-
-È un valore che modifica il comportamento del comando.
-
----
-
-# 4. Tornare indietro con backward()
-
-<a id="4-tornare-indietro-con-backward"></a>
-
-[🔙 Torna all'indice](#indice)
-
----
-
-A volte Terry deve tornare al punto di partenza.
-
-Usiamo:
-
-```python
-backward(100)
-```
-
-Significa:
-
-"Vai indietro di 100 passi."
-
----
-
-Esempio:
-
-```python
-clearscreen()
-setup(800,500)
-
-forward(200)
-backward(200)
-```
-
----
-
-Cosa succede?
-
-Terry:
-
-1. avanza;
-2. torna indietro;
-3. ritorna alla posizione iniziale.
-
----
-
-# 5. Cambiare direzione
-
-<a id="5-cambiare-direzione"></a>
-
-[🔙 Torna all'indice](#indice)
-
----
-
-Per costruire disegni non basta andare avanti.
-
-Dobbiamo cambiare direzione.
-
-I comandi principali sono:
-
-```python
-right()
-```
-
-gira a destra.
-
----
-
-```python
-left()
-```
-
-gira a sinistra.
-
----
-
-Questi comandi modificano solo la direzione.
-
-Non fanno muovere Terry.
-
----
-
-# 6. Girare a destra e sinistra
-
-<a id="6-girare-a-destra-e-sinistra"></a>
-
-[🔙 Torna all'indice](#indice)
-
----
-
-Per indicare quanto deve ruotare Terry usiamo i gradi.
-
-Esempio:
-
-```python
-right(90)
-```
-
-significa:
-
-"Ruota di 90 gradi verso destra."
-
----
-
-Proviamo:
-
-```python
-clearscreen()
-setup(800,500)
-
-forward(100)
-right(90)
-forward(100)
-```
-
----
-
-Abbiamo creato una forma a L.
+- a scuola;
+- a casa;
+- da qualsiasi computer collegato a Internet.
 
 ---
 
 ## 🐢 Terry consiglia
 
-Gli angoli più importanti:
+Non pensare al codice come a qualcosa di misterioso.
 
-| Rotazione | Effetto        |
-| --------- | -------------- |
-| 90°       | quarto di giro |
-| 180°      | mezzo giro     |
-| 360°      | giro completo  |
+Un programma nasce sempre da piccoli passi.
+
+Oggi non costruiremo un paesaggio.
+
+Oggi faremo il primo passo:
+
+far muovere Terry.
 
 ---
 
-# 7. La penna di Terry
+# 2. Che cos'è Google Colab
 
-<a id="7-la-penna-di-terry"></a>
+<a id="2"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Terry possiede una penna.
+Google Colab è un ambiente gratuito per scrivere ed eseguire programmi Python direttamente dal browser.
 
-Quando si muove:
+Il nome deriva da:
 
-* penna abbassata → disegna;
-* penna alzata → non disegna.
+**Colaboratory**
+
+cioè:
+
+"laboratorio collaborativo".
+
+Con Colab puoi:
+
+- creare documenti di codice;
+- eseguire programmi;
+- salvare il lavoro;
+- condividere esperimenti.
 
 ---
 
-Per alzare la penna:
+## Perché utilizziamo Colab?
 
-```python
-penup()
+Perché permette di concentrarsi sulla programmazione senza preoccuparsi dell'installazione.
+
+Il nostro obiettivo è imparare Python.
+
+Non perdere tempo nella configurazione del computer.
+
+---
+
+# 3. Che cos'è un notebook
+
+<a id="3"></a>
+
+[🔙 Torna all'indice](#indice)
+
+---
+
+Un notebook è un documento digitale formato da celle.
+
+Puoi immaginarlo come un quaderno interattivo.
+
+Un quaderno normale contiene:
+
+- pagine;
+- testi;
+- disegni.
+
+Un notebook contiene:
+
+- testo;
+- codice;
+- risultati.
+
+---
+
+Un notebook Python permette di:
+
+1. scrivere un comando;
+2. eseguirlo;
+3. vedere immediatamente il risultato.
+
+Questo rende l'apprendimento molto più semplice.
+
+---
+
+# 4. Le celle di Colab
+
+<a id="4"></a>
+
+[🔙 Torna all'indice](#indice)
+
+---
+
+Un notebook è formato da celle.
+
+Esistono principalmente due tipi di celle.
+
+---
+
+## Celle di testo
+
+Servono per scrivere spiegazioni.
+
+Esempio:
+
+```
+Questo è il mio primo programma Python.
 ```
 
 ---
 
-Per abbassarla:
+## Celle di codice
 
-```python
-pendown()
-```
-
----
+Servono per scrivere istruzioni Python.
 
 Esempio:
 
 ```python
-clearscreen()
-setup(800,500)
+print("Ciao Python")
+```
 
-forward(100)
+Quando premi il pulsante ▶ la cella viene eseguita.
 
-penup()
+---
 
-forward(100)
+## 🧠 Byte spiega
 
-pendown()
+Il computer non esegue tutto il notebook automaticamente.
 
-forward(100)
+Esegue solamente le celle che gli chiedi di eseguire.
+
+Se una cella contiene un errore, puoi correggere solo quella.
+
+---
+
+# 5. Prepariamo il nostro laboratorio
+
+<a id="5"></a>
+
+[🔙 Torna all'indice](#indice)
+
+---
+
+Per iniziare servono:
+
+✅ un account Google
+
+✅ un browser aggiornato
+
+✅ una connessione Internet
+
+Apriremo un nuovo notebook.
+
+Il nome consigliato sarà:
+
+```
+PythonCreativeLab_M2_PrimaTurtle
 ```
 
 ---
 
-Risultato:
+## Regola del programmatore
 
-Una linea con uno spazio centrale.
+Un buon programmatore organizza sempre i propri lavori.
+
+Un nome chiaro aiuta a ritrovare facilmente i propri progetti.
+
+---
+
+# 6. Installiamo ColabTurtlePlus
+
+<a id="6"></a>
+
+[🔙 Torna all'indice](#indice)
+
+---
+
+Python può essere ampliato con librerie.
+
+Una libreria è una raccolta di strumenti già pronti.
+
+Per disegnare utilizzeremo:
+
+## ColabTurtlePlus
+
+È una versione adattata della classica Turtle per funzionare dentro Google Colab.
+
+---
+
+Nella prima cella di codice scrivi:
+
+```python
+!pip install ColabTurtlePlus
+```
+
+Poi premi ▶.
+
+---
+
+## Analizziamo il comando
+
+```python
+!
+```
+
+Dice a Colab di eseguire un comando del sistema.
+
+---
+
+```python
+pip install
+```
+
+Significa:
+
+"installa una libreria Python".
+
+---
+
+```python
+ColabTurtlePlus
+```
+
+È il nome dello strumento che useremo.
 
 ---
 
 ## 🐞 Bug ti avvisa
 
-Errore frequente:
+Se compare un messaggio rosso durante l'installazione non sempre significa che c'è un problema.
 
-Dimenticare `pendown()`.
+Aspetta che Colab termini l'esecuzione.
 
-Se Terry non disegna più, controlla sempre la penna.
+Molti messaggi sono semplicemente informazioni tecniche.
 
 ---
 
-# 8. Controllare la velocità
+# 7. Conosciamo Terry
 
-<a id="8-controllare-la-velocità"></a>
+<a id="7"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Possiamo controllare quanto velocemente si muove Terry.
+Ora possiamo importare gli strumenti necessari.
 
-Usiamo:
+Scriviamo:
 
 ```python
-speed()
+from ColabTurtlePlus.Turtle import *
 ```
 
 ---
 
-Esempio:
+Questa istruzione permette al nostro programma di utilizzare i comandi della Turtle.
 
-```python
-speed(1)
-```
-
-movimento lento.
+Da questo momento Python conosce Terry.
 
 ---
 
-```python
-speed(10)
-```
+## 🐢 Terry racconta
 
-movimento veloce.
+La Turtle nasce negli anni '60 come strumento educativo.
 
----
+È stata creata per aiutare gli studenti a capire la programmazione attraverso il movimento.
 
-Durante la creazione di animazioni questa funzione sarà molto importante.
+Ancora oggi viene utilizzata perché trasforma il codice in qualcosa di visibile.
 
 ---
 
-# 9. Disegnare un percorso
+# 8. Il primo comando Python
 
-<a id="9-disegnare-un-percorso"></a>
+<a id="8"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Ora uniamo più comandi.
+Prima di disegnare prepariamo lo spazio.
 
-Obiettivo:
-
-Creare un percorso.
+Scriviamo:
 
 ```python
 clearscreen()
-setup(800,500)
-
-forward(100)
-right(90)
-
-forward(150)
-left(90)
-
-forward(100)
 ```
 
 ---
 
-Terry ha seguito una piccola strada.
+Questo comando pulisce il foglio.
+
+È come prendere un foglio bianco prima di iniziare un disegno.
 
 ---
 
-# 10. Analisi del codice
+Ora impostiamo la finestra:
 
-<a id="10-analisi-del-codice"></a>
+```python
+setup(800,500)
+```
+
+---
+
+Significa:
+
+* larghezza: 800 pixel
+* altezza: 500 pixel
+
+---
+
+# 9. Il primo disegno
+
+<a id="9"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-Analizziamo:
+Finalmente Terry è pronta.
+
+Scriviamo:
 
 ```python
 forward(100)
 ```
 
-Terry avanza.
+Esegui la cella.
+
+Dovresti vedere una linea.
+
+🎉 Hai appena creato il tuo primo disegno con Python.
 
 ---
+
+# 10. Analizziamo il codice
+
+<a id="10"></a>
+
+[🔙 Torna all'indice](#indice)
+
+---
+
+## `forward()`
+
+È un comando di movimento.
+
+Dice a Terry:
+
+"Vai avanti."
+
+---
+
+## Il numero 100
+
+Indica la distanza.
 
 ```python
-right(90)
+forward(100)
 ```
 
-Terry ruota.
+significa:
+
+"Avanza di 100 pixel."
 
 ---
+
+La struttura generale è:
 
 ```python
-left(90)
+comando(valore)
 ```
 
-Terry cambia direzione opposta.
-
----
-
-La programmazione funziona creando sequenze di istruzioni.
-
-Un comando dopo l'altro.
+Molti comandi Python funzionano in questo modo.
 
 ---
 
 # 11. Laboratorio guidato
 
-<a id="11-laboratorio-guidato"></a>
+<a id="11"></a>
 
 [🔙 Torna all'indice](#indice)
 
@@ -546,13 +479,13 @@ Un comando dopo l'altro.
 Modifica:
 
 ```python
-right(90)
+forward(100)
 ```
 
 in:
 
 ```python
-right(45)
+forward(50)
 ```
 
 Cosa cambia?
@@ -564,134 +497,108 @@ Cosa cambia?
 Prova:
 
 ```python
-left(180)
+forward(200)
 ```
 
-Prima di eseguire prova a immaginare il risultato.
+Osserva la differenza.
 
 ---
 
 ## Esperimento 3
 
-Crea un percorso formato da:
+Prova a prevedere il risultato prima di eseguire.
 
-* tre linee;
-* due curve;
-* un ritorno.
+Questa è una capacità fondamentale del programmatore.
 
 ---
 
 # 12. Missione di Terry
 
-<a id="12-missione-di-terry"></a>
+<a id="12"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-## Missione: il percorso del robot
+## Missione: la prima passeggiata
 
-Terry deve raggiungere un tesoro.
+Terry vuole fare una passeggiata.
 
-Il percorso deve avere:
+Crea tre programmi diversi:
 
-* una linea lunga;
-* una curva;
-* una linea corta;
-* un ritorno.
-
-Progetta prima il percorso su carta.
-
-Poi trasformalo in comandi Python.
-
----
-
-# 13. Mini progetto — Il robot esploratore
-
-<a id="13-mini-progetto--il-robot-esploratore"></a>
-
-[🔙 Torna all'indice](#indice)
-
----
-
-## Obiettivo
-
-Creare il primo percorso completo di Terry.
-
-Il progetto deve contenere:
-
-✅ almeno 5 movimenti
-
-✅ almeno 2 rotazioni
-
-✅ almeno un tratto senza disegno usando `penup()`
-
----
-
-Esempio:
+🟢 corto
 
 ```python
-clearscreen()
-setup(800,500)
-
-speed(5)
-
-forward(120)
-
-right(90)
-
-forward(80)
-
-penup()
-
-forward(100)
-
-pendown()
-
-left(90)
-
-forward(120)
+forward(50)
 ```
+
+🟡 medio
+
+```python
+forward(150)
+```
+
+🔴 lungo
+
+```python
+forward(300)
+```
+
+Confronta i risultati.
 
 ---
 
-Ora personalizza:
+# 13. Mini progetto
 
-* lunghezze;
-* direzioni;
-* percorso.
+<a id="13"></a>
+
+[🔙 Torna all'indice](#indice)
+
+---
+
+## Il diario di Terry
+
+Crea un notebook chiamato:
+
+```
+Diario_di_Terry
+```
+
+Inserisci:
+
+* un titolo;
+* una cella con il primo comando;
+* una cella con le tue prove.
+
+Questo sarà il tuo primo progetto personale.
 
 ---
 
 # 14. Sfida pratica
 
-<a id="14-sfida-pratica"></a>
+<a id="14"></a>
 
 [🔙 Torna all'indice](#indice)
 
 ---
 
-## Sfida livello 🟡
+## Sfida livello 🟢
 
-Disegna una strada per Terry.
+Disegna tre linee diverse:
 
-La strada deve avere:
+* una corta;
+* una media;
+* una lunga.
 
-* almeno 4 cambi di direzione;
-* un tratto nascosto;
-* un punto finale.
+Poi rispondi:
 
-Poi aggiungi un commento:
-
-```python
-# Arrivo al tesoro
-```
+Quale valore rende la linea più lunga?
 
 ---
 
 # 15. Quiz docente
 
-<a id="15-quiz-docente"></a>
+<a id="15"></a>
 
 [🔙 Torna all'indice](#indice)
 
@@ -699,15 +606,15 @@ Poi aggiungi un commento:
 
 ## Domanda 1
 
-Quale comando fa avanzare Terry?
+Google Colab è:
 
-A) move()
+A) Un videogioco
 
-B) forward()
+B) Un ambiente online per programmare
 
-C) go()
+C) Un linguaggio di programmazione
 
-D) walk()
+D) Un sistema operativo
 
 ✅ Risposta corretta: B
 
@@ -715,55 +622,55 @@ D) walk()
 
 ## Domanda 2
 
-Cosa indica il numero dentro:
+Una cella di codice serve per:
 
-```python
-forward(100)
-```
+A) Scrivere ed eseguire programmi
 
-A) Il colore
+B) Disegnare immagini manualmente
 
-B) La velocità
+C) Salvare fotografie
 
-C) La distanza
+D) Navigare su Internet
 
-D) La direzione
-
-✅ Risposta corretta: C
+✅ Risposta corretta: A
 
 ---
 
 ## Domanda 3
 
-Quale comando ruota Terry?
+Cosa installa il comando?
 
-A) rotate()
+```python
+!pip install ColabTurtlePlus
+```
 
-B) turn()
+A) Un browser
 
-C) right()
+B) Una libreria Python
 
-D) move()
+C) Un gioco
 
-✅ Risposta corretta: C
+D) Un sistema operativo
+
+✅ Risposta corretta: B
 
 ---
 
 ## Domanda 4
 
-Cosa fa:
+Cosa significa:
 
 ```python
-penup()
+forward(100)
 ```
 
 A) Cambia colore
 
-B) Alza la penna
+B) Avanza di 100 pixel
 
-C) Cancella il disegno
+C) Cancella lo schermo
 
-D) Chiude il programma
+D) Chiude Python
 
 ✅ Risposta corretta: B
 
@@ -771,15 +678,15 @@ D) Chiude il programma
 
 ## Domanda 5
 
-Quale comando permette di disegnare di nuovo?
+La Turtle permette di:
 
-A) pendown()
+A) Disegnare programmando
 
-B) draw()
+B) Creare documenti Word
 
-C) start()
+C) Navigare online
 
-D) penon()
+D) Modificare foto
 
 ✅ Risposta corretta: A
 
@@ -787,7 +694,7 @@ D) penon()
 
 # 16. Badge e punti esperienza
 
-<a id="16-badge-e-punti-esperienza"></a>
+<a id="16"></a>
 
 [🔙 Torna all'indice](#indice)
 
@@ -795,19 +702,19 @@ D) penon()
 
 Completando M2 ottieni:
 
-🏆 **Badge: 🚶 Esploratore**
+🏆 **Badge: 🐢 Primo Passo**
 
 XP guadagnati:
 
 ⭐ 100 XP
 
-Hai imparato a controllare Terry nello spazio.
+Hai aperto il laboratorio e fatto muovere Terry per la prima volta.
 
 ---
 
 # 17. Riepilogo finale
 
-<a id="17-riepilogo-finale"></a>
+<a id="17"></a>
 
 [🔙 Torna all'indice](#indice)
 
@@ -815,47 +722,43 @@ Hai imparato a controllare Terry nello spazio.
 
 In questo modulo hai imparato:
 
-✅ muovere Terry
+✅ cos'è Google Colab
 
-✅ usare `forward()`
+✅ cos'è un notebook
 
-✅ usare `backward()`
+✅ cosa sono le celle
 
-✅ cambiare direzione
+✅ cosa sono le librerie Python
 
-✅ usare destra e sinistra
+✅ come installare ColabTurtlePlus
 
-✅ controllare la penna
+✅ come importare Turtle
 
-✅ controllare la velocità
-
-✅ creare percorsi
+✅ il primo comando di movimento
 
 ---
 
 ## Checklist finale
 
-Prima di passare a M3:
+Prima di passare a M2:
 
-☐ So far avanzare Terry.
+☐ So aprire un notebook Colab.
 
-☐ So farla ruotare.
+☐ So eseguire una cella.
 
-☐ So creare un percorso.
+☐ So installare una libreria.
 
-☐ So usare `penup()` e `pendown()`.
+☐ So utilizzare `forward()`.
 
-☐ Ho completato il progetto Robot Esploratore.
+☐ Ho creato il mio primo disegno.
 
 ---
 
-🚀 **Prossima missione: M3 — Disegnare figure geometriche**
+🚀 **Prossima missione: M3 — Muovere la Turtle**
 
-Nel prossimo modulo Terry userà i suoi movimenti per costruire:
+Nel prossimo modulo Terry imparerà a:
 
-* quadrati;
-* triangoli;
-* poligoni;
-* stelle.
-
-Inizieremo a trasformare semplici movimenti in veri disegni.
+* cambiare direzione;
+* girare a destra e sinistra;
+* controllare la penna;
+* costruire i primi percorsi.

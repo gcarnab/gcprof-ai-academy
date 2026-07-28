@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { notFound, useParams } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { notFound, useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
@@ -16,9 +16,11 @@ import { logger } from "@/lib/logger";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { hasCourseAccess } from "@/features/courses/services/courseService";
 import { checkExternalCourseAccessAction } from "@/features/courses/services/checkExternalCourseAccessAction";
+import { AwardBadgeResult } from "@/features/admin/users/actions/activityActions";
 
 export default function LessonPage() {
   const params = useParams();
+  const router = useRouter();
   const { user } = useAuth();
 
   logger.info(
@@ -42,6 +44,20 @@ export default function LessonPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
 
+  // 🎯 STATO MODAL SBLOCCO / COMPLETAMENTO DA TRACKER
+  const [completionModal, setCompletionModal] = useState<{
+    isOpen: boolean;
+    badge: AwardBadgeResult | null;
+  } | null>(null);
+
+  const hasShownModalRef = useRef(false);
+
+  // Reset del flag per la finestra modale ad ogni cambio lezione
+  useEffect(() => {
+    hasShownModalRef.current = false;
+    setCompletionModal(null);
+  }, [lessonId]);
+
   useEffect(() => {
     async function loadLessonData() {
       // 🔴 CHECKPOINT 2: L'effetto di caricamento parte?
@@ -62,8 +78,8 @@ export default function LessonPage() {
         );
 
         const course = liveCourses.find((c) => c.slug === slug);
-        const module = course?.modules?.find((m: any) => m.id === moduleId);
-        const lesson = module?.lessons?.find((l: any) => l.id === lessonId);
+        const module = course?.modules?.find((m: any) => String(m.id) === String(moduleId));
+        const lesson = module?.lessons?.find((l: any) => String(l.id) === String(lessonId));
 
         // 🔴 CHECKPOINT 4: Esito della ricerca interna
         logger.debug("=== [CHECKPOINT 4] Esito filtri:", {
@@ -126,6 +142,42 @@ export default function LessonPage() {
     }
   }, [slug, moduleId, lessonId, user]);
 
+  // 🎯 ASCOLTTO EVENTO GLOBALE DI GAMIFICATION DA ACTIVITY TRACKER
+  useEffect(() => {
+    const handleGamificationUpdate = (event: CustomEvent) => {
+      const detail = event.detail;
+      if (!detail || String(detail.lessonId) !== String(lessonId)) return;
+
+      const trackingResult = Array.isArray(detail.result)
+        ? detail.result[0]
+        : detail.result;
+
+      const isCompleted = Boolean(
+        trackingResult?.is_completed || trackingResult?.isCompleted
+      );
+
+      if (isCompleted && !hasShownModalRef.current) {
+        hasShownModalRef.current = true;
+        setCompletionModal({
+          isOpen: true,
+          badge: detail.badge || null,
+        });
+      }
+    };
+
+    window.addEventListener(
+      "gamification:updated",
+      handleGamificationUpdate as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "gamification:updated",
+        handleGamificationUpdate as EventListener
+      );
+    };
+  }, [lessonId]);
+
   // 🔴 CHECKPOINT 5: Stato dello switch di rendering
   logger.warn("=== [CHECKPOINT 5] Stato render attuale:", {
     isLoading,
@@ -183,6 +235,22 @@ export default function LessonPage() {
       content: normalizedContent,
     },
   ];
+
+  // 🎯 CALCOLO LINK LEZIONE SUCCESSIVA
+  const currentModuleIndex = course.modules?.findIndex((m: any) => String(m.id) === String(moduleId)) ?? -1;
+  const currentLessonIndex = module.lessons?.findIndex((l: any) => String(l.id) === String(lessonId)) ?? -1;
+
+  let nextLessonUrl: string | null = null;
+  if (module.lessons && currentLessonIndex !== -1 && currentLessonIndex < module.lessons.length - 1) {
+    const nextL = module.lessons[currentLessonIndex + 1];
+    nextLessonUrl = `/courses/${slug}/modules/${module.id}/lessons/${nextL.id}`;
+  } else if (course.modules && currentModuleIndex !== -1 && currentModuleIndex < course.modules.length - 1) {
+    const nextM = course.modules[currentModuleIndex + 1];
+    if (nextM.lessons && nextM.lessons.length > 0) {
+      const nextL = nextM.lessons[0];
+      nextLessonUrl = `/courses/${slug}/modules/${nextM.id}/lessons/${nextL.id}`;
+    }
+  }
 
   // 🔴 CHECKPOINT 7: Arrivo al traguardo del rendering del Player
   logger.debug(
@@ -268,6 +336,76 @@ export default function LessonPage() {
           )}
         </div>
       </main>
+
+      {/* MODAL COMPLETAMENTO AUTOMATICO (Innescato da ActivityTracker) */}
+      {completionModal?.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-background dark:bg-slate-900 border border-border dark:border-slate-800 p-6 md:p-8 rounded-2xl max-w-md w-full text-center space-y-6 shadow-2xl relative overflow-hidden">
+            
+            <div className="space-y-2">
+              <div className="text-5xl animate-bounce">🎉</div>
+              <h3 className="text-2xl font-black tracking-tight text-foreground">
+                Lezione Completata!
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Hai completato il tempo di fruizione richiesto per “{lesson.title}”.
+              </p>
+            </div>
+
+            {/* NOTIFICA BADGE SBLOCCATO */}
+            {completionModal.badge?.awarded && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2 text-left">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">🏆</span>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                      Nuovo Badge Sbloccato!
+                    </span>
+                    <h4 className="text-sm font-bold text-foreground">
+                      {completionModal.badge.badge_title}
+                    </h4>
+                  </div>
+                </div>
+                {completionModal.badge.xp_reward > 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-bold pl-11">
+                    +{completionModal.badge.xp_reward} XP Bonus Guadagnati!
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <button
+                onClick={() => setCompletionModal(null)}
+                className="w-full sm:flex-1 py-2.5 text-xs font-semibold bg-secondary text-secondary-foreground rounded-xl border border-border hover:bg-secondary/80 transition-all"
+              >
+                Rimani Qui
+              </button>
+
+              {nextLessonUrl ? (
+                <button
+                  onClick={() => {
+                    setCompletionModal(null);
+                    router.push(nextLessonUrl!);
+                  }}
+                  className="w-full sm:flex-1 py-2.5 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-md transition-all"
+                >
+                  Prossima Lezione ⚡
+                </button>
+              ) : (
+                <Link
+                  href="/dashboard"
+                  className="w-full sm:flex-1 py-2.5 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-md transition-all inline-flex items-center justify-center"
+                >
+                  Vai alla Dashboard 📊
+                </Link>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

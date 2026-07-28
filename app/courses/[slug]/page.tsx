@@ -13,9 +13,10 @@ import type { Course, Module, Lesson } from "@/features/courses/types/course";
 import { hasCourseAccess } from "@/features/courses/services/courseService";
 import { getLiveCourses } from "@/features/courses/services/courseActions";
 
-import { 
-  checkExternalCourseAccessAction, 
-  enrollFreeCourseAction 
+import {
+  checkExternalCourseAccessAction,
+  enrollFreeCourseAction,
+  checkInternalCourseAccessAction, // <-- Importazione aggiunta
 } from "@/features/courses/services/checkExternalCourseAccessAction";
 
 import { AccessNoticeBanner } from "@/features/courses/components/AccessNoticeBanner";
@@ -39,23 +40,64 @@ export default function CourseDetailPage() {
     async function loadCourseDetail() {
       setIsLoading(true);
       try {
-        const allCourses = await getLiveCourses(user?.role === "admin" ? "admin" : "student");
+        const allCourses = await getLiveCourses(
+          user?.role === "admin" ? "admin" : "student",
+        );
         const currentCourse = allCourses.find((c: Course) => c.slug === slug);
         setCourse(currentCourse || null);
 
         if (currentCourse) {
           const currentUser = user as any;
-          const rawUserType = String(currentUser?.userType || currentUser?.user_type || "").toUpperCase();
+          const rawUserType = String(
+            currentUser?.userType || currentUser?.user_type || "",
+          ).toUpperCase();
           const rawRole = String(currentUser?.role || "").toUpperCase();
-          const isExternalStudent = rawUserType === "EXTERNAL_STUDENT" || rawRole === "EXTERNAL_STUDENT";
+          const isExternalStudent =
+            rawUserType === "EXTERNAL_STUDENT" ||
+            rawRole === "EXTERNAL_STUDENT";
 
+          // LOGICA DI ACCESSO AGGIORNATA
           if (currentUser?.role === "admin") {
             setHasAccess(true);
-          } else if (isExternalStudent && currentUser?.id) {
-            const hasExternalAccess = await checkExternalCourseAccessAction(String(currentCourse.id), currentUser.id);
-            setHasAccess(hasExternalAccess);
-          } else if (hasCourseAccess(currentCourse, user)) {
-            setHasAccess(true);
+          } else if (currentUser?.id) {
+            try {
+              // 1. Controllo per gli studenti esterni (se applicabile)
+              if (isExternalStudent) {
+                const hasExternalAccess = await checkExternalCourseAccessAction(
+                  String(currentCourse.id),
+                  currentUser.id,
+                );
+                if (hasExternalAccess) {
+                  setHasAccess(true);
+                  return;
+                }
+              }
+
+              // 2. Controllo REALE sul database per tutti gli altri
+              // Questo bypassa la cache del browser e va dritto su `profile_courses`
+              const hasRealTimeAccess = await checkInternalCourseAccessAction(
+                String(currentCourse.id),
+                currentUser.id,
+              );
+
+              if (hasRealTimeAccess) {
+                setHasAccess(true);
+              } else {
+                // 3. Fallback locale di sicurezza
+                setHasAccess(
+                  hasCourseAccess(currentCourse, currentUser) || false,
+                );
+              }
+            } catch (error) {
+              console.error(
+                "Errore durante il controllo real-time dell'accesso:",
+                error,
+              );
+              // Fallback in caso di eccezioni di rete/server
+              setHasAccess(
+                hasCourseAccess(currentCourse, currentUser) || false,
+              );
+            }
           } else {
             setHasAccess(false);
           }
@@ -77,7 +119,7 @@ export default function CourseDetailPage() {
 
     try {
       const result = await enrollFreeCourseAction(String(course.id));
-      
+
       if (result.success && result.redirectUrl) {
         router.push(result.redirectUrl);
       } else if (result.success) {
@@ -88,7 +130,9 @@ export default function CourseDetailPage() {
       }
     } catch (err) {
       console.error("Errore iscrizione gratuita:", err);
-      setEnrollError("Si è verificato un errore inaspettato durante la generazione dell'ordine.");
+      setEnrollError(
+        "Si è verificato un errore inaspettato durante la generazione dell'ordine.",
+      );
     } finally {
       setIsEnrolling(false);
     }
@@ -100,7 +144,8 @@ export default function CourseDetailPage() {
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-muted-foreground text-sm animate-pulse flex items-center gap-2">
-            <span className="text-lg">⏳</span> Sincronizzazione contenuti del corso...
+            <span className="text-lg">⏳</span> Sincronizzazione contenuti del
+            corso...
           </div>
         </main>
         <Footer />
@@ -110,12 +155,19 @@ export default function CourseDetailPage() {
 
   if (!course) notFound();
 
-  const isPendingUser = user && user.status === "pending" && user.role !== "admin";
+  const isPendingUser =
+    user && user.status === "pending" && user.role !== "admin";
   const courseQuizzes = (course as any).quiz_assignments || [];
-  
+
   // ✅ Lettura robusta del prezzo e dello stato a pagamento
-  const rawPrice = (course as any)?.price ?? (course as any)?.price_amount ?? (course as any)?.cost;
-  const coursePrice = rawPrice !== undefined && rawPrice !== null ? parseFloat(String(rawPrice)) : 0;
+  const rawPrice =
+    (course as any)?.price ??
+    (course as any)?.price_amount ??
+    (course as any)?.cost;
+  const coursePrice =
+    rawPrice !== undefined && rawPrice !== null
+      ? parseFloat(String(rawPrice))
+      : 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/30">
@@ -124,13 +176,32 @@ export default function CourseDetailPage() {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
         {/* BREADCRUMB */}
-        <nav aria-label="Breadcrumb" className="flex items-center space-x-2 text-sm text-muted-foreground mb-6 overflow-x-auto pb-2">
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center space-x-2 text-sm text-muted-foreground mb-6 overflow-x-auto pb-2"
+        >
           <ol className="flex items-center space-x-2">
-            <li><span>🏠</span> <Link href="/dashboard?tab=courses">Dashboard</Link></li>
-            <li><span>/</span></li>
-            <li><Link href="/dashboard?tab=courses">I Miei Corsi</Link></li>
-            <li><span>/</span></li>
-            <li><span className="text-foreground font-medium truncate" aria-current="page">{course.title}</span></li>
+            <li>
+              <span>🏠</span>{" "}
+              <Link href="/dashboard?tab=courses">Dashboard</Link>
+            </li>
+            <li>
+              <span>/</span>
+            </li>
+            <li>
+              <Link href="/dashboard?tab=courses">I Miei Corsi</Link>
+            </li>
+            <li>
+              <span>/</span>
+            </li>
+            <li>
+              <span
+                className="text-foreground font-medium truncate"
+                aria-current="page"
+              >
+                {course.title}
+              </span>
+            </li>
           </ol>
         </nav>
 
@@ -138,23 +209,43 @@ export default function CourseDetailPage() {
         <div className="bg-background rounded-2xl border border-border shadow-sm p-6 lg:p-8 mb-8 flex flex-col gap-6 md:flex-row md:items-center">
           <div className="relative h-32 w-32 md:h-40 md:w-40 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted/50 p-2 shadow-inner flex items-center justify-center text-5xl">
             {course.coverImage ? (
-              course.coverImage.startsWith("http") || course.coverImage.startsWith("/") ? (
-                <img src={course.coverImage} alt={course.title} className="h-full w-full object-contain drop-shadow-md" loading="lazy" />
+              course.coverImage.startsWith("http") ||
+              course.coverImage.startsWith("/") ? (
+                <img
+                  src={course.coverImage}
+                  alt={course.title}
+                  className="h-full w-full object-contain drop-shadow-md"
+                  loading="lazy"
+                />
               ) : (
                 <span>{course.coverImage}</span>
               )
             ) : (
-              <div className="h-full w-full rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-2xl">📚 LMS</div>
+              <div className="h-full w-full rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-2xl">
+                📚 LMS
+              </div>
             )}
           </div>
 
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2 mb-3">
-              {course.category && <span className="px-3 py-1 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 text-xs font-semibold">{course.category}</span>}
-              {course.difficulty && <span className="px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 text-xs font-semibold">{course.difficulty}</span>}
+              {course.category && (
+                <span className="px-3 py-1 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 text-xs font-semibold">
+                  {course.category}
+                </span>
+              )}
+              {course.difficulty && (
+                <span className="px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 text-xs font-semibold">
+                  {course.difficulty}
+                </span>
+              )}
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">{course.title}</h1>
-            <p className="mt-3 text-base md:text-lg text-muted-foreground leading-relaxed max-w-3xl">{course.description}</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
+              {course.title}
+            </h1>
+            <p className="mt-3 text-base md:text-lg text-muted-foreground leading-relaxed max-w-3xl">
+              {course.description}
+            </p>
           </div>
         </div>
 
@@ -175,20 +266,39 @@ export default function CourseDetailPage() {
             {/* SEZIONE QUIZ */}
             {hasAccess && courseQuizzes.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2"><span>🎯</span> Verifiche e Quiz</h2>
+                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <span>🎯</span> Verifiche e Quiz
+                </h2>
                 <div className="rounded-2xl border border-purple-100 bg-purple-50/30 p-2 shadow-sm space-y-1">
                   {courseQuizzes.map((assignment: any, index: number) => (
-                    <div key={assignment.id || index} className="flex justify-between items-center text-sm p-3 rounded-xl border bg-background/80 border-purple-100/50 transition-all hover:bg-white hover:shadow-sm">
+                    <div
+                      key={assignment.id || index}
+                      className="flex justify-between items-center text-sm p-3 rounded-xl border bg-background/80 border-purple-100/50 transition-all hover:bg-white hover:shadow-sm"
+                    >
                       <button
-                        onClick={() => router.push(`/courses/${slug}/quizzes/${assignment.quiz_id}`)}
+                        onClick={() =>
+                          router.push(
+                            `/courses/${slug}/quizzes/${assignment.quiz_id}`,
+                          )
+                        }
                         className="font-semibold text-left flex items-center gap-3 text-purple-700 hover:text-purple-900 transition-colors"
                       >
-                        <span className="text-lg bg-purple-100 rounded-lg p-1.5 select-none">📝</span>
-                        <span className="hover:underline underline-offset-4">{assignment.quiz_title || assignment.quiz?.title || `Quiz #${index + 1}`}</span>
+                        <span className="text-lg bg-purple-100 rounded-lg p-1.5 select-none">
+                          📝
+                        </span>
+                        <span className="hover:underline underline-offset-4">
+                          {assignment.quiz_title ||
+                            assignment.quiz?.title ||
+                            `Quiz #${index + 1}`}
+                        </span>
                       </button>
                       {assignment.due_at && (
                         <span className="text-xs text-muted-foreground font-mono bg-muted px-2.5 py-1 rounded-md">
-                          Scadenza: {new Date(assignment.due_at).toLocaleDateString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                          Scadenza:{" "}
+                          {new Date(assignment.due_at).toLocaleDateString(
+                            "it-IT",
+                            { hour: "2-digit", minute: "2-digit" },
+                          )}
                         </span>
                       )}
                     </div>
@@ -199,14 +309,20 @@ export default function CourseDetailPage() {
 
             {/* SEZIONE MODULI */}
             <div className="space-y-4">
-              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2"><span>📚</span> Moduli del Corso</h2>
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <span>📚</span> Moduli del Corso
+              </h2>
               {course.modules && course.modules.length > 0 ? (
                 <div className="space-y-4">
                   {course.modules.map((module: Module) => (
-                    <div key={module.id} className="rounded-2xl border border-border bg-background overflow-hidden shadow-sm transition-all hover:border-muted-foreground/30">
+                    <div
+                      key={module.id}
+                      className="rounded-2xl border border-border bg-background overflow-hidden shadow-sm transition-all hover:border-muted-foreground/30"
+                    >
                       <div className="bg-muted/30 px-5 py-4 border-b border-border flex justify-between items-center">
                         <h3 className="font-bold text-foreground text-lg flex items-center gap-2">
-                          <span className="text-muted-foreground">📂</span> {module.title}
+                          <span className="text-muted-foreground">📂</span>{" "}
+                          {module.title}
                         </h3>
                       </div>
                       <div className="p-3">
@@ -223,7 +339,10 @@ export default function CourseDetailPage() {
                               />
                             ))
                           ) : (
-                            <li className="text-sm italic text-muted-foreground p-4 text-center">Nessun contenuto attualmente presente in questo modulo.</li>
+                            <li className="text-sm italic text-muted-foreground p-4 text-center">
+                              Nessun contenuto attualmente presente in questo
+                              modulo.
+                            </li>
                           )}
                         </ul>
                       </div>
@@ -232,7 +351,9 @@ export default function CourseDetailPage() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-border bg-transparent p-12 text-center">
-                  <p className="text-muted-foreground">Nessun modulo didattico caricato per questo corso.</p>
+                  <p className="text-muted-foreground">
+                    Nessun modulo didattico caricato per questo corso.
+                  </p>
                 </div>
               )}
             </div>
