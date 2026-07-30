@@ -26,14 +26,17 @@ export interface UserBadgeItem {
 }
 
 /**
-  Invoca la procedura SQL atomica `award_module_badge` per conferire il badge al completamento di un modulo.
+ * Conferisce il badge di completamento modulo tramite RPC SQL.
  */
 export async function unlockModuleBadge(
   userId: string,
   moduleCode: string,
 ): Promise<BadgeUnlockResult> {
   if (!userId || !moduleCode) {
-    return { success: false, error: "Parametri mancanti (userId o moduleCode)" };
+    return {
+      success: false,
+      error: "Parametri mancanti (userId o moduleCode)",
+    };
   }
 
   const supabase = getSupabaseAdmin();
@@ -50,16 +53,23 @@ export async function unlockModuleBadge(
         moduleCode,
         error: error.message,
       });
-      return { success: false, error: error.message };
+
+      return {
+        success: false,
+        error: error.message,
+      };
     }
 
     if (!data || data.length === 0) {
-      return { success: false, error: "Nessun dato restituito dalla RPC" };
+      return {
+        success: false,
+        error: "Nessun dato restituito dalla RPC",
+      };
     }
 
     const result = data[0];
 
-    logger.info("unlockModuleBadge: esito elaborato", {
+    logger.info("unlockModuleBadge: badge elaborato", {
       userId,
       moduleCode,
       alreadyUnlocked: result.already_unlocked,
@@ -78,36 +88,122 @@ export async function unlockModuleBadge(
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Internal Server Error";
-    logger.error("unlockModuleBadge: eccezione non gestita", {
+
+    logger.error("unlockModuleBadge: eccezione", {
       userId,
       moduleCode,
       error: message,
     });
-    return { success: false, error: message };
+
+    return {
+      success: false,
+      error: message,
+    };
   }
 }
 
 /**
-  Recupera le statistiche di gamification dello studente (XP, Livello) e la lista completa dei badge con relativo stato di sblocco.
+ * Conferisce il badge del quiz tramite RPC SQL.
+ * Mappato su p_quiz_code per supportare sia l'ID che il codice del quiz.
  */
-export async function getUserGamificationData(userId: string) {
-  if (!userId) {
-    return { success: false, error: "userId mancante" };
+export async function unlockQuizBadge(
+  userId: string,
+  quizId: string,
+): Promise<BadgeUnlockResult> {
+  if (!userId || !quizId) {
+    return {
+      success: false,
+      error: "Parametri mancanti",
+    };
   }
 
   const supabase = getSupabaseAdmin();
 
   try {
-    // 1. Dati profilo (XP, Livello)
+    const { data, error } = await supabase.rpc("award_quiz_badge", {
+      p_user_id: userId,
+      p_quiz_code: quizId,
+    });
+
+    if (error) {
+      logger.error("unlockQuizBadge: errore RPC", {
+        userId,
+        quizId,
+        error: error.message,
+      });
+
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    if (!data || data.length === 0) {
+      return {
+        success: false,
+        error: "Nessun dato restituito dalla RPC",
+      };
+    }
+
+    const result = data[0];
+
+    logger.info("unlockQuizBadge: badge elaborato", {
+      userId,
+      quizId,
+      alreadyUnlocked: result.already_unlocked,
+      xpGained: result.xp_gained,
+    });
+
+    return {
+      success: true,
+      alreadyUnlocked: result.already_unlocked,
+      badgeTitle: result.badge_title ?? undefined,
+      badgeIcon: result.badge_icon ?? undefined,
+      xpGained: result.xp_gained ?? 0,
+      newTotalXp: result.new_total_xp,
+      newLevel: result.new_level,
+    };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Internal Server Error";
+
+    logger.error("unlockQuizBadge: eccezione", {
+      userId,
+      quizId,
+      error: message,
+    });
+
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
+ * Recupera XP, livello e catalogo badge dell'utente.
+ */
+export async function getUserGamificationData(userId: string) {
+  if (!userId) {
+    return {
+      success: false,
+      error: "userId mancante",
+    };
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  try {
     const { data: profile, error: profileErr } = await supabase
       .from("profiles")
-      .select("total_xp, current_level, total_minutes_active")
+      .select("total_xp,current_level,total_minutes_active")
       .eq("id", userId)
       .single();
 
-    if (profileErr) throw profileErr;
+    if (profileErr) {
+      throw profileErr;
+    }
 
-    // 2. Catalogo badge + badge posseduti dall'utente
     const { data: badges, error: badgesErr } = await supabase
       .from("badges")
       .select(`
@@ -117,27 +213,34 @@ export async function getUserGamificationData(userId: string) {
         description,
         icon,
         xp_reward,
-        user_badges!left(awarded_at, profile_id)
+        user_badges!left(
+          profile_id,
+          awarded_at,
+          course_id
+        )
       `)
-      .order("code", { ascending: true });
+      .order("code");
 
-    if (badgesErr) throw badgesErr;
+    if (badgesErr) {
+      throw badgesErr;
+    }
 
-    // 3. Mappatura unificata per la UI
-    const formattedBadges: UserBadgeItem[] = (badges || []).map((b: any) => {
-      const userBadge = Array.isArray(b.user_badges)
-        ? b.user_badges.find((ub: any) => ub?.profile_id === userId)
+    const formattedBadges: UserBadgeItem[] = (badges ?? []).map((badge: any) => {
+      const unlocked = Array.isArray(badge.user_badges)
+        ? badge.user_badges.find(
+            (ub: any) => ub.profile_id === userId,
+          )
         : null;
 
       return {
-        id: b.id,
-        code: b.code,
-        title: b.title,
-        description: b.description,
-        icon: b.icon,
-        xpReward: b.xp_reward,
-        isUnlocked: Boolean(userBadge),
-        awardedAt: userBadge?.awarded_at || null,
+        id: badge.id,
+        code: badge.code,
+        title: badge.title,
+        description: badge.description,
+        icon: badge.icon,
+        xpReward: badge.xp_reward,
+        isUnlocked: Boolean(unlocked),
+        awardedAt: unlocked?.awarded_at ?? null,
       };
     });
 
@@ -153,10 +256,15 @@ export async function getUserGamificationData(userId: string) {
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Internal Server Error";
-    logger.error("getUserGamificationData: errore durante il recupero", {
+
+    logger.error("getUserGamificationData: errore", {
       userId,
       error: message,
     });
-    return { success: false, error: message };
+
+    return {
+      success: false,
+      error: message,
+    };
   }
 }

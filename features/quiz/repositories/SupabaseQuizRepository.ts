@@ -1,4 +1,3 @@
-//import { createClient } from "@supabase/supabase-js";
 import { IQuizRepository } from "../ports/IQuizRepository";
 import { Quiz, QuizStatus } from "../domain/Quiz";
 import { QuizQuestion } from "../domain/Question";
@@ -8,13 +7,6 @@ import { QuizReview } from "../domain/QuizReview";
 import { ParsedQuiz } from "../validators/quizValidators";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
-// Inizializzazione sicura del client Supabase esclusivamente Server-Side
-/*
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-*/
 /**
  * Client Supabase centralizzato.
  * Tutta la configurazione server-side risiede in /lib/supabase
@@ -39,7 +31,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
    */
   async createFromParsed(
     parsedQuiz: ParsedQuiz,
-    adminId: string,
+    adminId: string
   ): Promise<Quiz> {
     const { data: quizData, error: quizError } = await supabase
       .from("quizzes")
@@ -71,7 +63,9 @@ export class SupabaseQuizRepository implements IQuizRepository {
         .single();
 
       if (questionError)
-        throw new Error(`Errore inserimento domanda: ${questionError.message}`);
+        throw new Error(
+          `Errore inserimento domanda: ${questionError.message}`
+        );
 
       if (q.type === "multiple_choice" && q.options) {
         const optionsPayload = q.options.map((opt) => ({
@@ -86,7 +80,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
 
         if (optionsError)
           throw new Error(
-            `Errore inserimento opzioni: ${optionsError.message}`,
+            `Errore inserimento opzioni: ${optionsError.message}`
           );
       }
     }
@@ -106,7 +100,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
   }
 
   async findFullQuizStructure(
-    quizId: string,
+    quizId: string
   ): Promise<{ quiz: Quiz; questions: QuizQuestion[] }> {
     const quiz = await this.findById(quizId);
     if (!quiz) throw new Error("Quiz non trovato");
@@ -117,7 +111,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
         `
         *,
         options:quiz_options(*)
-      `,
+      `
       )
       .eq("quiz_id", quizId)
       .order("order_index", { ascending: true });
@@ -150,7 +144,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .order("created_at", { ascending: false });
 
     if (error) throw new Error(error.message);
-    return data.map(this.mapToQuizEntity);
+    return (data ?? []).map((q: any) => this.mapToQuizEntity(q));
   }
 
   async updateStatus(id: string, status: QuizStatus): Promise<void> {
@@ -197,13 +191,13 @@ export class SupabaseQuizRepository implements IQuizRepository {
           created_at,
           updated_at
         )
-      `,
+      `
       )
       .eq("course_id", courseId)
       .eq("quizzes.status", "active");
 
     if (error) throw new Error(error.message);
-    return data.map((item: any) => this.mapToQuizEntity(item.quizzes));
+    return (data ?? []).map((item: any) => this.mapToQuizEntity(item.quizzes));
   }
 
   async delete(id: string): Promise<void> {
@@ -215,7 +209,10 @@ export class SupabaseQuizRepository implements IQuizRepository {
   // STUDENT ATTEMPTS
   // ======================================================
 
-  async createAttempt(quizId: string, studentId: string): Promise<QuizAttempt> {
+  async createAttempt(
+    quizId: string,
+    studentId: string
+  ): Promise<QuizAttempt> {
     const { data, error } = await supabase
       .from("quiz_attempts")
       .insert({
@@ -236,7 +233,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
   async saveAttemptSubmission(
     attemptId: string,
     answers: Omit<QuizAnswer, "id" | "createdAt">[],
-    autoScore: number,
+    autoScore: number
   ): Promise<QuizAttempt> {
     const answersPayload = answers.map((ans) => ({
       attempt_id: attemptId,
@@ -270,7 +267,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
 
   async hasStudentAttempted(
     quizId: string,
-    studentId: string,
+    studentId: string
   ): Promise<boolean> {
     const { data, error } = await supabase
       .from("quiz_attempts")
@@ -280,7 +277,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .limit(1);
 
     if (error) throw new Error(error.message);
-    return data.length > 0;
+    return (data ?? []).length > 0;
   }
 
   async findAttemptById(attemptId: string): Promise<QuizAttempt | null> {
@@ -299,15 +296,15 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .from("quiz_answers")
       .select(
         `
-      id,
-      attempt_id,
-      question_id,
-      selected_option_id,
-      open_answer_text,
-      is_correct,
-      score,
-      created_at
-    `,
+        id,
+        attempt_id,
+        question_id,
+        selected_option_id,
+        open_answer_text,
+        is_correct,
+        score,
+        created_at
+      `
       )
       .eq("attempt_id", attemptId);
 
@@ -319,15 +316,10 @@ export class SupabaseQuizRepository implements IQuizRepository {
       id: row.id,
       attemptId: row.attempt_id,
       questionId: row.question_id,
-
       selectedOptionId: row.selected_option_id ?? undefined,
-
       openAnswerText: row.open_answer_text ?? undefined,
-
       isCorrect: row.is_correct ?? undefined,
-
       score: Number(row.score),
-
       createdAt: new Date(row.created_at),
     }));
   }
@@ -340,7 +332,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .order("created_at", { ascending: false });
 
     if (error) throw new Error(error.message);
-    return data.map(this.mapToAttemptEntity);
+    return (data ?? []).map((a: any) => this.mapToAttemptEntity(a));
   }
 
   // ======================================================
@@ -349,7 +341,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
 
   async submitReviewAndGrade(
     review: Omit<QuizReview, "id" | "reviewedAt">,
-    finalScore: number,
+    finalScore: number
   ): Promise<QuizAttempt> {
     const { error: reviewError } = await supabase.from("quiz_reviews").insert({
       attempt_id: review.attemptId,
@@ -384,7 +376,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
 
   async findReviewByAttemptAndQuestion(
     attemptId: string,
-    questionId: string,
+    questionId: string
   ): Promise<QuizReview | null> {
     const { data, error } = await supabase
       .from("quiz_reviews")
@@ -394,12 +386,12 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .maybeSingle();
 
     if (error) {
-      throw new Error("Errore recupero valutazione manuale: " + error.message,);
+      throw new Error(
+        "Errore recupero valutazione manuale: " + error.message
+      );
     }
 
-    if (!data) {
-      return null;
-    }
+    if (!data) return null;
 
     return {
       id: data.id,
@@ -417,12 +409,12 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .from("quiz_reviews")
       .select("*")
       .eq("attempt_id", attemptId)
-      .order("reviewed_at", {
-        ascending: false,
-      });
+      .order("reviewed_at", { ascending: false });
 
     if (error) {
-      throw new Error("Errore recupero storico valutazioni: " + error.message,);
+      throw new Error(
+        "Errore recupero storico valutazioni: " + error.message
+      );
     }
 
     return (data ?? []).map((review) => ({
@@ -439,7 +431,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
   async updateReviewAndGrade(
     reviewId: string,
     review: Omit<QuizReview, "id" | "reviewedAt">,
-    finalScore: number,
+    finalScore: number
   ): Promise<QuizAttempt> {
     const { error: reviewError } = await supabase
       .from("quiz_reviews")
@@ -449,9 +441,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       })
       .eq("id", reviewId);
 
-    if (reviewError) {
-      throw new Error(reviewError.message);
-    }
+    if (reviewError) throw new Error(reviewError.message);
 
     const { error: answerError } = await supabase
       .from("quiz_answers")
@@ -462,9 +452,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .eq("attempt_id", review.attemptId)
       .eq("question_id", review.questionId);
 
-    if (answerError) {
-      throw new Error(answerError.message);
-    }
+    if (answerError) throw new Error(answerError.message);
 
     const { data: attemptData, error: attemptError } = await supabase
       .from("quiz_attempts")
@@ -477,9 +465,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .select("*")
       .single();
 
-    if (attemptError) {
-      throw new Error(attemptError.message);
-    }
+    if (attemptError) throw new Error(attemptError.message);
 
     return this.mapToAttemptEntity(attemptData);
   }
@@ -498,14 +484,17 @@ export class SupabaseQuizRepository implements IQuizRepository {
     const { count: totalCreated } = await supabase
       .from("quizzes")
       .select("*", { count: "exact", head: true });
+
     const { count: totalPublished } = await supabase
       .from("quizzes")
       .select("*", { count: "exact", head: true })
       .eq("status", "active");
+
     const { count: totalCompleted } = await supabase
       .from("quiz_attempts")
       .select("*", { count: "exact", head: true })
       .eq("status", "graded");
+
     const { count: pendingReviewsCount } = await supabase
       .from("quiz_attempts")
       .select("*", { count: "exact", head: true })
@@ -532,10 +521,11 @@ export class SupabaseQuizRepository implements IQuizRepository {
     const { data, error } = await supabase
       .from("quiz_attempts")
       .select("final_score");
+
     if (error) throw new Error(error.message);
 
     const distribution = { "0-3": 0, "4-6": 0, "7-8": 0, "9-10": 0 };
-    data.forEach((item: any) => {
+    (data ?? []).forEach((item: any) => {
       const score = Number(item.final_score);
       if (score <= 3) distribution["0-3"]++;
       else if (score <= 6) distribution["4-6"]++;
@@ -547,7 +537,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
   }
 
   async getMostFailedQuestions(
-    limit = 5,
+    limit = 5
   ): Promise<
     { questionId: string; questionText: string; errorCount: number }[]
   > {
@@ -557,7 +547,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
         `
         question_id,
         quiz_questions(text)
-      `,
+      `
       )
       .eq("is_correct", false)
       .limit(limit);
@@ -565,7 +555,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
     if (error) throw new Error(error.message);
 
     const counts: Record<string, { text: string; count: number }> = {};
-    data.forEach((item: any) => {
+    (data ?? []).forEach((item: any) => {
       const qId = item.question_id;
       const text = item.quiz_questions?.text || "Domanda sconosciuta";
       if (!counts[qId]) counts[qId] = { text, count: 0 };
@@ -590,21 +580,13 @@ export class SupabaseQuizRepository implements IQuizRepository {
       id: q.id,
       title: q.title,
       description: q.description ?? undefined,
-
       status: q.status,
-
       penaltyEnabled: q.penalty_enabled ?? false,
-
       negativeMark: Number(q.negative_mark ?? 0.25),
-
       maxScore: Number(q.max_score ?? 10),
-
       passingScore: Number(q.passing_score ?? 60),
-
       createdBy: q.created_by ?? undefined,
-
       createdAt: new Date(q.created_at),
-
       updatedAt: new Date(q.updated_at),
     };
   }
@@ -620,6 +602,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       teacherScore: Number(a.teacher_score),
       finalScore: Number(a.final_score),
       status: a.status,
+      xpAwarded: a.xp_awarded ?? false,
       createdAt: new Date(a.created_at),
     };
   }

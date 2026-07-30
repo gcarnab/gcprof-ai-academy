@@ -11,6 +11,7 @@ import BadgeGrid from "@/features/gamification/components/BadgeGrid";
 import type { Metadata } from "next";
 import { GamificationTestButton } from "@/features/gamification/components/GamificationTestButton";
 import { getUserGamificationOverview } from "@/features/gamification/actions/gamification";
+import { StudentGamificationDashboard } from "@/features/gamification/components/StudentGamificationDashboard";
 
 export const metadata: Metadata = {
   title: "Dashboard Studente",
@@ -377,62 +378,17 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
 
         {activeTab === "badges" && (
           <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">I Tuoi Badge &amp; Traguardi Multi-Corso</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Visualizza i traguardi e i badge sbloccati per ciascuno dei tuoi corsi!
-                </p>
+            {gamificationOverview ? (
+              <StudentGamificationDashboard overview={gamificationOverview} />
+            ) : (
+              <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
+                Nessun dato di gamification disponibile al momento.
               </div>
-              <GamificationBar totalXp={totalXp} currentLevel={currentLevel} />
+            )}
+
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+              <GamificationTestButton />
             </div>
-
-            {/* SEZIONE BADGE E STATISTICHE PER SINGOLO CORSO */}
-            <div className="space-y-6">
-              {courseStatsList.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
-                  Nessun corso attivo per la gamification.
-                </div>
-              ) : (
-                courseStatsList.map((courseStat, index) => (
-                  <div
-                    key={courseStat.course_id ? `course-stat-${courseStat.course_id}` : `course-stat-${index}`}
-                    className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800/80 pb-3">
-                      <div>
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                          {courseStat.course_title}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {courseStat.badges.length} Badge sbloccati per questo corso
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50">
-                          Livello Corso: {courseStat.course_level}
-                        </span>
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">
-                          {courseStat.course_xp} XP Corso
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* GRIGLIA BADGE DEL CORSO */}
-                    {courseStat.badges.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic py-2">
-                        Nessun badge ancora ottenuto in questo corso. Completa le lezioni per sbloccarli!
-                      </p>
-                    ) : (
-                      <BadgeGrid badges={courseStat.badges as any} />
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-
-            <GamificationTestButton />
           </div>
         )}
 

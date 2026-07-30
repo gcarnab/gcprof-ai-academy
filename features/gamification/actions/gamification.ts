@@ -4,14 +4,16 @@ import { unstable_noStore as noStore } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
-// --- TIPI DATO DIVERSIFICATI PER CORSO E GLOBALI ---
-
 export interface BadgeItem {
   badge_id: string;
   code: string;
   title: string;
+  description?: string;
   icon: string;
   awarded_at: string;
+  badge_type: "module" | "quiz" | string;
+  type?: "module" | "quiz" | string;
+  quiz_id: string | null;
 }
 
 export interface CourseGamificationStats {
@@ -41,12 +43,12 @@ export interface AdminCourseStat {
 }
 
 /**
- * Recupera la panoramica Gamification dell'utente (Globale + Dettaglio Corsi)
+ * Recupera la panoramica Gamification dell'utente (Globale + Dettaglio Corsi Iscritti)
  */
 export async function getUserGamificationOverview(
   userId: string
 ): Promise<{ success: boolean; data?: UserGamificationOverview; error?: string }> {
-  noStore(); // Disabilita cache Next.js per dati sempre aggiornati
+  noStore();
   if (!userId) return { success: false, error: "ID Utente mancante" };
 
   const supabase = getSupabaseAdmin();
@@ -76,7 +78,7 @@ export async function getAdminGamificationStats(): Promise<{
   data?: AdminCourseStat[];
   error?: string;
 }> {
-  noStore(); // Disabilita cache Next.js per la dashboard Admin
+  noStore();
 
   const supabase = getSupabaseAdmin();
 
@@ -85,8 +87,7 @@ export async function getAdminGamificationStats(): Promise<{
 
     if (error) {
       logger.error("getAdminGamificationStats: Errore RPC, avvio fallback", { error: error.message });
-      
-      // Fallback manuale via query diretta
+
       const { data: courses } = await supabase.from("courses").select("id, title");
       if (!courses || courses.length === 0) {
         return { success: true, data: [] };

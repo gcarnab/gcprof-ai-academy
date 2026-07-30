@@ -1,6 +1,7 @@
 "use server";
 
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { unlockQuizBadge } from "./badgeActions";
 
 // ======================================================
 // CALCOLO LIVELLO
@@ -28,21 +29,24 @@ export async function onLessonCompletedAction(payload: LessonCompletedPayload) {
   const { userId, lessonId, courseId } = payload;
   const supabase = getSupabaseAdmin();
 
+  // Evita doppia assegnazione XP
   const { data: existingProgress } = await supabase
     .from("profile_lessons_progress")
     .select("is_completed")
     .eq("profile_id", userId)
     .eq("lesson_id", lessonId)
-    .single();
+    .maybeSingle();
 
   if (existingProgress?.is_completed) {
     return {
       success: true,
       xpGained: 0,
-      newBadge: null,
+      newTotalXp: null,
+      newLevel: null,
     };
   }
 
+  // Salvataggio completamento lezione
   await supabase.from("profile_lessons_progress").upsert({
     profile_id: userId,
     lesson_id: lessonId,
@@ -52,6 +56,7 @@ export async function onLessonCompletedAction(payload: LessonCompletedPayload) {
     last_accessed_at: new Date().toISOString(),
   });
 
+  // Recupero XP correnti
   const { data: profile } = await supabase
     .from("profiles")
     .select("total_xp,current_level")
@@ -59,52 +64,54 @@ export async function onLessonCompletedAction(payload: LessonCompletedPayload) {
     .single();
 
   const currentXp = profile?.total_xp ?? 0;
+
+  // ======================================================
+  // XP LEZIONE
+  // ======================================================
+
   const xpGained = 50;
-  const newXp = currentXp + xpGained;
-  const newLevel = calculateLevel(newXp);
+
+  const newTotalXp = currentXp + xpGained;
+  const newLevel = calculateLevel(newTotalXp);
 
   await supabase
     .from("profiles")
     .update({
-      total_xp: newXp,
+      total_xp: newTotalXp,
       current_level: newLevel,
     })
     .eq("id", userId);
 
-  const { count: completedCount } = await supabase
-    .from("profile_lessons_progress")
-    .select("id", {
-      count: "exact",
-      head: true,
-    })
-    .eq("profile_id", userId)
-    .eq("is_completed", true);
-
-  let unlockedBadge = null;
-
-  if (completedCount === 1) {
-    await supabase.from("user_badges").insert({
-      profile_id: userId,
-      badge_id: "first_lesson",
-      unlocked_at: new Date().toISOString(),
-    });
-
-    unlockedBadge = "Primo Passo nell'AI";
-  }
+  // ======================================================
+  // NOTA IMPORTANTE
+  // ======================================================
+  //
+  // Da questo momento i badge NON vengono più assegnati qui.
+  //
+  // Il badge del modulo viene conferito esclusivamente tramite:
+  //
+  // unlockModuleBadge(...)
+  //
+  // presente in:
+  //
+  // features/gamification/actions/badgeActions.ts
+  //
+  // che richiama la RPC SQL award_module_badge.
+  //
+  // In questo modo esiste un solo punto di gestione
+  // dei badge ed evitiamo duplicazioni.
+  // ======================================================
 
   return {
     success: true,
     xpGained,
-    newTotalXp: newXp,
+    newTotalXp,
     newLevel,
-    unlockedBadge,
   };
 }
 
 // ======================================================
 // COMPLETAMENTO QUIZ
-// Viene chiamata SOLO quando il docente conclude
-// definitivamente la correzione.
 // ======================================================
 
 interface QuizCompletedPayload {
@@ -117,33 +124,47 @@ export async function onQuizCompletedAction(payload: QuizCompletedPayload) {
   const { userId, quizId, finalScore } = payload;
   const supabase = getSupabaseAdmin();
 
-  // Evita doppia assegnazione XP
-  const { data: reward } = await supabase
-    .from("profile_quiz_rewards")
+  // ======================================================
+  // EVITA DOPPIA ASSEGNAZIONE XP
+  // ======================================================
+
+  const { data: rewardedAttempt } = await supabase
+    .from("quiz_attempts")
     .select("id")
-    .eq("profile_id", userId)
+    .eq("student_id", userId)
     .eq("quiz_id", quizId)
+    .eq("xp_awarded", true)
     .maybeSingle();
 
-  if (reward) {
+  if (rewardedAttempt) {
     return {
       success: true,
       alreadyRewarded: true,
       xpGained: 0,
+      newTotalXp: null,
+      newLevel: null,
     };
   }
+
+  // ======================================================
+  // CALCOLO XP IN BASE AL VOTO FINALE
+  // ======================================================
 
   let xpGained = 20;
 
   if (finalScore >= 9) {
-    xpGained = 100;
+    xpGained = 20;
   } else if (finalScore >= 8) {
-    xpGained = 80;
+    xpGained = 15;
   } else if (finalScore >= 7) {
-    xpGained = 60;
+    xpGained = 10;
   } else if (finalScore >= 6) {
-    xpGained = 40;
+    xpGained = 5;
   }
+
+  // ======================================================
+  // RECUPERO PROFILO
+  // ======================================================
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -152,8 +173,13 @@ export async function onQuizCompletedAction(payload: QuizCompletedPayload) {
     .single();
 
   const currentXp = profile?.total_xp ?? 0;
+
   const newTotalXp = currentXp + xpGained;
   const newLevel = calculateLevel(newTotalXp);
+
+  // ======================================================
+  // AGGIORNAMENTO PROFILO
+  // ======================================================
 
   await supabase
     .from("profiles")
@@ -163,19 +189,61 @@ export async function onQuizCompletedAction(payload: QuizCompletedPayload) {
     })
     .eq("id", userId);
 
-  await supabase.from("profile_quiz_rewards").insert({
-    profile_id: userId,
-    quiz_id: quizId,
-    xp_awarded: xpGained,
-    final_score: finalScore,
-    created_at: new Date().toISOString(),
-  });
+  // ======================================================
+  // REGISTRAZIONE PREMIO QUIZ
+  // Imposta il flag xp_awarded sul tentativo del quiz
+  // ======================================================
+
+  await supabase
+    .from("quiz_attempts")
+    .update({ xp_awarded: true })
+    .eq("quiz_id", quizId)
+    .eq("student_id", userId);
+
+  // ======================================================
+  // SBLOCCO BADGE QUIZ
+  // ======================================================
+
+  const badgeResult = await unlockQuizBadge(userId, quizId);
+
+  // ======================================================
+  // NOTA IMPORTANTE
+  // ======================================================
+  //
+  // Questo metodo assegna ESCLUSIVAMENTE gli XP.
+  //
+  // Il badge del quiz NON viene assegnato qui.
+  //
+  // L'assegnazione del badge deve essere effettuata
+  // tramite:
+  //
+  //    unlockQuizBadge(...)
+  //
+  // definita in:
+  //
+  // features/gamification/actions/badgeActions.ts
+  //
+  // che utilizzerà una RPC SQL dedicata
+  // (es. award_quiz_badge) mantenendo tutta la
+  // logica dei badge centralizzata in un unico punto.
+  // ======================================================
 
   return {
     success: true,
+    alreadyRewarded: false,
+
     xpGained,
     newTotalXp,
     newLevel,
-    alreadyRewarded: false,
+
+    badgeUnlocked: badgeResult.success && !badgeResult.alreadyUnlocked,
+
+    badge: badgeResult.success
+      ? {
+          title: badgeResult.badgeTitle,
+          icon: badgeResult.badgeIcon,
+          xpGained: badgeResult.xpGained,
+        }
+      : null,
   };
 }

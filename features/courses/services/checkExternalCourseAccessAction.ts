@@ -30,17 +30,36 @@ export async function checkExternalCourseAccessAction(
   try {
     const { data, error } = await supabaseAdmin
       .from("profile_courses")
-      .select("id, status")
+      .select("status") // 👈 Selezioniamo solo status (senza id)
       .eq("profile_id", userId)
       .eq("course_id", courseId)
-      .eq("status", "ACTIVE")
       .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      logger.error("[checkExternalCourseAccessAction] Errore query Supabase:", error);
       return false;
     }
 
-    return true;
+    if (!data) {
+      logger.warn("[checkExternalCourseAccessAction] Nessun record iscrizione trovato:", {
+        userId,
+        courseId,
+      });
+      return false;
+    }
+
+    // Normalizziamo lo stato in maiuscolo
+    const normalizedStatus = String(data.status || "").trim().toUpperCase();
+    const isAllowed = normalizedStatus === "ACTIVE" || normalizedStatus === "COMPLETED";
+
+    logger.info("[checkExternalCourseAccessAction] Verifica completata:", {
+      userId,
+      courseId,
+      statusTrovato: data.status,
+      accessoConcesso: isAllowed,
+    });
+
+    return isAllowed;
   } catch (err) {
     logger.error("[checkExternalCourseAccessAction] Errore verifica accesso", { error: err });
     return false;

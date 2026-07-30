@@ -78,8 +78,12 @@ export default function LessonPage() {
         );
 
         const course = liveCourses.find((c) => c.slug === slug);
-        const module = course?.modules?.find((m: any) => String(m.id) === String(moduleId));
-        const lesson = module?.lessons?.find((l: any) => String(l.id) === String(lessonId));
+        const module = course?.modules?.find(
+          (m: any) => String(m.id) === String(moduleId),
+        );
+        const lesson = module?.lessons?.find(
+          (l: any) => String(l.id) === String(lessonId),
+        );
 
         // 🔴 CHECKPOINT 4: Esito della ricerca interna
         logger.debug("=== [CHECKPOINT 4] Esito filtri:", {
@@ -104,6 +108,15 @@ export default function LessonPage() {
           const isExternalStudent =
             rawUserType === "EXTERNAL_STUDENT" ||
             rawRole === "EXTERNAL_STUDENT";
+
+          logger.debug("🔍 [DIAGNOSTICA ACCESSO]", {
+            userId: currentUser?.id,
+            userType: currentUser?.userType || currentUser?.user_type,
+            role: currentUser?.role,
+            isExternalStudent,
+            courseId: course?.id,
+            courseTitle: course?.title,
+          });
 
           let accessGranted = false;
           if (currentUser?.role === "admin") {
@@ -153,7 +166,7 @@ export default function LessonPage() {
         : detail.result;
 
       const isCompleted = Boolean(
-        trackingResult?.is_completed || trackingResult?.isCompleted
+        trackingResult?.is_completed || trackingResult?.isCompleted,
       );
 
       if (isCompleted && !hasShownModalRef.current) {
@@ -167,13 +180,13 @@ export default function LessonPage() {
 
     window.addEventListener(
       "gamification:updated",
-      handleGamificationUpdate as EventListener
+      handleGamificationUpdate as EventListener,
     );
 
     return () => {
       window.removeEventListener(
         "gamification:updated",
-        handleGamificationUpdate as EventListener
+        handleGamificationUpdate as EventListener,
       );
     };
   }, [lessonId]);
@@ -237,14 +250,26 @@ export default function LessonPage() {
   ];
 
   // 🎯 CALCOLO LINK LEZIONE SUCCESSIVA
-  const currentModuleIndex = course.modules?.findIndex((m: any) => String(m.id) === String(moduleId)) ?? -1;
-  const currentLessonIndex = module.lessons?.findIndex((l: any) => String(l.id) === String(lessonId)) ?? -1;
+  const currentModuleIndex =
+    course.modules?.findIndex((m: any) => String(m.id) === String(moduleId)) ??
+    -1;
+  const currentLessonIndex =
+    module.lessons?.findIndex((l: any) => String(l.id) === String(lessonId)) ??
+    -1;
 
   let nextLessonUrl: string | null = null;
-  if (module.lessons && currentLessonIndex !== -1 && currentLessonIndex < module.lessons.length - 1) {
+  if (
+    module.lessons &&
+    currentLessonIndex !== -1 &&
+    currentLessonIndex < module.lessons.length - 1
+  ) {
     const nextL = module.lessons[currentLessonIndex + 1];
     nextLessonUrl = `/courses/${slug}/modules/${module.id}/lessons/${nextL.id}`;
-  } else if (course.modules && currentModuleIndex !== -1 && currentModuleIndex < course.modules.length - 1) {
+  } else if (
+    course.modules &&
+    currentModuleIndex !== -1 &&
+    currentModuleIndex < course.modules.length - 1
+  ) {
     const nextM = course.modules[currentModuleIndex + 1];
     if (nextM.lessons && nextM.lessons.length > 0) {
       const nextL = nextM.lessons[0];
@@ -341,14 +366,14 @@ export default function LessonPage() {
       {completionModal?.isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-background dark:bg-slate-900 border border-border dark:border-slate-800 p-6 md:p-8 rounded-2xl max-w-md w-full text-center space-y-6 shadow-2xl relative overflow-hidden">
-            
             <div className="space-y-2">
               <div className="text-5xl animate-bounce">🎉</div>
               <h3 className="text-2xl font-black tracking-tight text-foreground">
                 Lezione Completata!
               </h3>
               <p className="text-xs text-muted-foreground">
-                Hai completato il tempo di fruizione richiesto per “{lesson.title}”.
+                Hai completato il tempo di fruizione richiesto per “
+                {lesson.title}”.
               </p>
             </div>
 
@@ -401,7 +426,6 @@ export default function LessonPage() {
                 </Link>
               )}
             </div>
-
           </div>
         </div>
       )}
