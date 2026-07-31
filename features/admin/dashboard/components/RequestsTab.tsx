@@ -14,6 +14,7 @@ import { revokeCourseAccessAction } from "@/features/admin/users/actions/revokeC
 import { getRevokedExternalEnrollmentsAction } from "@/features/admin/actions/getRevokedExternalEnrollmentsAction";
 import { reactivateExternalEnrollmentAction } from "@/features/admin/actions/reactivateExternalEnrollmentAction";
 import { getCoursesForEnrollmentAction } from "@/features/admin/actions/getCoursesForEnrollmentAction";
+import { logger } from "@/lib/logger";
 
 interface PendingEnrollment {
   profileId: string;
@@ -109,7 +110,7 @@ export default function RequestsTab() {
         setRequestError(result.error || "Impossibile caricare le richieste.");
       }
     } catch (error) {
-      console.error(
+      logger.error(
         "[RequestsTab Client] Errore caricamento richieste pendenti:",
         error,
       );
@@ -127,13 +128,13 @@ export default function RequestsTab() {
       if (result.success && result.data) {
         setAvailableCourses(result.data);
       } else {
-        console.error(
+        logger.error(
           "[RequestsTab Client] Errore server azioni corsi:",
           result.error,
         );
       }
     } catch (error) {
-      console.error(
+      logger.error(
         "[RequestsTab Client] Errore eccezione corsi disponibili:",
         error,
       );
@@ -166,7 +167,7 @@ export default function RequestsTab() {
         setGroupedActiveRequests(Object.values(groups));
       }
     } catch (error) {
-      console.error(
+      logger.error(
         "[RequestsTab Client] Errore caricamento iscritti attivi:",
         error,
       );
@@ -183,7 +184,7 @@ export default function RequestsTab() {
         setRevokedRequests(result.data as any);
       }
     } catch (error) {
-      console.error(
+      logger.error(
         "[RequestsTab Client] Errore caricamento iscritti revocati:",
         error,
       );
@@ -217,7 +218,7 @@ export default function RequestsTab() {
           alert(`Errore durante l'abilitazione dei corsi: ${result.error}`);
         }
       } catch (err: any) {
-        console.error(
+        logger.error(
           "[RequestsTab Client] Eccezione approvazione iscrizione:",
           err,
         );
@@ -243,7 +244,7 @@ export default function RequestsTab() {
           alert(`Errore durante l'aggiornamento dei corsi: ${result.error}`);
         }
       } catch (err: any) {
-        console.error(
+        logger.error(
           "[RequestsTab Client] Eccezione sincro corsi attivi:",
           err,
         );
@@ -272,7 +273,7 @@ export default function RequestsTab() {
           alert(`Errore durante la revoca: ${result.error}`);
         }
       } catch (err: any) {
-        console.error("[RequestsTab Client] Eccezione revoca corso:", err);
+        logger.error("[RequestsTab Client] Eccezione revoca corso:", err);
         alert(`Errore imprevisto: ${err.message || err}`);
       }
     });
@@ -298,7 +299,7 @@ export default function RequestsTab() {
           alert(`Errore durante il ripristino: ${result.error}`);
         }
       } catch (err: any) {
-        console.error("[RequestsTab Client] Eccezione ripristino corso:", err);
+        logger.error("[RequestsTab Client] Eccezione ripristino corso:", err);
         alert(`Errore imprevisto: ${err.message || err}`);
       }
     });

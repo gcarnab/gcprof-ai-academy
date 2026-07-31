@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
@@ -134,7 +135,7 @@ export async function addLesson(
       .insert(insertData);
 
     if (error) {
-      console.error("Supabase Insert Error:", error);
+      logger.error("Supabase Insert Error:", error);
       return { success: false, error: error.message };
     }
     revalidatePath("/admin");
@@ -143,7 +144,7 @@ export async function addLesson(
     revalidatePath("/courses");
     return { success: true };
   } catch (err: any) {
-    console.error("Server Action Exception:", err);
+    logger.error("Server Action Exception:", err);
     return { success: false, error: err.message };
   }
 }

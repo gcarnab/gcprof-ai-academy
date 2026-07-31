@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { PasswordResetService } from "../services/PasswordResetService";
 
 export async function validateResetTokenAction(token: string): Promise<boolean> {
@@ -12,7 +13,7 @@ export async function validateResetTokenAction(token: string): Promise<boolean> 
     // Ritorna true se il token è valido e associato a un utente, altrimenti false
     return !!userId;
   } catch (error) {
-    console.error("❌ Errore durante la validazione del token:", error);
+    logger.error("❌ Errore durante la validazione del token:", error);
     return false;
   }
 }

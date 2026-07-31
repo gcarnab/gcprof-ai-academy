@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
@@ -36,7 +37,7 @@ export async function assignCourseClassAction(formData: FormData) {
       };
     }
     
-    console.error("Errore assegnazione corso:", error);
+    logger.error("Errore assegnazione corso:", error);
     return { success: false, error: error.message || "Errore durante l'assegnazione." };
   }
 

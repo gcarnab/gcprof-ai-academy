@@ -10,12 +10,15 @@ import RequestsTab from "./RequestsTab";
 import QuizzesTab from "./QuizzesTab";
 import ResourceAdminTable from "@/features/resources/components/ResourceAdminTable";
 import { Resource } from "@/features/resources/types/Resource";
+import { HomeBannerSettings } from "@/features/system/types/SystemConfiguration";
+import HomeBannerAdminForm from "@/features/system/actions/HomeBannerAdminForm";
 
 interface Props {
   stats: any;
   currentTab: string;
   trackingStats: any;
   initialResources: Resource[];
+  initialSystemSettings?: HomeBannerSettings; // 2. Prop opzionale per le impostazioni
   paymentsTab?: React.ReactNode;
 }
 
@@ -29,6 +32,7 @@ const tabs = [
   { id: "tracking", label: "🛰 Tracking" },
   { id: "resources", label: "🔗 Risorse" },
   { id: "payments", label: "💳 Payments" },
+  { id: "settings", label: "⚙️ Impostazioni" }, // 3. Nuova tab aggiunta
 ];
 
 export default function AdminDashboard({
@@ -36,6 +40,7 @@ export default function AdminDashboard({
   currentTab,
   trackingStats,
   initialResources,
+  initialSystemSettings,
   paymentsTab,
 }: Props) {
   const router = useRouter();
@@ -64,7 +69,7 @@ export default function AdminDashboard({
 
       {/* TAB BAR E CONTENUTO */}
       <div className="rounded-xl border bg-card text-card-foreground shadow-sm">
-        {/* Scroll orizzontale su mobile per evitare il collasso visivo delle tab */}
+        {/* Scroll orizzontale su mobile */}
         <div className="flex overflow-x-auto border-b no-scrollbar">
           {tabs.map((tab) => {
             const isActive = currentTab === tab.id;
@@ -87,9 +92,7 @@ export default function AdminDashboard({
           })}
         </div>
 
-        {/* 
-          Area Contenuto con animazione fade-in allo switch delle tab.
-        */}
+        {/* Area Contenuto con animazione fade-in */}
         <div
           key={currentTab}
           className="p-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
@@ -133,6 +136,11 @@ export default function AdminDashboard({
 
           {/* PAYMENTS */}
           {currentTab === "payments" && paymentsTab}
+
+          {/* 4. SETTINGS / SYSTEM BANNER */}
+          {currentTab === "settings" && initialSystemSettings && (
+            <HomeBannerAdminForm initialSettings={initialSystemSettings} />
+          )}
         </div>
       </div>
     </div>

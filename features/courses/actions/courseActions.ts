@@ -6,6 +6,7 @@ import { SupabaseCourseRepository } from "../repositories/SupabaseCourseReposito
 import { JoseTokenService } from "@/features/auth/infrastructure/JoseTokenService";
 import { NextCookieService } from "@/features/auth/infrastructure/NextCookieService";
 import { getLiveCourses } from "../services/courseActions";
+import { logger } from "@/lib/logger";
 
 export interface CompleteLessonParams {
   courseId: string;
@@ -230,7 +231,7 @@ export async function completeLessonAction(
       allLessonIdsInModule = allLessonIdsInModuleArg;
     }
 
-    console.log(
+    logger.info(
       `📥 [completeLesson] Ricevuto modulo: ${moduleCode}, Lezioni da completare: ${allLessonIdsInModule?.length}`,
     );
 
@@ -309,7 +310,7 @@ export async function completeLessonAction(
       iconUrl?: string | null;
       xpReward?: number;
     } | null = null;
-    
+
     let isModuleComplete = false;
 
     // 5. CONTROLLO SBLOCCO BADGE MODULO
@@ -329,7 +330,7 @@ export async function completeLessonAction(
         completedSet.has(String(id)),
       );
 
-      console.log(
+      logger.info(
         `🔍 [completeLesson] Stato modulo ${moduleCode}: completate ${completedSet.size} lezioni (Serve averne fatte ${allLessonIdsInModule.length}). Modulo completo? ${isModuleComplete}`,
       );
 
@@ -341,7 +342,7 @@ export async function completeLessonAction(
           .single();
 
         if (badgeFetchError || !badgeData) {
-          console.warn(
+          logger.warn(
             `⚠️ [completeLesson] Modulo completo, ma il badge con code '${moduleCode}' NON ESISTE nel database badges!`,
           );
         }
@@ -359,12 +360,12 @@ export async function completeLessonAction(
             );
 
           if (badgeInsertErr) {
-            console.error(
+            logger.error(
               `❌ [completeLesson] ERRORE GRAVE DURANTE L'INSERIMENTO DEL BADGE IN user_badges:`,
               badgeInsertErr,
             );
           } else {
-            console.log(
+            logger.info(
               `✅ [completeLesson] Badge '${badgeData.title}' assegnato con successo all'utente!`,
             );
 
@@ -389,7 +390,7 @@ export async function completeLessonAction(
                 .update({ total_xp: updatedXp, current_level: updatedLevel })
                 .eq("id", userId);
 
-              console.log(
+              logger.info(
                 `🎁 [completeLesson] Aggiunti ${badgeData.xp_reward} XP bonus per il completamento modulo.`,
               );
             }
@@ -397,7 +398,7 @@ export async function completeLessonAction(
         }
       }
     } else {
-      console.warn(
+      logger.warn(
         "⚠️ [completeLesson] Attenzione: moduleCode o allLessonIdsInModule non sono stati passati correttamente dal frontend.",
       );
     }
@@ -415,10 +416,10 @@ export async function completeLessonAction(
       leveledUp,
       isModuleComplete,
       unlockedBadgeTitle: unlockedBadgeObject?.title || null, // Per retrocompatibilità
-      unlockedBadge: unlockedBadgeObject,                     // Dati estesi per il Modal
+      unlockedBadge: unlockedBadgeObject, // Dati estesi per il Modal
     };
   } catch (error: any) {
-    console.error("❌ [completeLesson] Errore critico:", error);
+    logger.error("❌ [completeLesson] Errore critico:", error);
     return {
       success: false,
       error: error.message || "Errore durante il completamento della lezione.",

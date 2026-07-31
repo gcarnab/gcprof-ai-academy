@@ -11,6 +11,7 @@ import {
   PaymentDashboardDTO,
   LatestOrderDTO,
 } from "../dto/PaymentDashboardDTO";
+import { logger } from "@/lib/logger";
 
 export class PaymentDashboardService {
   constructor(private readonly repository: PaymentRepository) {}
@@ -32,7 +33,7 @@ export class PaymentDashboardService {
         latestOrders,
       };
     } catch (error) {
-      console.error("❌ [PaymentDashboardService Error - getOverview]:", error);
+      logger.error("❌ [PaymentDashboardService Error - getOverview]:", error);
       throw error;
     }
   }

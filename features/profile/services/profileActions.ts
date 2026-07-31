@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
@@ -36,7 +37,7 @@ export async function updateProfileText({ userId, firstName, lastName, displayNa
     .single();
 
   if (error) {
-    console.error("❌ Errore Supabase nell'aggiornamento del profilo:", error.message);
+    logger.error("❌ Errore Supabase nell'aggiornamento del profilo:", error.message);
     throw new Error(`Impossibile aggiornare i dati del profilo: ${error.message}`);
   }
 
@@ -129,7 +130,7 @@ export async function uploadAvatar(userId: string, formData: FormData) {
     };
 
   } catch (err: any) {
-    console.error("💥 Eccezione durante la gestione dell'avatar:", err.message || err);
+    logger.error("💥 Eccezione durante la gestione dell'avatar:", err.message || err);
     throw new Error(err.message || "Si è verificato un errore imprevisto durante il caricamento.");
   }
 }

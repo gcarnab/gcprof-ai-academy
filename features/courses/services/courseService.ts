@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import type { Course, Module, Lesson } from "../types/course";
 import { AuthUser } from "@/features/auth/context/AuthContext";
 
@@ -143,7 +144,7 @@ export function getGoogleDriveEmbedUrl(url: string): string | null {
     }
     return url;
   } catch (error) {
-    console.error("Errore nella formattazione del link Drive:", error);
+    logger.error("Errore nella formattazione del link Drive:", error);
     return url;
   }
 }

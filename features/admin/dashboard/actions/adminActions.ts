@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
@@ -94,7 +95,7 @@ export async function createClass(name: string, description?: string) {
     .single();
 
   if (error) {
-    console.error("❌ [ADMIN ACTION ERROR] Creazione classe fallita:", error.message);
+    logger.error("❌ [ADMIN ACTION ERROR] Creazione classe fallita:", error.message);
     return { success: false, error: error.message };
   }
 

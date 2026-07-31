@@ -6,6 +6,7 @@ import { MailTemplateService } from "@/features/admin/mail/services/MailTemplate
 import { MailTemplateEngine } from "@/features/admin/mail/services/MailTemplateEngine";
 import { PasswordResetService } from "../services/PasswordResetService";
 import { createClient } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -155,7 +156,7 @@ export async function requestPasswordResetAction(
 
     return successFallbackResponse;
   } catch (error: any) {
-    console.error("❌ requestPasswordResetAction error:", error);
+    logger.error("❌ requestPasswordResetAction error:", error);
 
     return {
       success: false,

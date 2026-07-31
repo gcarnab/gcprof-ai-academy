@@ -145,7 +145,7 @@ export async function registerAction(prevState: any, formData: FormData) {
         "Registrazione completata! Il tuo account è in attesa di attivazione da parte dell'amministratore.",
     };
   } catch (error: any) {
-    console.error("Error in registerAction:", error);
+    logger.error("Error in registerAction:", error);
     return { success: false, error: "Errore durante la registrazione." };
   }
 }
@@ -252,6 +252,6 @@ async function startEmailDispatches(params: {
       await emailService.sendGenericEmail(adminRecipient, subject, html);
     }
   } catch (err) {
-    console.error("❌ Errore durante l'invio delle email di notifica:", err);
+    logger.error("❌ Errore durante l'invio delle email di notifica:", err);
   }
 }

@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { getLiveClasses, upsertSchoolClass, getClassDetails } from "@/features/courses/services/courseActions";
+import { logger } from "@/lib/logger";
 
 export default function CreateClassForm() {
   const [classesList, setClassesList] = useState<string[]>([]);
@@ -19,7 +20,7 @@ export default function CreateClassForm() {
       const res = await getLiveClasses();
       setClassesList(res);
     } catch (err) {
-      console.error("Errore nel recupero delle classi:", err);
+      logger.error("Errore nel recupero delle classi:", err);
     }
   };
 

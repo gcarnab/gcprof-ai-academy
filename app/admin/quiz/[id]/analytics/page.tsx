@@ -8,6 +8,7 @@ import Footer from "@/features/home/components/Footer";
 import AssignQuizButton from "@/features/quiz/components/AssignQuizButton";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface AdminQuizAnalyticsPageProps {
   params: Promise<{ id: string }>;
@@ -29,7 +30,7 @@ export default async function AdminQuizAnalyticsPage({
     .single();
 
   if (quizError || !quizData) {
-    console.error("Errore dettagli quiz:", quizError?.message);
+    logger.error("Errore dettagli quiz:", quizError?.message);
     return notFound();
   }
 
@@ -40,7 +41,7 @@ export default async function AdminQuizAnalyticsPage({
     .order("title", { ascending: true });
 
   if (coursesError) {
-    console.error("Errore nel recupero dei corsi:", coursesError.message);
+    logger.error("Errore nel recupero dei corsi:", coursesError.message);
   }
 
   const courses = coursesData || [];
@@ -87,7 +88,7 @@ export default async function AdminQuizAnalyticsPage({
     .order("completed_at", { ascending: false });
 
   if (attemptsError) {
-    console.error("Errore tentativi studenti:", attemptsError.message);
+    logger.error("Errore tentativi studenti:", attemptsError.message);
   }
 
   const { data: assignment } = await supabase

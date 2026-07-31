@@ -65,6 +65,7 @@ export type Database = {
       }
       badges: {
         Row: {
+          badge_type: string
           code: string
           created_at: string | null
           description: string | null
@@ -74,6 +75,7 @@ export type Database = {
           xp_reward: number
         }
         Insert: {
+          badge_type?: string
           code: string
           created_at?: string | null
           description?: string | null
@@ -83,6 +85,7 @@ export type Database = {
           xp_reward: number
         }
         Update: {
+          badge_type?: string
           code?: string
           created_at?: string | null
           description?: string | null
@@ -957,6 +960,33 @@ export type Database = {
           },
         ]
       }
+      profile_course_xp: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       profile_courses: {
         Row: {
           approved_at: string | null
@@ -1018,6 +1048,7 @@ export type Database = {
       }
       profile_lessons_progress: {
         Row: {
+          completed_at: string | null
           course_id: string | null
           is_completed: boolean
           last_accessed_at: string
@@ -1027,6 +1058,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          completed_at?: string | null
           course_id?: string | null
           is_completed?: boolean
           last_accessed_at?: string
@@ -1036,6 +1068,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          completed_at?: string | null
           course_id?: string | null
           is_completed?: boolean
           last_accessed_at?: string
@@ -1237,6 +1270,7 @@ export type Database = {
           status: Database["public"]["Enums"]["attempt_status"]
           student_id: string
           teacher_score: number
+          xp_awarded: boolean | null
         }
         Insert: {
           auto_score?: number
@@ -1249,6 +1283,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["attempt_status"]
           student_id: string
           teacher_score?: number
+          xp_awarded?: boolean | null
         }
         Update: {
           auto_score?: number
@@ -1261,6 +1296,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["attempt_status"]
           student_id?: string
           teacher_score?: number
+          xp_awarded?: boolean | null
         }
         Relationships: [
           {
@@ -1605,6 +1641,7 @@ export type Database = {
           course_id: string | null
           id: string
           profile_id: string
+          quiz_id: string | null
         }
         Insert: {
           awarded_at?: string | null
@@ -1612,6 +1649,7 @@ export type Database = {
           course_id?: string | null
           id?: string
           profile_id: string
+          quiz_id?: string | null
         }
         Update: {
           awarded_at?: string | null
@@ -1619,6 +1657,7 @@ export type Database = {
           course_id?: string | null
           id?: string
           profile_id?: string
+          quiz_id?: string | null
         }
         Relationships: [
           {
@@ -1647,6 +1686,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
             referencedColumns: ["id"]
           },
         ]
@@ -1828,6 +1874,22 @@ export type Database = {
           global_level: number
           global_total_xp: number
           xp_reward: number
+        }[]
+      }
+      award_quiz_badge: {
+        Args: {
+          p_max_score?: number
+          p_quiz_code: string
+          p_score?: number
+          p_user_id: string
+        }
+        Returns: {
+          already_unlocked: boolean
+          badge_icon: string
+          badge_title: string
+          new_level: number
+          new_total_xp: number
+          xp_gained: number
         }[]
       }
       get_admin_courses_gamification_stats: {

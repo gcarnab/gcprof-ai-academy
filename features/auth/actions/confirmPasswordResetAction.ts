@@ -3,6 +3,7 @@
 import { getUserRepository } from "../infrastructure/RepositoryFactory";
 import { PasswordResetService } from "../services/PasswordResetService";
 import { BcryptPasswordService } from "../infrastructure/BcryptPasswordService";
+import { logger } from "@/lib/logger";
 
 export async function confirmPasswordResetAction(
   prevState: any,
@@ -65,7 +66,7 @@ export async function confirmPasswordResetAction(
       message: "Password aggiornata con successo.",
     };
   } catch (error: any) {
-    console.error("❌ Errore confirmPasswordResetAction:", error);
+    logger.error("❌ Errore confirmPasswordResetAction:", error);
 
     return {
       success: false,

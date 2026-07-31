@@ -1,5 +1,6 @@
 "use client";
 
+import { logger } from "@/lib/logger";
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 // Definiamo il tipo dell'utente nel contesto (allineato alla v2 e alla feature Profilo)
@@ -67,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await fetch("/api/auth/logout", { method: "POST" });
       setUser(null);
     } catch (err) {
-      console.error("Errore durante il logout:", err);
+      logger.error("Errore durante il logout:", err);
     }
   };
 

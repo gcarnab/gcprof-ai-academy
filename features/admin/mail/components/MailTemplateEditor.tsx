@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MailTemplate } from "../types/mail";
 import { useEffect, useState } from "react";
 import { updateMailTemplateAction, createMailTemplateAction } from "../actions/mailTemplateActions";
+import { logger } from "@/lib/logger";
 
 interface Props {
   template: MailTemplate | null; // Se null, siamo in modalità CREAZIONE
@@ -87,7 +88,7 @@ export default function MailTemplateEditor({
         onTemplateUpdated(updatedTemplate);
       }
     } catch (error: any) {
-      console.error("Errore durante il salvataggio del template:", error);
+      logger.error("Errore durante il salvataggio del template:", error);
       alert("Errore durante il salvataggio: " + (error.message || error));
     } finally {
       setSaving(false);

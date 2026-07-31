@@ -3,6 +3,7 @@
 import { useTransition, useState } from "react";
 import { approveEnrollmentAction } from "@/features/admin/actions/approveEnrollmentAction";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 interface PendingEnrollmentProps {
   profileId: string;
@@ -27,10 +28,9 @@ export default function PendingEnrollmentCard({
       const result = await approveEnrollmentAction(profileId, courseId);
       
       if (result.success) {
-        console.log(result.message);
         setIsApproved(true); // Nasconde o disabilita l'elemento nella UI
       } else {
-        console.error(result.error || "Impossibile completare l'operazione.");
+        logger.error(result.error || "Impossibile completare l'operazione.");
       }
     });
   };

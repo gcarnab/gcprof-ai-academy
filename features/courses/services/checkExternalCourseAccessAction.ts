@@ -157,7 +157,7 @@ export async function checkInternalCourseAccessAction(courseId: string, profileI
     // Controlliamo che lo stato sia attivo
     return data.status === "ACTIVE" || data.status === "COMPLETED" || data.status === "active";
   } catch (err) {
-    console.error("Errore lettura profile_courses:", err);
+    logger.error("Errore lettura profile_courses:", err);
     return false;
   }
 }

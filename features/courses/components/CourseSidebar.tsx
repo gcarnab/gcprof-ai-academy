@@ -2,6 +2,7 @@
 
 import type { Course } from "@/features/courses/types/course";
 import { CourseCTA } from "./CourseCTA";
+import { logger } from "@/lib/logger";
 
 interface CourseSidebarProps {
   course: Course;
@@ -19,7 +20,7 @@ export function CourseSidebar({
   onFreeEnroll,
 }: CourseSidebarProps) {
 
-  console.log("🔍 DATI RICEVUTI NEL SIDEBAR:", { coursePrice, coursePriceType: typeof coursePrice, course });
+  logger.info("🔍 DATI RICEVUTI NEL SIDEBAR:", { coursePrice, coursePriceType: typeof coursePrice, course });
   
   // Parsing e conversione sicura del prezzo
   const numericPrice =

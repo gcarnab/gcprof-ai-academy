@@ -9,6 +9,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { CartSummaryDTO, ShoppingCart, ShoppingCartItem } from "../types/paymentTypes";
+import { logger } from "@/lib/logger";
 
 export class CartService {
   constructor(private supabase: SupabaseClient) {}
@@ -26,7 +27,7 @@ export class CartService {
       .maybeSingle();
 
     if (error) {
-      console.error("[CartService.getOrCreateCart] Errore recupero carrello:", error);
+      logger.error("[CartService.getOrCreateCart] Errore recupero carrello:", error);
       throw new Error("Impossibile recuperare il carrello dell'utente.");
     }
 
@@ -45,7 +46,7 @@ export class CartService {
       .single();
 
     if (createError) {
-      console.error("[CartService.getOrCreateCart] Errore creazione carrello:", createError);
+      logger.error("[CartService.getOrCreateCart] Errore creazione carrello:", createError);
       throw new Error("Impossibile creare il carrello per l'utente.");
     }
 
@@ -72,7 +73,7 @@ export class CartService {
       .eq("cart_id", cart.id);
 
     if (error) {
-      console.error("[CartService.getCartSummary] Errore recupero elementi carrello:", error);
+      logger.error("[CartService.getCartSummary] Errore recupero elementi carrello:", error);
       throw new Error("Impossibile recuperare gli elementi del carrello.");
     }
 
@@ -143,7 +144,7 @@ export class CartService {
       );
 
     if (insertError) {
-      console.error("[CartService.addToCart] Errore inserimento elemento:", insertError);
+      logger.error("[CartService.addToCart] Errore inserimento elemento:", insertError);
       throw new Error("Impossibile aggiungere il corso al carrello.");
     }
 
@@ -163,7 +164,7 @@ export class CartService {
       .eq("course_id", courseId);
 
     if (error) {
-      console.error("[CartService.removeFromCart] Errore rimozione elemento:", error);
+      logger.error("[CartService.removeFromCart] Errore rimozione elemento:", error);
       throw new Error("Impossibile rimuovere il corso dal carrello.");
     }
 
@@ -180,7 +181,7 @@ export class CartService {
       .eq("cart_id", cartId);
 
     if (error) {
-      console.error("[CartService.clearCart] Errore svuotamento carrello:", error);
+      logger.error("[CartService.clearCart] Errore svuotamento carrello:", error);
       throw new Error("Impossibile svuotare il carrello.");
     }
   }

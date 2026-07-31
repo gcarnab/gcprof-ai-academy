@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
@@ -49,7 +50,7 @@ export async function bulkUpdateUsersClassAction(userIds: string[], targetClassN
     revalidatePath("/admin/dashboard");
     return { success: true };
   } catch (error: any) {
-    console.error("Errore bulk class update:", error);
+    logger.error("Errore bulk class update:", error);
     return { success: false, error: error.message || "Errore interno del server." };
   }
 }

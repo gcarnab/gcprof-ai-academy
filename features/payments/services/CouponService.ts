@@ -8,6 +8,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Coupon, DiscountTypeEnum } from "../types/paymentTypes";
+import { logger } from "@/lib/logger";
 
 export interface CouponValidationResult {
   isValid: boolean;
@@ -117,7 +118,7 @@ export class CouponService {
       });
 
     if (redemptionError) {
-      console.error("[CouponService] Errore salvataggio redemption:", redemptionError);
+      logger.error("[CouponService] Errore salvataggio redemption:", redemptionError);
       throw new Error("Impossibile registrare l'utilizzo del coupon.");
     }
 

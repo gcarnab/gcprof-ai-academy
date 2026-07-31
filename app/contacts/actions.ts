@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { Resend } from "resend";
 
 // 🎯 FIX: Recuperiamo la chiave. Se manca in locale, usiamo una stringa vuota temporanea per non bloccare il server all'avvio
@@ -9,7 +10,7 @@ const resend = new Resend(apiKey);
 export async function sendContactEmail(formData: FormData) {
   // Controlliamo se la chiave è effettivamente presente prima di tentare l'invio
   if (!apiKey) {
-    console.error(
+    logger.error(
       "❌ ERRORE: La variabile RESEND_API_KEY non è configurata nel file .env.local o su Vercel!",
     );
     return {
@@ -45,7 +46,7 @@ export async function sendContactEmail(formData: FormData) {
 
     return { success: true };
   } catch (error) {
-    console.error("Errore invio email:", error);
+    logger.error("Errore invio email:", error);
     return {
       success: false,
       error: "Impossibile inviare il messaggio in questo momento.",

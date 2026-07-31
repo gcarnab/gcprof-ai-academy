@@ -1,6 +1,7 @@
 "use server";
 
 import { requireAdminGuard } from "@/lib/auth-guard";
+import { logger } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 export async function getAdminPaymentsOverviewAction() {
@@ -33,9 +34,9 @@ export async function getAdminPaymentsOverviewAction() {
   ]);
 
   // Gestione errori centralizzata
-  if (couponsRes.error) console.error("Errore Fetch Coupons:", couponsRes.error);
-  if (ordersRes.error) console.error("Errore Fetch Orders:", ordersRes.error);
-  if (paymentsRes.error) console.error("Errore Fetch Payments:", paymentsRes.error);
+  if (couponsRes.error) logger.error("Errore Fetch Coupons:", couponsRes.error);
+  if (ordersRes.error) logger.error("Errore Fetch Orders:", ordersRes.error);
+  if (paymentsRes.error) logger.error("Errore Fetch Payments:", paymentsRes.error);
 
   return {
     coupons: couponsRes.data || [],

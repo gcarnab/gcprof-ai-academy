@@ -27,7 +27,7 @@ export default function LessonPage() {
     "gcprof-ai-academy\\app\\courses\\[slug]\\modules\\[moduleId]\\lessons\\[lessonId]\\page.tsx Componente avviato. Params correnti:",
     params,
   );
-  console.log(
+  logger.info(
     "gcprof-ai-academy\\app\\courses\\[slug]\\modules\\[moduleId]\\lessons\\[lessonId]\\page.tsx Componente avviato. Params correnti:",
     params,
   );

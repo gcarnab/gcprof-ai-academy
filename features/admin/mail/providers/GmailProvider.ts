@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { EmailProvider, SendEmailOptions } from "./EmailProvider";
+import { logger } from "@/lib/logger";
 
 export class GmailProvider implements EmailProvider {
   private transporter: nodemailer.Transporter;
@@ -10,7 +11,7 @@ export class GmailProvider implements EmailProvider {
     const smtpPass = process.env.GMAIL_SMTP_APP_PASSWORD || "";
 
     if (!this.smtpUser || !smtpPass) {
-      console.warn("⚠️ Attenzione: GMAIL_SMTP_USER o GMAIL_SMTP_APP_PASSWORD non configurati nel .env.local!");
+      logger.warn("⚠️ Attenzione: GMAIL_SMTP_USER o GMAIL_SMTP_APP_PASSWORD non configurati nel .env.local!");
     }
 
     // Configurazione del transport SMTP usando la porta sicura 465 (SSL)
@@ -43,7 +44,7 @@ export class GmailProvider implements EmailProvider {
         messageId: info.messageId,
       };
     } catch (error: any) {
-      console.error("❌ Errore durante l'invio tramite Gmail SMTP Provider:", error);
+      logger.error("❌ Errore durante l'invio tramite Gmail SMTP Provider:", error);
       return {
         success: false,
         error: error.message || error,

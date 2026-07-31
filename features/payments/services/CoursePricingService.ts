@@ -8,6 +8,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { CurrencyEnum } from "../types/paymentTypes";
+import { logger } from "@/lib/logger";
 
 export interface CoursePricing {
   course_id: string;
@@ -42,7 +43,7 @@ export class CoursePricingService {
       .single();
 
     if (error || !data) {
-      console.error("[CoursePricingService] Errore recupero prezzo corso:", error);
+      logger.error("[CoursePricingService] Errore recupero prezzo corso:", error);
       throw new Error("Impossibile recuperare le informazioni di prezzo del corso.");
     }
 
@@ -68,7 +69,7 @@ export class CoursePricingService {
       .order("title", { ascending: true });
 
     if (error) {
-      console.error("[CoursePricingService] Errore recupero listino corsi:", error);
+      logger.error("[CoursePricingService] Errore recupero listino corsi:", error);
       throw new Error("Impossibile caricare il listino corsi.");
     }
 
@@ -109,7 +110,7 @@ export class CoursePricingService {
       .single();
 
     if (error || !data) {
-      console.error("[CoursePricingService] Errore aggiornamento prezzo corso:", error);
+      logger.error("[CoursePricingService] Errore aggiornamento prezzo corso:", error);
       throw new Error("Impossibile aggiornare il listino per questo corso.");
     }
 

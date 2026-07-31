@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
@@ -26,7 +27,7 @@ export async function createAcademyClass(name: string, description?: string, slu
     .single();
 
   if (error) {
-    console.error("❌ Errore creazione classe:", error.message);
+    logger.error("❌ Errore creazione classe:", error.message);
     return { success: false, error: error.message };
   }
 

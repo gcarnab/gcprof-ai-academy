@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { JoseTokenService } from "@/features/auth/infrastructure/JoseTokenService";
 import { TrackingService } from "@/features/admin/tracking/services/trackingService";
+import { logger } from "@/lib/logger";
 
 export async function POST() {
   const cookieStore = await cookies();
@@ -24,7 +25,7 @@ export async function POST() {
       }
     }
   } catch (error) {
-    console.error("Errore tracking logout:", error);
+    logger.error("Errore tracking logout:", error);
   }
 
   cookieStore.set("auth_token", "", {

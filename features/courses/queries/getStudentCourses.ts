@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 export async function getStudentCoursesAction(profileId: string) {
@@ -42,7 +43,7 @@ export async function getStudentCoursesAction(profileId: string) {
       .eq("courses.published", true);
 
     if (error) {
-      console.error(
+      logger.error(
         "Errore nel recupero dei corsi dalla tabella fisica:",
         error.message,
       );
@@ -69,7 +70,7 @@ export async function getStudentCoursesAction(profileId: string) {
 
     return { success: true, data: normalizedCourses };
   } catch (err) {
-    console.error("Errore server in getStudentCoursesAction:", err);
+    logger.error("Errore server in getStudentCoursesAction:", err);
     return { success: false, error: "Errore di rete o del server." };
   }
 }

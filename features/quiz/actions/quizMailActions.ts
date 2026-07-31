@@ -3,6 +3,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { EmailService } from "@/features/admin/mail/services/EmailService";
 import { MailTemplateEngine } from "@/features/admin/mail/services/MailTemplateEngine";
+import { logger } from "@/lib/logger";
 
 /**
  * Converte mail_settings in mappa variabili
@@ -103,7 +104,7 @@ export async function sendQuizSubmittedMail(
     await sendTemplateEmail("QUIZ_SUBMITTED", recipient, variables);
     return { success: true };
   } catch (error: any) {
-    console.error("❌ Errore in sendQuizSubmittedMail:", error);
+    logger.error("❌ Errore in sendQuizSubmittedMail:", error);
     return { success: false, error: error?.message || "Errore durante l'invio dell'email di conferma quiz." };
   }
 }
@@ -143,7 +144,7 @@ export async function sendQuizGradedMail(
     };
   } catch (error: any) {
     // Tracciamo l'errore sul server per il debugging
-    console.error("❌ [quizMailActions] Errore in sendQuizGradedMail:", error);
+    logger.error("❌ [quizMailActions] Errore in sendQuizGradedMail:", error);
 
     // Restituiamo un errore leggibile al client senza far crashare la Server Action
     return {

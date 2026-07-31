@@ -16,6 +16,7 @@ import {
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
 import { deleteCourse, getLiveCourses, upsertCourse } from "@/features/courses/services/courseActions";
+import { logger } from "@/lib/logger";
 
 export default function AdminDashboardPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -65,7 +66,7 @@ export default function AdminDashboardPage() {
       const data = await getLiveCourses();
       setCourses(data || []);
     } catch (error) {
-      console.error("Errore nel caricamento dei corsi:", error);
+      logger.error("Errore nel caricamento dei corsi:", error);
     } finally {
       setIsLoading(false);
     }
@@ -125,7 +126,7 @@ export default function AdminDashboardPage() {
         await deleteCourse(courseId);
         await refreshCourses();
       } catch (error) {
-        console.error("Errore durante l'eliminazione:", error);
+        logger.error("Errore durante l'eliminazione:", error);
         alert("Impossibile eliminare il corso.");
       }
     }
@@ -276,7 +277,7 @@ export default function AdminDashboardPage() {
       setIsDialogOpen(false);
       await refreshCourses();
     } catch (error) {
-      console.error("Errore durante il salvataggio:", error);
+      logger.error("Errore durante il salvataggio:", error);
       alert("Impossibile salvare il corso sul database.");
     }
   };

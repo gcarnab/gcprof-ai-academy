@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
@@ -21,7 +22,7 @@ export class PasswordResetService {
     });
 
     if (error) {
-      console.error("[PASSWORD RESET CREATE ERROR]", error.message);
+      logger.error("[PASSWORD RESET CREATE ERROR]", error.message);
       throw new Error("Errore nella creazione del token.");
     }
 
@@ -48,7 +49,7 @@ export class PasswordResetService {
       : `${data.expires_at}Z`;
 
     if (new Date(expiresAtUtc) < new Date()) {
-      console.warn(
+      logger.warn(
         `[PASSWORD RESET] Token trovato ma scaduto UTC. Scadenza: ${expiresAtUtc}`,
       );
       return null;

@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { IUserRepository } from "../ports/IUserRepository";
 import { StudentUser } from "../domain/user";
 import { randomUUID } from "crypto";
+import { logger } from "@/lib/logger";
 
 interface SupabaseProfileRow {
   id: string;
@@ -39,7 +40,7 @@ export class SupabaseUserRepository implements IUserRepository {
       .eq("profile_id", userId);
 
     if (error) {
-      console.error(
+      logger.error(
         "[SUPABASE ERROR] Errore in getUserClasses:",
         error.message,
       );
@@ -63,7 +64,7 @@ export class SupabaseUserRepository implements IUserRepository {
       .maybeSingle();
 
     if (error) {
-      console.error("[SUPABASE ERROR] Errore in findByEmail:", error.message);
+      logger.error("[SUPABASE ERROR] Errore in findByEmail:", error.message);
       throw new Error("Errore durante la ricerca dell'utente sul database.");
     }
 
@@ -83,7 +84,7 @@ export class SupabaseUserRepository implements IUserRepository {
       .maybeSingle();
 
     if (error) {
-      console.error("[SUPABASE ERROR] Errore in findById:", error.message);
+      logger.error("[SUPABASE ERROR] Errore in findById:", error.message);
       throw new Error("Errore durante la ricerca dell'utente per ID.");
     }
 
@@ -120,7 +121,7 @@ export class SupabaseUserRepository implements IUserRepository {
       .single();
 
     if (error) {
-      console.error("[SUPABASE ERROR] Errore in create user:", error.message);
+      logger.error("[SUPABASE ERROR] Errore in create user:", error.message);
       throw new Error("Impossibile salvare il nuovo utente nel database.");
     }
 
@@ -170,7 +171,7 @@ export class SupabaseUserRepository implements IUserRepository {
       .eq("id", id);
 
     if (error) {
-      console.error("[SUPABASE ERROR] Errore in update user:", error.message);
+      logger.error("[SUPABASE ERROR] Errore in update user:", error.message);
       throw new Error("Impossibile aggiornare i dati dell'utente.");
     }
 
@@ -197,7 +198,7 @@ export class SupabaseUserRepository implements IUserRepository {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("[SUPABASE ERROR] Errore in list users:", error.message);
+      logger.error("[SUPABASE ERROR] Errore in list users:", error.message);
       throw new Error("Impossibile recuperare il registro utenti.");
     }
 

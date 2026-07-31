@@ -123,7 +123,7 @@ export async function sendBulkMailAction(
           `[Gmail SMTP Success] Inviata singolarmente a: ${user.email}`,
         );
       } else {
-        console.error(
+        logger.error(
           `[Gmail SMTP Error] Fallito invio per ${user.email}:`,
           result.error,
         );

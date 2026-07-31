@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { EmailService } from "@/features/admin/mail/services/EmailService"; // 🎯 AGGIORNATO: Import del nuovo servizio basato su Gmail SMTP
 import { MailTemplateEngine } from "../services/MailTemplateEngine";
 import { MailTemplateKeys } from "../constants/MailTemplateKeys";
+import { logger } from "@/lib/logger";
 
 /**
  * Converte mail_settings in mappa variabili
@@ -127,7 +128,7 @@ export async function sendTestMailAction(
       messageId: result.messageId,
     };
   } catch (error: any) {
-    console.error("❌ sendTestMailAction error:", error);
+    logger.error("❌ sendTestMailAction error:", error);
 
     return {
       success: false,

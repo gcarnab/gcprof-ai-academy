@@ -9,723 +9,21 @@ Il progetto è una piattaforma LMS ("gcprof-ai-academy") per la gestione di cors
 ### 📂 2. FILE SYSTEM TREE DEL PROGETTO
 
 Questo è il tree aggiornato della struttura del progetto su cui stiamo lavorando:
-
-GCPROF-AI-ACADEMY
-|   .env.local
-|   .gitignore
-|   components.json
-|   data.sql
-|   eslint.config.mjs
-|   next-env.d.ts
-|   next.config.ts
-|   package-lock.json
-|   package.json
-|   postcss.config.mjs
-|   proxy.ts
-|   README.md
-|   roles.sql
-|   schema.sql
-|   tree.txt
-|   tsconfig.json
-|   vitest.config.ts
-|   
-+---app
-|   |   favicon.ico
-|   |   globals.css
-|   |   layout.tsx
-|   |   page.tsx
-|   |   robots.ts
-|   |   sitemap.ts
-|   |   
-|   +---admin
-|   |   |   layout.tsx
-|   |   |   page.tsx
-|   |   |   
-|   |   +---dashboard
-|   |   |       page.tsx
-|   |   |       
-|   |   +---enrollments
-|   |   |       page.tsx
-|   |   |       
-|   |   +---payments
-|   |   |       actions.ts
-|   |   |       layout.tsx
-|   |   |       page.tsx
-|   |   |       
-|   |   \---quiz
-|   |       |   actions.ts
-|   |       |   
-|   |       \---[id]
-|   |           +---analytics
-|   |           |       page.tsx
-|   |           |       
-|   |           \---review
-|   |                   page.tsx
-|   |                   
-|   +---api
-|   |   +---admin
-|   |   |   \---quizzes
-|   |   |           route.ts
-|   |   |           
-|   |   +---auth
-|   |   |   +---logout
-|   |   |   |       route.ts
-|   |   |   |       
-|   |   |   \---session
-|   |   |           route.ts
-|   |   |           
-|   |   +---classes
-|   |   |       route.ts
-|   |   |       
-|   |   +---docs
-|   |   |   |   route.ts
-|   |   |   |   
-|   |   |   +---config
-|   |   |   |       route.ts
-|   |   |   |       
-|   |   |   \---upload
-|   |   |           route.ts
-|   |   |           
-|   |   +---seed-admin
-|   |   |       route.ts
-|   |   |       
-|   |   \---webhooks
-|   |       \---stripe
-|   |               route.ts
-|   |               
-|   +---auth
-|   |   \---reset-password
-|   |           page.tsx
-|   |           ResetPasswordClient.tsx
-|   |           
-|   +---contacts
-|   |       actions.ts
-|   |       page.tsx
-|   |       
-|   +---courses
-|   |   |   page.tsx
-|   |   |   
-|   |   \---[slug]
-|   |       |   page.tsx
-|   |       |   page.tsx_nostripe
-|   |       |   
-|   |       +---modules
-|   |       |   \---[moduleId]
-|   |       |       \---lessons
-|   |       |           \---[lessonId]
-|   |       |                   page.tsx
-|   |       |                   
-|   |       \---quizzes
-|   |           \---[quizId]
-|   |                   page.tsx
-|   |                   
-|   +---credits
-|   |       CreditsClientWrapper.tsx
-|   |       page.tsx
-|   |       
-|   +---dashboard
-|   |       layout.tsx
-|   |       page.tsx
-|   |       page.tsx_old
-|   |       
-|   +---login
-|   |       page.tsx
-|   |       
-|   +---profile
-|   |       page.tsx
-|   |       
-|   +---register
-|   |       page.tsx
-|   |       
-|   +---resources
-|   |       page.tsx
-|   |       
-|   \---students
-|           page.tsx
-|           
-+---components
-|   |   ShowcaseSlides.tsx
-|   |   
-|   \---ui
-|           alert.tsx
-|           badge.tsx
-|           button.tsx
-|           card.tsx
-|           checkbox.tsx
-|           dialog.tsx
-|           dropdown-menu.tsx
-|           form.tsx
-|           input.tsx
-|           label.tsx
-|           progress.tsx
-|           radio-group.tsx
-|           select.tsx
-|           table.tsx
-|           tabs.tsx
-|           textarea.tsx
-|           
-+---docs
-|   |   credits.md
-|   |   gcprof-academy_DEV_GUIDE.md
-|   |   gcprof-academy_index_gpt.md
-|   |   HANDOVER_PROMPT.md
-|   |   README-DB.md
-|   |   
-|   +---courses
-|   |   |   Blockchain_Guide_Full.md
-|   |   |   ProblemSolving_Guide_Full.md
-|   |   |   Python_Practice_Full.md
-|   |   |   test.md
-|   |   |   WebProgramming_Base_HTML_CSS_Full.md
-|   |   |   
-|   |   +---AI
-|   |   |       AI_COURSE_01.md
-|   |   |       AI_COURSE_02.md
-|   |   |       AI_COURSE_03.md
-|   |   |       AI_COURSE_04.md
-|   |   |       AI_COURSE_05.md
-|   |   |       AI_COURSE_06.md
-|   |   |       AI_COURSE_MASTER.md
-|   |   |       AI_Guide_FULL.md
-|   |   |       AI_GUIDE_STYLE.md
-|   |   |       
-|   |   +---preview
-|   |   |       AI_COURSE_preview.md
-|   |   |       Blockchain_01_preview.md
-|   |   |       DataBase_01_preview.md
-|   |   |       Finance_01_preview.md
-|   |   |       OOP_01_preview.md
-|   |   |       ProbleSolving_01_preview.md
-|   |   |       Python_01_preview.md
-|   |   |       WebProgramming_01_preview.md
-|   |   |       
-|   |   \---Python Creative Lab
-|   |           PCL_00.md
-|   |           PCL_01.md
-|   |           PCL_02.md
-|   |           PCL_MASTER_PLAN.md
-|   |           PCL_PREVIEW.md
-|   |           
-|   +---dev
-|   |       gcprof-academy_index_gem.md
-|   |       
-|   +---quiz
-|   |       quiz_AI_base_01.md
-|   |       quiz_AI_Fondamenti_ML.md
-|   |       quiz_DB_Fondamenti_DB_SQL_01.md
-|   |       quiz_FINANCE_base_01.md
-|   |       quiz_INFO_Sheets_01.md
-|   |       quiz_Python_base_01.md
-|   |       
-|   \---supabase
-|       |   payments_schema.sql
-|       |   
-|       \---backup
-|           +---01_stable_before_payments
-|           |       20260721_data.sql
-|           |       20260721_roles.sql
-|           |       20260721_schema.sql
-|           |       
-|           +---02_payments
-|           |       20260722_data.sql
-|           |       20260722_roles.sql
-|           |       20260722_schema.sql
-|           |       
-|           \---03_tracking
-+---e2e
-|   +---admin
-|   +---auth
-|   |       adminGuard.spec.ts
-|   |       
-|   +---courses
-|   \---quiz
-+---features
-|   +---admin
-|   |   +---actions
-|   |   |       approveEnrollmentAction.ts
-|   |   |       getActiveExternalEnrollmentsAction.ts
-|   |   |       getCoursesForEnrollmentAction.ts
-|   |   |       getPendingEnrollmentsAction.ts
-|   |   |       getRevokedExternalEnrollmentsAction.ts
-|   |   |       reactivateExternalEnrollmentAction.ts
-|   |   |       
-|   |   +---courses
-|   |   |   +---actions
-|   |   |   |       assignCourseClassAction.ts
-|   |   |   |       bulkDissociateAction.ts
-|   |   |   |       classActions.ts
-|   |   |   |       courseActions.ts
-|   |   |   |       structureActions.ts
-|   |   |   |       
-|   |   |   +---components
-|   |   |   |       ActiveAssociationsList.tsx
-|   |   |   |       AssignCourseClassForm.tsx
-|   |   |   |       CourseContentEditor.tsx
-|   |   |   |       CoursesTab.tsx
-|   |   |   |       CoursesTab.tsx_old
-|   |   |   |       CreateClassForm.tsx
-|   |   |   |       CreateCourseForm.tsx
-|   |   |   |       ManageCategoriesForm.tsx
-|   |   |   |       ManageCoursesModal.tsx
-|   |   |   |       
-|   |   |   \---services
-|   |   |           adminCourseService.ts
-|   |   |           adminStructureService.ts
-|   |   |           
-|   |   +---dashboard
-|   |   |   +---actions
-|   |   |   |       adminActions.ts
-|   |   |   |       
-|   |   |   \---components
-|   |   |           AdminDashboard.tsx
-|   |   |           AdminHeader.tsx
-|   |   |           QuizAnalyticsDashboard.tsx
-|   |   |           QuizzesTab.tsx
-|   |   |           RequestsTab.tsx
-|   |   |           
-|   |   +---mail
-|   |   |   +---actions
-|   |   |   |       mailBulkActions.ts
-|   |   |   |       mailBulkActions.ts_resend
-|   |   |   |       mailSettingsActions.ts
-|   |   |   |       mailTemplateActions.ts
-|   |   |   |       mailTestActions.ts
-|   |   |   |       
-|   |   |   +---components
-|   |   |   |       MailBulkSender.tsx
-|   |   |   |       MailDashboard.tsx
-|   |   |   |       MailSettingsCard.tsx
-|   |   |   |       MailTab.tsx
-|   |   |   |       MailTemplateEditor.tsx
-|   |   |   |       MailTemplateList.tsx
-|   |   |   |       MailTestSender.tsx
-|   |   |   |       
-|   |   |   +---constants
-|   |   |   |       MailTemplateKeys.ts
-|   |   |   |       
-|   |   |   +---providers
-|   |   |   |       EmailProvider.ts
-|   |   |   |       GmailProvider.ts
-|   |   |   |       ResendProvider.ts
-|   |   |   |       
-|   |   |   +---services
-|   |   |   |       EmailService.ts
-|   |   |   |       MailSettingsService.ts
-|   |   |   |       MailTemplateEngine.ts
-|   |   |   |       MailTemplateService.ts
-|   |   |   |       
-|   |   |   \---types
-|   |   |           mail.ts
-|   |   |           
-|   |   +---stats
-|   |   |   +---components
-|   |   |   |   |   AdminStatsDashboard.tsx
-|   |   |   |   |   AdminStatsDashboard.tsx_old
-|   |   |   |   |   StatsTab.tsx
-|   |   |   |   |   
-|   |   |   |   \---charts
-|   |   |   |           BarChartCard.tsx
-|   |   |   |           DonutChartCard.tsx
-|   |   |   |           HorizontalBarChartCard.tsx
-|   |   |   |           PieChartCard.tsx
-|   |   |   |           ProgressChartCard.tsx
-|   |   |   |           StatsKpiCards.tsx
-|   |   |   |           StudentsByClassChart.tsx
-|   |   |   |           
-|   |   |   \---services
-|   |   |           adminStatsService.ts
-|   |   |           
-|   |   +---tracking
-|   |   |   +---actions
-|   |   |   |       trackingActions.ts
-|   |   |   |       trackPageViewAction.ts
-|   |   |   |       
-|   |   |   +---components
-|   |   |   |       PageTracker.tsx
-|   |   |   |       TrackingDashboard.tsx
-|   |   |   |       TrackingDashboard.tsx_old
-|   |   |   |       TrackingTab.tsx
-|   |   |   |       
-|   |   |   \---services
-|   |   |           trackingQueries.ts
-|   |   |           trackingService.ts
-|   |   |           
-|   |   \---users
-|   |       +---actions
-|   |       |       activityActions.ts
-|   |       |       activityActions.ts_old
-|   |       |       adminUserActions.ts
-|   |       |       bulkActivateUsersAction.ts
-|   |       |       bulkUpdateUsersClassAction.ts
-|   |       |       revokeCourseAccessAction.ts
-|   |       |       seedUsersAction.ts
-|   |       |       
-|   |       +---components
-|   |       |       ActivityTracker.tsx
-|   |       |       ActivityTracker.tsx_old
-|   |       |       AdminUsersClassesEditor.tsx
-|   |       |       AdminUsersHeader.tsx
-|   |       |       AdminUsersRow.tsx
-|   |       |       AdminUsersTable.tsx
-|   |       |       AdminUsersToolbar.tsx
-|   |       |       UsersTab.tsx
-|   |       |       
-|   |       \---services
-|   |               adminService.ts
-|   |               
-|   +---auth
-|   |   +---actions
-|   |   |       confirmPasswordResetAction.ts
-|   |   |       getClassesAction.ts
-|   |   |       getSessionAction.ts
-|   |   |       loginAction.ts
-|   |   |       logoutAction.ts
-|   |   |       registerAction.ts
-|   |   |       requestPasswordResetAction.ts
-|   |   |       validateResetTokenAction.ts
-|   |   |       
-|   |   +---components
-|   |   |       LoginDialog.tsx
-|   |   |       ProtectedRoute.tsx
-|   |   |       
-|   |   +---constants
-|   |   |       AuthConstants.ts
-|   |   |       CookieConstants.ts
-|   |   |       TokenConstants.ts
-|   |   |       
-|   |   +---context
-|   |   |       AuthContext.tsx
-|   |   |       
-|   |   +---domain
-|   |   |       user.ts
-|   |   |       
-|   |   +---dto
-|   |   |       AuthDto.ts
-|   |   |       
-|   |   +---errors
-|   |   |       AuthError.ts
-|   |   |       InvalidCredentialsError.ts
-|   |   |       UnauthorizedError.ts
-|   |   |       UserAlreadyExistsError.ts
-|   |   |       
-|   |   +---infrastructure
-|   |   |       BcryptPasswordService.ts
-|   |   |       JoseTokenService.ts
-|   |   |       MemoryUserRepository.ts
-|   |   |       NextCookieService.ts
-|   |   |       RepositoryFactory.ts
-|   |   |       ResendEmailService.ts
-|   |   |       SupabaseUserRepository.ts
-|   |   |       
-|   |   +---ports
-|   |   |       ICookieService.ts
-|   |   |       IPasswordService.ts
-|   |   |       ITokenService.ts
-|   |   |       IUserRepository.ts
-|   |   |       
-|   |   +---services
-|   |   |       AuthService.ts
-|   |   |       PasswordResetService.ts
-|   |   |       
-|   |   \---validators
-|   |           AuthValidators.ts
-|   |           
-|   +---courses
-|   |   |   index.ts
-|   |   |   
-|   |   +---actions
-|   |   |       courseActions.ts
-|   |   |       courseActions.ts_old
-|   |   |       
-|   |   +---components
-|   |   |   |   AccessNoticeBanner.tsx
-|   |   |   |   CategoryFilter.tsx
-|   |   |   |   CourseCard.tsx
-|   |   |   |   CourseCTA.tsx
-|   |   |   |   CourseDashboard.tsx
-|   |   |   |   CourseList.tsx
-|   |   |   |   CourseSearch.tsx
-|   |   |   |   CoursesHeader.tsx
-|   |   |   |   CourseSidebar.tsx
-|   |   |   |   CourseViewer.tsx
-|   |   |   |   LessonRow.tsx
-|   |   |   |   MarkdownPreview.tsx
-|   |   |   |   MarkdownPreview.tsx_old
-|   |   |   |   
-|   |   |   \---lesson
-|   |   |           LessonRenderer.tsx
-|   |   |           
-|   |   +---domain
-|   |   |       CourseMapper.ts
-|   |   |       
-|   |   +---hooks
-|   |   |       useCourses.ts
-|   |   |       
-|   |   +---queries
-|   |   |       getStudentCourses.ts
-|   |   |       
-|   |   +---repositories
-|   |   |       SupabaseCourseRepository.ts
-|   |   |       
-|   |   +---services
-|   |   |       checkExternalCourseAccessAction.ts
-|   |   |       checkExternalCourseAccessAction.ts_nostripe
-|   |   |       courseActions.ts
-|   |   |       courseService.ts
-|   |   |       
-|   |   \---types
-|   |           course.ts
-|   |           lessonContent.ts
-|   |           
-|   +---gamification
-|   |   +---actions
-|   |   |       awardXpAction.ts
-|   |   |       badgeActions.ts
-|   |   |       
-|   |   \---components
-|   |           BadgeGrid.tsx
-|   |           BadgeUnlockModal.tsx
-|   |           GamificationBar.tsx
-|   |           GamificationTestButton.tsx
-|   |           
-|   +---home
-|   |   \---components
-|   |           CoursePreview.tsx
-|   |           Footer.tsx
-|   |           Hero.tsx
-|   |           Navbar.tsx
-|   |           
-|   +---marketing
-|   |   \---components
-|   |           HeroSection.tsx
-|   |           HowItWorks.tsx
-|   |           StudentFeatures.tsx
-|   |           WhyChoose.tsx
-|   |           
-|   +---payments
-|   |   +---actions
-|   |   |       getPaymentsDashboardAction.ts
-|   |   |       orderActions.ts
-|   |   |       paymentActions.ts
-|   |   |       paymentSettingsActions.ts
-|   |   |       
-|   |   +---adapters
-|   |   |   \---stripe
-|   |   |           StripeGatewayAdapter.ts
-|   |   |           
-|   |   +---components
-|   |   |       AddToCartButton.tsx
-|   |   |       CartBadge.tsx
-|   |   |       CartDrawer.tsx
-|   |   |       CouponManager.tsx
-|   |   |       CoursePricingManager.tsx
-|   |   |       OrderDetailDrawer.tsx
-|   |   |       OrdersList.tsx
-|   |   |       OrdersTabContent.tsx
-|   |   |       OverviewComponents.tsx
-|   |   |       PaymentFeedbackBanner.tsx
-|   |   |       PaymentSettingsForm.tsx
-|   |   |       PaymentsNav.tsx
-|   |   |       PaymentsTabContent.tsx
-|   |   |       SettingsTabContent.tsx
-|   |   |       
-|   |   +---constants
-|   |   |       paymentConstants.ts
-|   |   |       
-|   |   +---dto
-|   |   |       OrderDetailDTO.ts
-|   |   |       PaymentDashboardDTO.ts
-|   |   |       
-|   |   +---factories
-|   |   |       PaymentGatewayFactory.ts
-|   |   |       
-|   |   +---ports
-|   |   |       IPaymentGateway.ts
-|   |   |       
-|   |   +---repositories
-|   |   |       PaymentRepository.ts
-|   |   |       PaymentSettingsRepository.ts
-|   |   |       
-|   |   +---services
-|   |   |       CartService.ts
-|   |   |       CheckoutService.ts
-|   |   |       CouponService.ts
-|   |   |       CoursePricingService.ts
-|   |   |       EnrollmentService.ts
-|   |   |       PaymentDashboardService.ts
-|   |   |       PaymentService.ts
-|   |   |       PaymentSettingsService.ts
-|   |   |       StripeWebhookService.ts
-|   |   |       
-|   |   \---types
-|   |           paymentTypes.ts
-|   |           
-|   +---profile
-|   |   +---components
-|   |   |       ProfileForm.tsx
-|   |   |       
-|   |   \---services
-|   |           profileActions.ts
-|   |           
-|   +---quiz
-|   |   +---actions
-|   |   |       getQuizAction.ts
-|   |   |       quizActions.ts
-|   |   |       quizMailActions.ts
-|   |   |       statsActions.ts
-|   |   |       teacherActions.ts
-|   |   |       
-|   |   +---components
-|   |   |       AdminQuizPanel.tsx
-|   |   |       AssignQuizButton.tsx
-|   |   |       AssignQuizModal.tsx
-|   |   |       CorrectionForm.tsx
-|   |   |       QuizStatsDashboard.tsx
-|   |   |       QuizViewer.tsx
-|   |   |       StudentQuizDashboard.tsx
-|   |   |       TeacherQuizDashboard.tsx
-|   |   |       
-|   |   +---domain
-|   |   |       Question.ts
-|   |   |       Quiz.ts
-|   |   |       QuizAnswer.ts
-|   |   |       QuizAttempt.ts
-|   |   |       QuizReview.ts
-|   |   |       
-|   |   +---markdown
-|   |   |   \---parser
-|   |   |           quizParser.ts
-|   |   |           
-|   |   +---ports
-|   |   |       IQuizRepository.ts
-|   |   |       
-|   |   +---repositories
-|   |   |       QuizRepositoryFactory.ts
-|   |   |       QuizStatsRepository.ts
-|   |   |       SupabaseQuizRepository.ts
-|   |   |       
-|   |   \---validators
-|   |           quizValidators.ts
-|   |           
-|   +---resources
-|   |   +---actions
-|   |   |       createResourceAction.ts
-|   |   |       deleteResourceAction.ts
-|   |   |       resourcesActions.ts
-|   |   |       updateResourceAction.ts
-|   |   |       
-|   |   +---components
-|   |   |       ResourceAdminTable.tsx
-|   |   |       ResourceCreateForm.tsx
-|   |   |       ResourceDashboard.tsx
-|   |   |       
-|   |   +---schemas
-|   |   |       resourceSchema.ts
-|   |   |       
-|   |   \---types
-|   |           Resource.ts
-|   |           
-|   \---theme
-|       +---components
-|       |       ThemeToggle.tsx
-|       |       
-|       \---context
-|               ThemeContext.tsx
-|               
-+---lib
-|       auth-guard.ts
-|       logger.ts
-|       stripe.ts
-|       supabase.ts
-|       utils.ts
-|       
-+---logs
-|       app.log
-|          
-+---public
-|   |   file.svg
-|   |   gcprof-ai-academy_logo_01.png
-|   |   gcprof-ai-academy_logo_small.png
-|   |   globe.svg
-|   |   next.svg
-|   |   vercel.svg
-|   |   window.svg
-|   |   
-|   +---courses
-|   |       gcprof-ai-academy_logo_01.png
-|   |       gcprof-ai-academy_logo_info_01.png
-|   |       gcprof-ai-academy_logo_info_02.png
-|   |       gcprof-ai-academy_logo_info_03.png
-|   |       gcprof-ai-academy_logo_info_04.png
-|   |       
-|   +---docs
-|   |       gcprof-academy-showcase.pdf
-|   |       
-|   \---showcase
-|           gcprof-academy-showcase_gemini.pdf
-|           index.html
-|           
-+---shared
-|   +---config
-|   |   |   site.ts
-|   |   |   
-|   |   \---navigation
-|   |           adminNavigation.ts
-|   |           getNavigationForUser.ts
-|   |           index.ts
-|   |           NavigationItem.ts
-|   |           pendingNavigation.ts
-|   |           publicNavigation.ts
-|   |           studentNavigation.ts
-|   |           
-|   +---layout
-|   |       PublicLayout.tsx
-|   |       
-|   \---ui
-|           Badge.tsx
-|           Card.tsx
-|           PageContainer.tsx
-|           SectionTitle.tsx
-|           
-+---supabase
-|   |   .gitignore
-|   |   config.toml
-|   |   
-|   \---.temp
-|           gotrue-version
-|           linked-project.json
-|           pooler-url
-|           postgres-version
-|           project-ref
-|           rest-version
-|           storage-migration
-|           storage-version
-|           
-+---test-results
-|   \---e2e-auth-adminGuard-Auth-G-641ce-tando-di-accedere-all-admin
-|           error-context.md
-|           trace.zip
-|           
-+---tests
-|   |   setupTests.ts
-|   |   
-|   +---admin
-|   +---auth
-|   +---courses
-|   +---mail
-|   +---quiz
-|   |       quizParser.test.ts
-|   |       
-|   +---resources
-|   +---shared
-|   |       smoke.test.ts
-|   |       
-|   \---tracking
-\---types
-        database.types.ts
-        
+   
 
 ### 💾 SCRIPT SQL AGGIORNATI DEL DATABASE (SUPABASE)
+
+## Table `academy_classes`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `slug` | `text` |  Unique |
+| `name` | `text` |  |
+| `description` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  |
 
 ## Table `academy_classes`
 
@@ -810,6 +108,7 @@ GCPROF-AI-ACADEMY
 | `order_index` | `int4` |  |
 | `created_at` | `timestamptz` |  |
 | `is_preview` | `bool` |  |
+| `module_code` | `varchar` |  |
 
 ## Table `course_lessons`
 
@@ -947,6 +246,7 @@ GCPROF-AI-ACADEMY
 | `minutes_watched` | `int4` |  |
 | `last_accessed_at` | `timestamptz` |  |
 | `updated_at` | `timestamptz` |  |
+| `completed_at` | `timestamptz` |  Nullable |
 
 ## Table `user_sessions`
 
@@ -1044,6 +344,7 @@ GCPROF-AI-ACADEMY
 | `final_score` | `numeric` |  |
 | `status` | `attempt_status` |  |
 | `created_at` | `timestamptz` |  |
+| `xp_awarded` | `bool` |  Nullable |
 
 ## Table `quiz_answers`
 
@@ -1315,6 +616,7 @@ Audit trail dei webhook ricevuti
 | `icon` | `varchar` |  |
 | `xp_reward` | `int4` |  |
 | `created_at` | `timestamptz` |  Nullable |
+| `badge_type` | `varchar` |  |
 
 ## Table `user_badges`
 
@@ -1326,6 +628,35 @@ Audit trail dei webhook ricevuti
 | `profile_id` | `uuid` |  |
 | `badge_id` | `uuid` |  |
 | `awarded_at` | `timestamptz` |  Nullable |
+| `course_id` | `uuid` |  Nullable |
+| `quiz_id` | `uuid` |  Nullable |
+
+## Table `user_course_stats`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `profile_id` | `uuid` |  |
+| `course_id` | `uuid` |  |
+| `course_xp` | `int4` |  |
+| `course_level` | `int4` |  |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+
+## Table `profile_course_xp`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `user_id` | `uuid` |  |
+| `course_id` | `uuid` |  |
+| `xp` | `int4` |  |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
 
 ## Custom Types / Enums
 
@@ -1501,35 +832,8 @@ Audit trail dei webhook ricevuti
 | `Utenti gestiscono proprio progresso lezioni` | ALL | authenticated | PERMISSIVE | `(auth.uid() = profile_id)` | `(auth.uid() = profile_id)` |
 | `Admin lettura totale progressi lezioni` | SELECT | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM profiles   WHERE ((profiles.id = auth.uid()) AND ((profiles.role)::text = 'admin'::text))))` | — |
 
+### `profile_course_xp`
 
-
-
-
-### PROMPT 
-
-CONTESTO :  
-1.aggiungiamo nuove features all'app custom gcprof-ai-academy. 
-2.ho comprato un dominio su cloudflare gcprof-academy.com già configurato su vercel 
-dove ho fatto hosting del progetto gcprof-ai-academy.vercel.app
-
-OBIETTIVO : 
-stiamo stabilizzando e completando la feature della gamification
-trasversale a tutti i corsi e visualizzabile dalla dashboard sia dallo studente che
-dall'amministratore che può vedere statistiche e KPI nella sezione STATS della dashboard admin
-dobbiamo risolvere i bug attuali per esempio i dati relativi alla gamification nella sezione STATS non
-si aggiornano 
-
-SITUAZIONE ATTUALE :
-0. feature in fase di svilippo (app stabile) 
-
-VINCOLI: 
-1. chiedimi sempre quale file attuale visualizzare per sincronizzarti con la situazione attuale e ti mando il codice. 
-2. ricorda di aspettare sempre la mia conferma per scrivere il codice
-3. fai riferimento al tree del filesystem del progetto ed allo schema del DB allegati in questa chat
-4. intercetta sempre i punti hardcoded che adrebbero spostati nel file .env come variabili
-5. procediamo per gradi senza distruggere il codice integrando le modifiche passo passo e testando che non stiamo regredendo
-6. ricorda di predisporre i nomi delle classi per la feature già abilitata theme light/dark
-7. usa sempre il logger disponibile nel codice che scrivi 
-8. fare il refactoring essenziale e puntare a risolvere il problema mantenendo quanto più possibile la logica attuale senza regredire
-9. se non puoi riscriverli per intero adotta sempre il metodo di spezzare i file (part1, part2...) quando sono troppo grandi scegliendo tu la grandezza e il numero delle parti
-
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Permetti lettura agli utenti autenticati` | SELECT | authenticated | PERMISSIVE | `true` | — |

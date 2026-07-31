@@ -5,6 +5,7 @@
 
 "use server";
 
+import { logger } from "@/lib/logger";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -22,7 +23,7 @@ export async function getClassesAction() {
     if (error) throw error;
     return { success: true, data };
   } catch (error) {
-    console.error("Errore nel recupero classi:", error);
+    logger.error("Errore nel recupero classi:", error);
     return { success: false, data: [] };
   }
 }

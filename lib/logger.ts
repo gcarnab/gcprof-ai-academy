@@ -26,7 +26,17 @@ function shouldLog(level: LogLevel): boolean {
 function formatMessage(level: LogLevel, message: string, ...args: any[]): string {
   const timestamp = new Date().toISOString();
   const extra = args.length 
-    ? ` ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}` 
+    ? ` ${args.map(a => {
+        if (a instanceof Error) return a.message || String(a);
+        if (typeof a === 'object' && a !== null) {
+          try {
+            return JSON.stringify(a);
+          } catch {
+            return '[Oggetto non serializzabile]';
+          }
+        }
+        return String(a);
+      }).join(' ')}` 
     : '';
   return `[${timestamp}] [${level}] ${message}${extra}`;
 }
@@ -58,7 +68,7 @@ function logToFile(formattedMessage: string) {
       fs.appendFileSync(fullPath, formattedMessage + "\n", "utf8");
     } catch (e) {
       // Fallback silenzioso per impedire crash applicativi dovuti ai log
-      console.warn("⚠️ Impossibile scrivere sul file di log:", e);
+      logger.warn("⚠️ Impossibile scrivere sul file di log:", e);
     }
   }
 }
@@ -68,7 +78,7 @@ export const logger = {
   debug: (msg: string, ...args: any[]) => {
     if (!shouldLog("DEBUG")) return;
     const formatted = formatMessage("DEBUG", msg, ...args);
-    console.log(formatted);
+    console.debug(formatted);
     logToFile(formatted);
   },
   info: (msg: string, ...args: any[]) => {

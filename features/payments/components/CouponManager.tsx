@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Coupon, DiscountTypeEnum } from "../types/paymentTypes";
+import { logger } from "@/lib/logger";
 
 export function CouponManager() {
 
@@ -30,7 +31,7 @@ export function CouponManager() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Errore durante il recupero dei coupon:", error);
+      logger.error("Errore durante il recupero dei coupon:", error);
       setErrorMsg("Impossibile caricare i coupon. Verifica i permessi o le politiche RLS.");
     } else if (data) {
       setCoupons(data as Coupon[]);

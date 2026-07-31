@@ -24,6 +24,7 @@ import { Quiz } from "@/features/quiz/domain/Quiz";
 import { QuizQuestion } from "@/features/quiz/domain/Question";
 import { CorrectionForm } from "./CorrectionForm";
 import { getAttemptOpenAnswerAction } from "../actions/teacherActions";
+import { logger } from "@/lib/logger";
 
 interface AttemptWithUser extends QuizAttempt {
   studentEmail: string;
@@ -87,7 +88,7 @@ export function TeacherQuizDashboard({
           setStudentAnswer(textToSet);
         }
       } catch (error) {
-        console.error("Errore nel caricamento della risposta aperta:", error);
+        logger.error("Errore nel caricamento della risposta aperta:", error);
       } finally {
         if (isCurrent) {
           setIsLoadingAnswer(false);
@@ -105,7 +106,7 @@ export function TeacherQuizDashboard({
   const pendingAttempts = attempts.filter((a) => a.status === "submitted");
   const gradedAttempts = attempts.filter((a) => a.status === "graded");
 
-  console.log("===> TeacherQuizDashboard DEBUG ATTEMPT:", selectedAttempt);
+  logger.info("===> TeacherQuizDashboard DEBUG ATTEMPT:", selectedAttempt);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-4">

@@ -17,6 +17,7 @@ import { PaymentGatewayFactory } from "../factories/PaymentGatewayFactory";
 import { PAYMENTS_CONFIG } from "../constants/paymentConstants";
 import { CartSummaryDTO, CheckoutSessionResult } from "../types/paymentTypes";
 import { EnrollmentService } from "../services/EnrollmentService";
+import { logger } from "@/lib/logger";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "super-secret-key-change-me-in-production"
@@ -53,7 +54,7 @@ async function getAuthenticatedUser(): Promise<{ id: string; email?: string } | 
       email: (payload.email as string) || "",
     };
   } catch (error) {
-    console.error("[getAuthenticatedUser] Errore di verifica JWT:", error);
+    logger.error("[getAuthenticatedUser] Errore di verifica JWT:", error);
     return null;
   }
 }
@@ -83,7 +84,7 @@ export async function getCartSummaryAction(): Promise<
 
     return { success: true, data: summary };
   } catch (error) {
-    console.error("[getCartSummaryAction] Errore:", error);
+    logger.error("[getCartSummaryAction] Errore:", error);
     return {
       success: false,
       error:
@@ -126,7 +127,7 @@ export async function addToCartAction(
 
     return { success: true, data: updatedCart };
   } catch (error) {
-    console.error("[addToCartAction] Errore:", error);
+    logger.error("[addToCartAction] Errore:", error);
     return {
       success: false,
       error:
@@ -166,7 +167,7 @@ export async function removeFromCartAction(
 
     return { success: true, data: updatedCart };
   } catch (error) {
-    console.error("[removeFromCartAction] Errore:", error);
+    logger.error("[removeFromCartAction] Errore:", error);
     return {
       success: false,
       error:
@@ -210,7 +211,7 @@ export async function createCheckoutSessionAction(): Promise<
 
     return { success: true, data: result };
   } catch (error) {
-    console.error("[createCheckoutSessionAction] Errore:", error);
+    logger.error("[createCheckoutSessionAction] Errore:", error);
     return {
       success: false,
       error:
@@ -247,7 +248,7 @@ export async function enrollInFreeCourseAction(
 
     return { success: true, data: undefined };
   } catch (error) {
-    console.error("[enrollInFreeCourseAction] Errore:", error);
+    logger.error("[enrollInFreeCourseAction] Errore:", error);
     return {
       success: false,
       error:

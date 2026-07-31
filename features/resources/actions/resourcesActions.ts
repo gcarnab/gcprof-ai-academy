@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { Resource } from "../types/Resource";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,7 +22,7 @@ export async function getActiveResources(): Promise<Resource[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Errore recupero risorse:", error.message);
+    logger.error("Errore recupero risorse:", error.message);
     return [];
   }
 
@@ -39,7 +40,7 @@ export async function getAllResourcesAdmin(): Promise<Resource[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Errore recupero risorse admin:", error.message);
+    logger.error("Errore recupero risorse admin:", error.message);
     return [];
   }
 
@@ -69,7 +70,7 @@ export async function createResource(formData: FormData) {
     .select();
 
   if (error) {
-    console.error("Errore durante la creazione della risorsa:", error);
+    logger.error("Errore durante la creazione della risorsa:", error);
     return { success: false, error: error.message };
   }
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
@@ -22,7 +23,7 @@ export async function bulkActivateUsersAction(userIds: string[]) {
     revalidatePath("/admin/dashboard");
     return { success: true };
   } catch (err: any) {
-    console.error("Errore attivazione massiva:", err.message);
+    logger.error("Errore attivazione massiva:", err.message);
     return { success: false, error: "Errore durante l'attivazione degli utenti." };
   }
 }

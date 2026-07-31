@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
@@ -13,7 +14,7 @@ interface AssignQuizPayload {
 export async function assignQuizAction(payload: AssignQuizPayload) {
   const supabase = getSupabaseAdmin();
 
-  console.log("👉 DATI RICEVUTI DALLA SERVER ACTION:", payload);
+  logger.info("👉 DATI RICEVUTI DALLA SERVER ACTION:", payload);
 
   // Prepariamo il salvataggio formattando correttamente la data ISO se presente
   const { error } = await supabase.from("quiz_assignments").upsert(
@@ -27,7 +28,7 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
   );
 
   if (error) {
-    console.error("❌ Errore DB durante l'assegnazione:", error.message);
+    logger.error("❌ Errore DB durante l'assegnazione:", error.message);
     return { success: false, error: error.message };
   }
 

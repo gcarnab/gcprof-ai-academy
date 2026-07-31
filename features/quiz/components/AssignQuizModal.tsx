@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { assignQuizAction } from "@/app/admin/quiz/actions";
+import { logger } from "@/lib/logger";
 
 interface AssignQuizModalProps {
   quizId: string;
@@ -27,7 +28,7 @@ export default function AssignQuizModal({
     if (!selectedCourseId) return;
 
     // AGGIUNGI QUESTO LOG:
-    console.log(
+    logger.info(
       "DEBUG ASSEGNAZIONE -> Quiz ID:",
       quizId,
       "Course ID:",

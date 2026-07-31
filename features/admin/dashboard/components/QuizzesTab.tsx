@@ -8,6 +8,7 @@ import {
   importQuizFromMarkdownAction,
   updateQuizStatusAction,
 } from "@/features/quiz/actions/quizActions";
+import { logger } from "@/lib/logger";
 
 interface QuizzesTabProps {
   availableQuizzes: any[];
@@ -34,7 +35,7 @@ export default function QuizzesTab({ availableQuizzes }: QuizzesTabProps) {
       };
       reader.readAsText(file);
     } catch (error) {
-      console.error("Errore durante la lettura del file Markdown:", error);
+      logger.error("Errore durante la lettura del file Markdown:", error);
       setIsImporting(false);
     }
   };

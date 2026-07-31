@@ -15,6 +15,10 @@ import { getTrackingStats } from "@/features/admin/tracking/services/trackingQue
 import { PaymentsTabContent } from "@/features/payments/components/PaymentsTabContent";
 import { logger } from "@/lib/logger";
 
+// Import dell'infrastruttura di gestione configurazioni di sistema
+import { SupabaseSystemSettingsRepository } from "@/features/system/repositories/SupabaseSystemSettingsRepository";
+import { SystemSettingsService } from "@/features/system/services/SystemSettingsService";
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -39,6 +43,10 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const supabase = getSupabaseAdmin();
 
+  // Inizializzazione repository e servizio per le impostazioni
+  const systemSettingsRepository = new SupabaseSystemSettingsRepository();
+  const systemSettingsService = new SystemSettingsService(systemSettingsRepository);
+
   // 📡 Esecuzione in parallelo delle chiamate principali
   const [
     stats,
@@ -47,6 +55,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     quizzesRes,
     coursesRes,
     courseStatsRes,
+    initialSystemSettings,
   ] = await Promise.all([
     getAdminDashboardStats(),
     getTrackingStats(),
@@ -62,6 +71,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     supabase
       .from("user_course_stats")
       .select("course_id, profile_id, course_xp, course_level"),
+    systemSettingsService.getHomeBannerSettings(),
   ]);
 
   if (quizzesRes.error) {
@@ -145,6 +155,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           currentTab={params.tab ?? "courses"}
           trackingStats={trackingStats}
           initialResources={resources}
+          initialSystemSettings={initialSystemSettings}
           paymentsTab={
             <Suspense
               key={params.subtab || "overview"}

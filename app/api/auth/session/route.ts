@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { createClient } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "super-secret-key-change-me-in-production"
@@ -32,7 +33,7 @@ export async function GET() {
       .maybeSingle();
 
     if (dbError || !profile) {
-      console.error("[API SESSION] Profilo non trovato su DB profiles:", dbError?.message);
+      logger.error("[API SESSION] Profilo non trovato su DB profiles:", dbError?.message);
       return NextResponse.json({ user: null }, { status: 401 });
     }
 
@@ -47,7 +48,7 @@ export async function GET() {
       .eq("profile_id", userId);
 
     if (relError) {
-      console.error("[API SESSION] Errore nel recupero delle academy_classes:", relError.message);
+      logger.error("[API SESSION] Errore nel recupero delle academy_classes:", relError.message);
     }
 
     const currentClasses = (relations || [])
@@ -70,7 +71,7 @@ export async function GET() {
 
     return NextResponse.json({ user });
   } catch (error) {
-    console.error("[API SESSION ERROR] Token non valido o scaduto:", error);
+    logger.error("[API SESSION ERROR] Token non valido o scaduto:", error);
     return NextResponse.json({ user: null }, { status: 401 });
   }
 }

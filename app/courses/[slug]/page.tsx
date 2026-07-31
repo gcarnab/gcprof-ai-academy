@@ -22,6 +22,7 @@ import {
 import { AccessNoticeBanner } from "@/features/courses/components/AccessNoticeBanner";
 import { LessonRow } from "@/features/courses/components/LessonRow";
 import { CourseSidebar } from "@/features/courses/components/CourseSidebar";
+import { logger } from "@/lib/logger";
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -89,7 +90,7 @@ export default function CourseDetailPage() {
                 );
               }
             } catch (error) {
-              console.error(
+              logger.error(
                 "Errore durante il controllo real-time dell'accesso:",
                 error,
               );
@@ -103,7 +104,7 @@ export default function CourseDetailPage() {
           }
         }
       } catch (err) {
-        console.error("Errore caricamento corso:", err);
+        logger.error("Errore caricamento corso:", err);
       } finally {
         setIsLoading(false);
       }
@@ -129,7 +130,7 @@ export default function CourseDetailPage() {
         setEnrollError(result.error || "Impossibile completare l'iscrizione.");
       }
     } catch (err) {
-      console.error("Errore iscrizione gratuita:", err);
+      logger.error("Errore iscrizione gratuita:", err);
       setEnrollError(
         "Si è verificato un errore inaspettato durante la generazione dell'ordine.",
       );
