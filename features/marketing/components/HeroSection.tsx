@@ -1,15 +1,6 @@
 import Link from "next/link";
 import React from "react";
-
-import {
-  ArrowRight,
-  BrainCircuit,
-  BookOpen,
-  GraduationCap,
-  Sparkles,
-  CheckCircle2,
-} from "lucide-react";
-
+import { ArrowRight, Sparkles, Zap, Trophy, Brain } from "lucide-react";
 import PageContainer from "@/shared/ui/PageContainer";
 
 interface HeroAction {
@@ -38,171 +29,71 @@ export default function HeroSection({
     href: "/courses",
   },
 }: HeroSectionProps) {
-  const appName = process.env.NEXT_PUBLIC_SITE_NAME || "GCPROF Academy";
-
   return (
-    <section className="relative overflow-hidden bg-background">
-      {/* Background */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute left-[-150px] top-[-150px] h-[350px] w-[350px] rounded-full bg-blue-500/10 blur-3xl" />
-
-        <div className="absolute right-[-180px] bottom-[-180px] h-[420px] w-[420px] rounded-full bg-violet-500/10 blur-3xl" />
+    <section className="relative overflow-hidden bg-background py-20 lg:py-28 border-b border-border/40">
+      {/* Background Radial Glow (Apple Style) */}
+      <div className="pointer-events-none absolute left-1/2 top-0 -z-10 -translate-x-1/2 transform text-center">
+        <div className="h-[320px] w-[600px] sm:w-[800px] rounded-full bg-gradient-to-tr from-blue-500/15 via-purple-500/15 to-pink-500/10 blur-3xl" />
       </div>
 
-      <PageContainer className="py-24 lg:py-32">
-        <div className="grid items-center gap-16 lg:grid-cols-2">
-          {/* ===========================
-              COLONNA SINISTRA
-          ============================ */}
+      <PageContainer className="flex flex-col items-center text-center">
+        {/* Top Badge */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 backdrop-blur-md">
+          <Sparkles className="h-3.5 w-3.5 text-blue-500 animate-pulse" />
+          <span>GCPROF AI ACADEMY • Nuova Piattaforma 2.0</span>
+        </div>
 
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground">
-              <Sparkles className="h-4 w-4 text-blue-600" />
-              Piattaforma didattica intelligente
-            </div>
+        {/* Titolo Principale Imponente */}
+        <h1 className="mt-6 max-w-4xl text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+          Apprendi Crea Evolvi <br className="hidden sm:inline" />
+          <span className="bg-gradient-to-r from-blue-600 via-violet-600 to-pink-600 bg-clip-text text-transparent">
+            {title}
+          </span>
+        </h1>
 
-            {/** className="mt-6 text-5xl font-black tracking-tight text-blue-600 md:text-6xl xl:text-7xl" */}
-            <h1 className="mt-6 text-5xl font-black tracking-tight bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent md:text-6xl xl:text-7xl">
-              {title}
-            </h1>
+        {/* Sottotitolo */}
+        <p className="mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg lg:text-xl leading-relaxed">
+          {subtitle}
+        </p>
 
-            <p className="mt-8 max-w-2xl text-lg leading-8 text-muted-foreground">
-              {subtitle}
-            </p>
+        {/* Pulsanti CTA Dual */}
+        <div className="mt-9 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          <Link
+            href={primaryAction.href}
+            className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-blue-600 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-700 hover:shadow-blue-500/40 active:scale-[0.98]"
+          >
+            {primaryAction.label}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
 
-            {/* Feature List */}
+          <Link
+            href={secondaryAction.href}
+            className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-border/80 bg-background/50 backdrop-blur-md px-8 py-3.5 text-sm font-semibold text-foreground transition-all hover:bg-accent/80 active:scale-[0.98]"
+          >
+            {secondaryAction.label}
+          </Link>
+        </div>
 
-            <div className="mt-10 grid gap-4 sm:grid-cols-2">
-              <Feature
-                icon={<BrainCircuit className="h-5 w-5" />}
-                title="Quiz Intelligenti"
-              />
-
-              <Feature
-                icon={<BookOpen className="h-5 w-5" />}
-                title="Corsi Interattivi"
-              />
-
-              <Feature
-                icon={<GraduationCap className="h-5 w-5" />}
-                title="Dashboard Docente"
-              />
-
-              <Feature
-                icon={<CheckCircle2 className="h-5 w-5" />}
-                title="Correzione Automatica"
-              />
-            </div>
-
-            {/* CTA */}
-
-            <div className="mt-12 flex flex-col gap-4 sm:flex-row">
-              <Link
-                href={primaryAction.href}
-                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-7 py-3 text-white font-semibold shadow-lg transition-all hover:scale-[1.02] hover:bg-blue-700"
-              >
-                {primaryAction.label}
-
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-
-              <Link
-                href={secondaryAction.href}
-                className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-7 py-3 font-semibold transition hover:bg-accent"
-              >
-                {secondaryAction.label}
-              </Link>
-            </div>
+        {/* Micro Features Pill Bar */}
+        <div className="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-medium text-muted-foreground w-full max-w-3xl border-t border-border/60 pt-8">
+          <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-card/50 border border-border/40">
+            <Brain className="h-4 w-4 text-blue-500" />
+            <span>Quiz AI Personalizzati</span>
           </div>
-          {/* ===========================
-              COLONNA DESTRA
-          ============================ */}
-
-          <div className="relative">
-            <div className="rounded-3xl border bg-card shadow-2xl overflow-hidden">
-              <div className="border-b bg-muted/40 px-6 py-4">
-                <h3 className="font-bold text-lg text-right">
-                  Dashboard {appName}
-                </h3>
-
-                <p className="text-sm text-muted-foreground text-right">
-                  Anteprima della piattaforma
-                </p>
-              </div>
-
-              <div className="space-y-5 p-6">
-                <MockCard title="Quiz AI" value="Mixed" color="bg-blue-500" />
-
-                <MockCard
-                  title="Media progressi corsi"
-                  value="82%"
-                  color="bg-green-500"
-                />
-
-                <MockCard
-                  title="Voto Medio"
-                  value="8.5 / 10"
-                  color="bg-violet-500"
-                />
-
-                <MockCard
-                  title="Tempo di studio medio mensile"
-                  value="18h"
-                  color="bg-orange-500"
-                />
-              </div>
-            </div>
-
-            {/* Floating cards */}
-
-            <div className="absolute -left-6 top-10 rounded-2xl border bg-card px-4 py-3 shadow-xl">
-              <div className="text-xs text-muted-foreground">Studenti</div>
-
-              <div className="text-2xl font-bold">+150</div>
-            </div>
-
-            <div className="absolute -right-5 bottom-10 rounded-2xl border bg-card px-4 py-3 shadow-xl">
-              <div className="text-xs text-muted-foreground">
-                Quiz completati
-              </div>
-
-              <div className="text-2xl font-bold">+1K</div>
-            </div>
+          <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-card/50 border border-border/40">
+            <Zap className="h-4 w-4 text-amber-500" />
+            <span>XP & Livelli Sbloccabili</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-card/50 border border-border/40">
+            <Trophy className="h-4 w-4 text-purple-500" />
+            <span>Badge & Certificati</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-card/50 border border-border/40">
+            <Sparkles className="h-4 w-4 text-emerald-500" />
+            <span>Correzioni istantanee</span>
           </div>
         </div>
       </PageContainer>
     </section>
-  );
-}
-
-function Feature({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
-      <div className="text-blue-600">{icon}</div>
-
-      <span className="font-medium">{title}</span>
-    </div>
-  );
-}
-
-function MockCard({
-  title,
-  value,
-  color,
-}: {
-  title: string;
-  value: string;
-  color: string;
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border p-4">
-      <div>
-        <div className="text-sm text-muted-foreground">{title}</div>
-
-        <div className="mt-1 text-xl font-bold">{value}</div>
-      </div>
-
-      <div className={`h-12 w-12 rounded-xl ${color}`} />
-    </div>
   );
 }
