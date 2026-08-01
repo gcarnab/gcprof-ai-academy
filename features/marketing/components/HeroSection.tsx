@@ -38,14 +38,15 @@ export default function HeroSection({
 
       <PageContainer className="flex flex-col items-center text-center">
         {/* Top Badge */}
+        {/*
         <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 backdrop-blur-md">
           <Sparkles className="h-3.5 w-3.5 text-blue-500 animate-pulse" />
-          <span>GCPROF AI ACADEMY • Nuova Piattaforma 2.0</span>
+           <span>GCPROF ACADEMY • Nuova Piattaforma 2.0</span>
         </div>
-
+        */}
         {/* Titolo Principale Imponente */}
         <h1 className="mt-6 max-w-4xl text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-          Apprendi Crea Evolvi <br className="hidden sm:inline" />
+          {/* Apprendi Crea Evolvi <br className="hidden sm:inline" /> */}
           <span className="bg-gradient-to-r from-blue-600 via-violet-600 to-pink-600 bg-clip-text text-transparent">
             {title}
           </span>

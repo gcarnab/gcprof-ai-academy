@@ -16,33 +16,33 @@
 * Installazione di ColabTurtlePlus
 
 ### PARTE I — I primi passi
-* **M0** Benvenuti nel laboratorio di Python
-* **M1** Google Colab e la prima tartaruga
-* **M2** Muovere la Turtle
-* **M3** Disegnare figure geometriche
-* **M4** Colori e riempimenti
+* **M1** Benvenuti nel laboratorio di Python
+* **M2** Google Colab e la prima tartaruga
+* **M3** Muovere la Turtle
+* **M4** Disegnare figure geometriche
+* **M5** Colori e riempimenti
 
 ### PARTE II — Le basi della programmazione
-* **M5** Variabili
-* **M6** Input e Output
-* **M7** Funzioni
-* **M8** Coordinate
+* **M6** Variabili
+* **M7** Input e Output
+* **M8** Funzioni
+* **M9** Coordinate
 
 ### PARTE III — Il controllo del programma
-* **M9** Condizioni
-* **M10** Ciclo FOR
-* **M11** Ciclo WHILE
-* **M12** Cicli annidati
+* **M10** Condizioni
+* **M11** Ciclo FOR
+* **M12** Ciclo WHILE
+* **M13** Cicli annidati
 
 ### PARTE IV — Disegni sempre più complessi
-* **M13** Forme composte
-* **M14** Pattern geometrici
-* **M15** Arte generativa
-* **M16** Animazioni
+* **M14** Forme composte
+* **M15** Pattern geometrici
+* **M16** Arte generativa
+* **M17** Animazioni
 
 ### PARTE V — Diventare creatori
-* **M17** Costruire una libreria grafica
-* **M18** Progetto Finale
+* **M18** Costruire una libreria grafica
+* **M19** Progetto Finale
 
 ### Appendici
 * **A.** Glossario
