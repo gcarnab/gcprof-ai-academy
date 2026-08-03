@@ -1,5 +1,5 @@
 ---
-title: "Modulo 10: LLM Engineering"
+title: "AI - M10: LLM Engineering"
 description: "Quiz conclusivo per verificare le conoscenze su quantizzazione, GGUF, Ollama/vLLM/llama.cpp e architetture RAG."
 penalty_enabled: true
 negative_mark: 0.25

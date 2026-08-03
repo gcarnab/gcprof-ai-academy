@@ -1,5 +1,5 @@
 ---
-title: "Modulo 8: Deep Learning"
+title: "AI - M8: Deep Learning"
 description: "Quiz conclusivo per verificare le conoscenze su neuroni artificiali, backpropagation, funzioni di attivazione, CNN e RNN/LSTM/GRU."
 penalty_enabled: true
 negative_mark: 0.25

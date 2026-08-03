@@ -1,5 +1,5 @@
 ---
-title: "Modulo 11: AI Agents"
+title: "AI - M11: AI Agents"
 description: "Quiz conclusivo per verificare le conoscenze su architettura degli agenti, planning, memoria, tool use, MCP e sistemi multi-agent."
 penalty_enabled: true
 negative_mark: 0.25

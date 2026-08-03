@@ -1,5 +1,5 @@
 ---
-title: "Modulo 4: Python per AI"
+title: "AI - M4: Python per AI"
 description: "Quiz conclusivo per verificare le conoscenze su ambiente di sviluppo, virtualenv, librerie fondamentali e OOP in Python."
 penalty_enabled: true
 negative_mark: 0.25

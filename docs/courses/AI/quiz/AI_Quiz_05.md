@@ -1,5 +1,5 @@
 ---
-title: "Modulo 5: Data Analysis"
+title: "AI - M5: Data Analysis"
 description: "Quiz conclusivo per verificare le conoscenze su EDA, pulizia dati, preprocessing, feature engineering e visualizzazione."
 penalty_enabled: true
 negative_mark: 0.25

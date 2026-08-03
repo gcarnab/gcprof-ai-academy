@@ -1,5 +1,5 @@
 ---
-title: "Modulo 2 - Prompt Engineering (Fondamenti)"
+title: "AI - M2 - Prompt Engineering (Fondamenti)"
 description: "Quiz di verifica finale sui concetti chiave del Modulo 2: tecniche Zero/One/Few Shot, delimitatori, prompting strutturato (XML/Markdown/JSON) e template parametrizzati."
 penalty_enabled: true
 negative_mark: 0.25

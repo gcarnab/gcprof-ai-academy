@@ -1,5 +1,5 @@
 ---
-title: "Modulo 1 - Fondamenti di Intelligenza Artificiale"
+title: "AI - M1 - Fondamenti di Intelligenza Artificiale"
 description: "Quiz di verifica finale sui concetti chiave del Modulo 1: storia dell'AI, differenza tra AI/Machine Learning/Deep Learning, reti neurali, LLM e AI Agent."
 penalty_enabled: true
 negative_mark: 0.25

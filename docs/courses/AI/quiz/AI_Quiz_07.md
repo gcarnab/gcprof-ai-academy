@@ -1,5 +1,5 @@
 ---
-title: "Modulo 7: Prompt Engineering Avanzato"
+title: "AI - M7: Prompt Engineering Avanzato"
 description: "Quiz conclusivo per verificare le conoscenze su Chain of Thought, ReAct, Structured Output, Function Calling e MCP."
 penalty_enabled: true
 negative_mark: 0.25

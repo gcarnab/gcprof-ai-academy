@@ -1,5 +1,5 @@
 ---
-title: "Modulo 6: Machine Learning"
+title: "AI - M6: Machine Learning"
 description: "Quiz conclusivo per verificare le conoscenze su apprendimento supervisionato/non supervisionato, validazione, metriche e overfitting."
 penalty_enabled: true
 negative_mark: 0.25

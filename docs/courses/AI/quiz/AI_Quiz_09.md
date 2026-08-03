@@ -1,5 +1,5 @@
 ---
-title: "Modulo 9: Transformer"
+title: "AI - M9: Transformer"
 description: "Quiz conclusivo per verificare le conoscenze su tokenizzazione, embedding, self-attention, multi-head attention e architetture Encoder/Decoder."
 penalty_enabled: true
 negative_mark: 0.25

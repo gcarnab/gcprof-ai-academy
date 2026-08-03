@@ -1,5 +1,5 @@
 ---
-title: "Modulo 3: Etica e Normativa"
+title: "AI - M3: Etica e Normativa"
 description: "Quiz conclusivo per verificare le conoscenze su copyright, GDPR e AI Act europeo."
 penalty_enabled: true
 negative_mark: 0.25
