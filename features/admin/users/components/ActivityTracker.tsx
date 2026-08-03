@@ -52,14 +52,15 @@ export default function ActivityTracker({
     const intervalSeconds = HEARTBEAT_INTERVAL_MS / 1000;
 
     const interval = setInterval(async () => {
-      const isVisible = document.visibilityState === "visible";
-      const hasFocus = document.hasFocus();
+      // 🎯 FIX: Verifichiamo solo che la scheda del browser sia visibile.
+      // Rimosso document.hasFocus() che si disattivava cliccando sugli iframe (YouTube / PDF Drive).
+      const isVisible = typeof document !== "undefined" && document.visibilityState === "visible";
 
       logger.warn(
-        `⏱️ Controllo focus (${intervalSeconds}s) - Visibile: ${isVisible}, Focus: ${hasFocus}`,
+        `⏱️ Controllo visibilità (${intervalSeconds}s) - Visibile: ${isVisible}`,
       );
 
-      if (isVisible && hasFocus) {
+      if (isVisible) {
         accumulatedSecondsRef.current += intervalSeconds;
 
         const pendingMinutes = Math.floor(accumulatedSecondsRef.current / 60);
@@ -87,7 +88,7 @@ export default function ActivityTracker({
               accumulatedSecondsRef.current -= pendingMinutes * 60;
               logger.warn("✅ Batch inviato e confermato dal DB", res);
 
-              // 🔔 Notifica Evento Globale per aggiornare al volo i widget della Gamification e il Modal
+              // 🔔 Notifica Evento Globale per aggiornare al volo i widget
               if (typeof window !== "undefined") {
                 window.dispatchEvent(
                   new CustomEvent("gamification:updated", {
@@ -109,7 +110,7 @@ export default function ActivityTracker({
           }
         }
       } else {
-        logger.warn("⏳ Battito saltato: finestra in background o senza focus.");
+        logger.warn("⏳ Battito saltato: scheda in background non visibile.");
       }
     }, HEARTBEAT_INTERVAL_MS);
 
@@ -117,9 +118,12 @@ export default function ActivityTracker({
     return () => {
       clearInterval(interval);
 
-      const remainingMinutes = Math.floor(accumulatedSecondsRef.current / 60);
+      // 🎯 FIX: Se sono stati accumulati almeno 30 secondi, arrotondiamo a 1 minuto per evitare perdita di tempo
+      const accumulated = accumulatedSecondsRef.current;
+      const remainingMinutes = Math.floor(accumulated / 60) || (accumulated >= 30 ? 1 : 0);
+
       if (remainingMinutes > 0 && user?.id && courseId && lessonId) {
-        logger.warn("🧹 Flush finale al cambio lezione/corso", { remainingMinutes, courseId, lessonId });
+        logger.warn("🧹 Flush finale al cambio lezione/corso", { remainingMinutes, accumulated, courseId, lessonId });
         incrementStudentMinutes(user.id, courseId, lessonId, remainingMinutes).then((res) => {
           if (res?.success && typeof window !== "undefined") {
             window.dispatchEvent(

@@ -18,7 +18,7 @@ export interface ChartDataPoint {
 
 export async function getAdminDashboardStats() {
   const statsWindowDays = parseInt(
-    process.env.NEXT_PUBLIC_ADMIN_STATS_WINDOW_DAYS || "7",
+    process.env.NEXT_PUBLIC_ADMIN_STATS_WINDOW_DAYS || "14",
     10,
   );
 
@@ -29,7 +29,6 @@ export async function getAdminDashboardStats() {
     `Estrazione statistiche admin con finestra temporale di ${statsWindowDays} giorni.`,
   );
 
-  // 🎯 FIX: Aggiunta query a profile_lessons_progress in Promise.all
   const [
     users,
     classes,
@@ -37,7 +36,6 @@ export async function getAdminDashboardStats() {
     courseClasses,
     sessionsResponse,
     pageViewsResponse,
-    progressResponse,
   ] = await Promise.all([
     getAdminUsersList(),
     getAvailableClassesForCourses(),
@@ -51,14 +49,10 @@ export async function getAdminDashboardStats() {
       .from("user_page_views")
       .select("course_slug, lesson_slug, path")
       .gte("viewed_at", twoWeeksAgo.toISOString()),
-    supabaseAdmin
-      .from("profile_lessons_progress")
-      .select("course_id, user_id, minutes_watched, is_completed"),
   ]);
 
   const sessions = sessionsResponse.data ?? [];
   const pageViews = pageViewsResponse.data ?? [];
-  const lessonProgress = progressResponse.data ?? [];
 
   const statsLimit = parseInt(
     process.env.NEXT_PUBLIC_ADMIN_STATS_LIMIT || "5",
@@ -74,7 +68,7 @@ export async function getAdminDashboardStats() {
   const totalClasses = classes.length;
 
   // ============================================================================
-  // 🏆 CALCOLO GAMIFICATION & TEMPO CUMULATO GLOBALE
+  // 🏆 CALCOLO GAMIFICATION & TEMPO CUMULATO
   // ============================================================================
   let totalXp = 0;
   let totalMinutesActive = 0;
@@ -103,61 +97,6 @@ export async function getAdminDashboardStats() {
     studentCount > 0
       ? Number((totalLevelSum / studentCount).toFixed(1))
       : 1;
-
-  // ============================================================================
-  // 📊 CALCOLO AGGREGATO GAMIFICATION PER SINGOLO CORSO (courseStats)
-  // ============================================================================
-  const courseProgressMap = new Map<
-    string,
-    {
-      totalMinutes: number;
-      uniqueStudents: Set<string>;
-      completedLessons: number;
-    }
-  >();
-
-  lessonProgress.forEach((p) => {
-    if (!p.course_id) return;
-    const key = String(p.course_id);
-
-    if (!courseProgressMap.has(key)) {
-      courseProgressMap.set(key, {
-        totalMinutes: 0,
-        uniqueStudents: new Set<string>(),
-        completedLessons: 0,
-      });
-    }
-
-    const entry = courseProgressMap.get(key)!;
-    entry.totalMinutes += Number(p.minutes_watched || 0);
-    if (p.user_id) entry.uniqueStudents.add(p.user_id);
-    if (p.is_completed) entry.completedLessons += 1;
-  });
-
-  const courseStats = courses.map((c: any) => {
-    const courseIdStr = String(c.id);
-    const courseSlugStr = String(c.slug || "");
-
-    const progData =
-      courseProgressMap.get(courseIdStr) ||
-      courseProgressMap.get(courseSlugStr) || {
-        totalMinutes: 0,
-        uniqueStudents: new Set<string>(),
-        completedLessons: 0,
-      };
-
-    return {
-      courseId: String(c.id),
-      title: c.title,
-      slug: c.slug,
-      isPublished: Boolean(c.published),
-      difficulty: c.difficulty || "Facile",
-      enrolledStudentsCount: progData.uniqueStudents.size,
-      totalMinutesStudied: progData.totalMinutes,
-      totalXp: progData.completedLessons * 50, // 50 XP indicativi per lezione completata
-      averageLevel: 1,
-    };
-  });
 
   // ============================================================================
   // 👥 USERS CHARTS
@@ -447,7 +386,6 @@ export async function getAdminDashboardStats() {
       totalHoursActive,
       averageLevel,
     },
-    courseStats, // 🎯 FIX: Restituita la proprietà attesa da StatsTab.tsx
     charts: {
       usersByRole,
       usersByStatus,
@@ -469,4 +407,103 @@ export async function getAdminDashboardStats() {
     },
     raw: { users, classes, courses, course_classes: courseClasses },
   };
+}
+
+function formatDateKey(date: Date): string {
+  return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+}
+
+function subDaysNative(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() - days);
+  return result;
+}
+
+export async function getDashboardChartStats(days: number = 14) {
+  const startDate = subDaysNative(new Date(), days);
+  const startDateIso = startDate.toISOString();
+
+  const [viewsRes, progressRes] = await Promise.all([
+    supabaseAdmin
+      .from("user_page_views")
+      .select("viewed_at")
+      .gte("viewed_at", startDateIso),
+    supabaseAdmin
+      .from("profile_lessons_progress")
+      .select("updated_at")
+      .eq("is_completed", true)
+      .gte("updated_at", startDateIso),
+  ]);
+
+  const viewsData = viewsRes.data ?? [];
+  const completionsData = progressRes.data ?? [];
+
+  const aggregatedData: Record<string, { views: number; completions: number }> =
+    {};
+
+  for (let i = days; i >= 0; i--) {
+    const d = subDaysNative(new Date(), i);
+    const dateKey = formatDateKey(d);
+    aggregatedData[dateKey] = { views: 0, completions: 0 };
+  }
+
+  viewsData.forEach((v) => {
+    if (!v.viewed_at) return;
+    const dateKey = formatDateKey(new Date(v.viewed_at));
+    if (aggregatedData[dateKey]) {
+      aggregatedData[dateKey].views += 1;
+    }
+  });
+
+  completionsData.forEach((c) => {
+    if (!c.updated_at) return;
+    const dateKey = formatDateKey(new Date(c.updated_at));
+    if (aggregatedData[dateKey]) {
+      aggregatedData[dateKey].completions += 1;
+    }
+  });
+
+  return Object.entries(aggregatedData).map(([date, metrics]) => ({
+    date,
+    views: metrics.views,
+    completions: metrics.completions,
+  }));
+}
+
+export async function getCompletionRateKPI() {
+  try {
+    const { count: startedCount, error: startedError } = await supabaseAdmin
+      .from("profile_lessons_progress")
+      .select("*", { count: "exact", head: true });
+
+    const { count: completedCount, error: completedError } = await supabaseAdmin
+      .from("profile_lessons_progress")
+      .select("*", { count: "exact", head: true })
+      .eq("is_completed", true);
+
+    if (startedError || completedError) {
+      logger.error(
+        "Errore nel recupero KPI completion rate:",
+        startedError || completedError,
+      );
+      return { completionRate: 0, dropOffRate: 0 };
+    }
+
+    if (!startedCount || startedCount === 0) {
+      return { completionRate: 0, dropOffRate: 0 };
+    }
+
+    const completionRate = Number(
+      ((completedCount! / startedCount) * 100).toFixed(1),
+    );
+    const dropOffRate = Number((100 - completionRate).toFixed(1));
+
+    return {
+      completionRate,
+      dropOffRate,
+    };
+  } catch (error) {
+    logger.error("Eccezione durante il calcolo del drop-off rate:", error);
+    return { completionRate: 0, dropOffRate: 0 };
+  }
 }

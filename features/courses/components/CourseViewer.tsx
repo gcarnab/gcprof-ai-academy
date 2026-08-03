@@ -22,11 +22,17 @@ import LessonRenderer, {
   LessonContent,
 } from "@/features/courses/components/lesson/LessonRenderer";
 
+// 🎯 FIX: Import per il tracciamento dell'attività e l'autenticazione
+import ActivityTracker from "@/features/admin/users/components/ActivityTracker";
+import { useAuth } from "@/features/auth/context/AuthContext";
+
 interface CourseViewerProps {
   course: Course;
 }
 
 export function CourseViewer({ course }: CourseViewerProps) {
+  const { user } = useAuth();
+
   // Imposta la prima lezione del primo modulo come lezione iniziale di default
   const initialLesson = course.modules[0]?.lessons[0] || null;
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(
@@ -43,12 +49,10 @@ export function CourseViewer({ course }: CourseViewerProps) {
    * Normalizza i contenuti della lezione per renderli compatibili con LessonRenderer
    */
   const getLessonContents = (lesson: Lesson): LessonContent[] => {
-    // Se la lezione possiede già l'array 'contents' nativo, usalo direttamente
     if ((lesson as any).contents && Array.isArray((lesson as any).contents)) {
       return (lesson as any).contents;
     }
 
-    // Altrimenti converti le vecchie proprietà singole nel nuovo formato
     const contents: LessonContent[] = [];
 
     if (lesson.contentType === "video" && lesson.youtubeUrl) {
@@ -72,7 +76,6 @@ export function CourseViewer({ course }: CourseViewerProps) {
       });
     }
 
-    // Se non ci sono media ma c'è un quizId, crea un elemento di tipo testo/quiz
     if (contents.length === 0 && (lesson as any).quizId) {
       contents.push({
         type: "markdown",
@@ -88,6 +91,15 @@ export function CourseViewer({ course }: CourseViewerProps) {
 
   return (
     <div className="relative flex h-[calc(100vh-4rem)] overflow-hidden bg-background border rounded-xl max-w-7xl mx-auto">
+      {/* 🎯 FIX: Tracker dell'attività per la lezione correntemente selezionata */}
+      {user && currentLesson && (
+        <ActivityTracker
+          key={currentLesson.id}
+          courseId={String(course.id)}
+          lessonId={String(currentLesson.id)}
+        />
+      )}
+
       {/* 🏆 MODAL NOTIFICA BADGE SBLOCCATO */}
       {unlockedBadge && (
         <BadgeUnlockedModal
@@ -189,7 +201,6 @@ export function CourseViewer({ course }: CourseViewerProps) {
             </div>
           ) : (
             <div className="space-y-6 max-w-4xl mx-auto h-full flex flex-col">
-              {/* RENDERING DINAMICO (Video, Documenti, Colab, Quiz, Markdown e Modal Badge) */}
               <LessonRenderer
                 contents={getLessonContents(currentLesson)}
                 unlockedBadge={unlockedBadge}
