@@ -44,6 +44,7 @@ export interface AdminCourseStat {
 
 /**
  * Recupera la panoramica Gamification dell'utente (Globale + Dettaglio Corsi Iscritti)
+ * e filtra restituendo SOLO i corsi a pagamento (is_paid = true)
  */
 export async function getUserGamificationOverview(
   userId: string
@@ -63,7 +64,41 @@ export async function getUserGamificationOverview(
       return { success: false, error: error.message };
     }
 
-    return { success: true, data: data as UserGamificationOverview };
+    const overview = data as UserGamificationOverview;
+
+    // --- INIZIO FILTRO CORSI A PAGAMENTO ---
+    if (overview.courses && overview.courses.length > 0) {
+      // Estraiamo tutti gli ID dei corsi restituiti dalla RPC
+      const courseIds = overview.courses.map((c) => c.course_id);
+
+      // Facciamo una singola query per recuperare solo gli ID dei corsi che sono a pagamento
+      const { data: paidCourses, error: coursesError } = await supabase
+        .from("courses")
+        .select("id")
+        .eq("is_paid", true)
+        .in("id", courseIds);
+
+      if (coursesError) {
+        logger.error("getUserGamificationOverview: Errore durante il check dei corsi a pagamento", { 
+          userId, 
+          error: coursesError.message 
+        });
+        // In caso di errore alla tabella courses, potresti voler gestire un fallback. 
+        // Qui per sicurezza restituiamo errore, o potresti decidere di svuotare l'array.
+        return { success: false, error: "Errore nella verifica dei permessi dei corsi." };
+      }
+
+      if (paidCourses) {
+        // Creiamo un Set per una ricerca più efficiente (O(1)) degli ID
+        const paidCourseIds = new Set(paidCourses.map((c) => String(c.id)));
+        
+        // Filtriamo l'array originale mantenendo SOLO i corsi presenti nel Set
+        overview.courses = overview.courses.filter((c) => paidCourseIds.has(String(c.course_id)));
+      }
+    }
+    // --- FINE FILTRO CORSI A PAGAMENTO ---
+
+    return { success: true, data: overview };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Errore server";
     return { success: false, error: message };

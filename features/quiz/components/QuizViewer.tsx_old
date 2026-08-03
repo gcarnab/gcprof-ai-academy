@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, AlertTriangle, HelpCircle, Award, Download } from "lucide-react";
+import { Loader2, CheckCircle, AlertTriangle, HelpCircle } from "lucide-react";
 
 interface QuizViewerProps {
   quiz: Quiz;
@@ -21,13 +21,7 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [openAnswer, setOpenAnswer] = useState<string>("");
   const [isPending, startTransition] = useTransition();
-  const [feedback, setFeedback] = useState<{
-    success: boolean;
-    score?: number;
-    message?: string;
-    hasOpenQuestions?: boolean;
-    certificate?: any;
-  } | null>(null);
+  const [feedback, setFeedback] = useState<{ success: boolean; score?: number; message?: string } | null>(null);
 
   const handleOptionChange = (questionId: string, optionId: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
@@ -55,8 +49,6 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
         setFeedback({
           success: true,
           score: result.autoScore,
-          hasOpenQuestions: result.hasOpenQuestions,
-          certificate: result.certificate,
         });
       } else {
         setFeedback({
@@ -73,7 +65,7 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
 
   if (feedback?.success) {
     return (
-      <Card className="max-w-2xl mx-auto border-border bg-card mt-8 text-center p-6 shadow-md">
+      <Card className="max-w-2xl mx-auto border-border bg-card mt-8 text-center p-6">
         <CardHeader className="flex flex-col items-center gap-2">
           <CheckCircle className="h-14 w-14 text-green-500 animate-bounce" />
           <CardTitle className="text-2xl font-bold">Quiz Sottomesso!</CardTitle>
@@ -81,53 +73,21 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
             Le tue risposte sono state registrate ed elaborate dal sistema centrale.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           <div className="bg-muted p-4 rounded-lg inline-block">
-            <span className="text-sm font-medium text-muted-foreground block">
-              {feedback.hasOpenQuestions ? "Punteggio Parziale Chiuse" : "Punteggio Finale"}
-            </span>
-            <span className="text-3xl font-extrabold text-foreground">
-              {feedback.score?.toFixed(2)} / {quiz.maxScore || 10.0}
-            </span>
+            <span className="text-sm font-medium text-muted-foreground block">Punteggio Parziale Chiuse</span>
+            <span className="text-3xl font-extrabold text-foreground">{feedback.score?.toFixed(2)} / 4.00</span>
           </div>
-
-          {feedback.hasOpenQuestions ? (
-            <div className="p-4 rounded-lg border text-left flex gap-3 bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400">
-              <HelpCircle className="h-5 w-5 shrink-0" />
-              <div>
-                <h5 className="font-semibold leading-none tracking-tight mb-1">In attesa del Docente</h5>
-                <p className="text-sm opacity-95">
-                  La domanda aperta è stata inviata ai docenti della piattaforma. Riceverai la notifica e il certificato d'attestato appena completata la correzione manuale.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 rounded-lg border text-left flex flex-col gap-3 bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-300">
-              <div className="flex items-center gap-2">
-                <Award className="h-6 w-6 text-emerald-600 shrink-0" />
-                <h5 className="font-semibold text-lg">Modulo Completato & Certificato Emesso!</h5>
-              </div>
-              <p className="text-sm opacity-90">
-                Complimenti! Hai superato con successo la lezione/modulo. Il tuo certificato PDF è stato generato ed inviato via email.
+          
+          <div className="p-4 rounded-lg border text-left flex gap-3 bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400">
+            <HelpCircle className="h-5 w-5 shrink-0" />
+            <div>
+              <h5 className="font-semibold leading-none tracking-tight mb-1">In attesa del Docente</h5>
+              <p className="text-sm opacity-95">
+                La domanda aperta (valore max 6.00 punti) è stata inviata ai docenti della piattaforma. Riceverai la notifica del voto complessivo appena completata la correzione manuale.
               </p>
-
-              {feedback.certificate && (
-                <div className="pt-2 flex flex-wrap gap-2 justify-end">
-                  <Button
-                    variant="default"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-                    onClick={() => {
-                      const url = feedback.certificate.pdfUrl || `/dashboard/certificates/${feedback.certificate.id}`;
-                      window.open(url, "_blank");
-                    }}
-                  >
-                    <Download className="h-4 w-4" />
-                    Scarica / Visualizza Certificato
-                  </Button>
-                </div>
-              )}
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -147,7 +107,7 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
               Penalità attiva (-{quiz.negativeMark})
             </Badge>
           )}
-          <Badge variant="secondary">Punti totali: {quiz.maxScore || "10.00"}</Badge>
+          <Badge variant="secondary">Punti totali: 10.00</Badge>
         </div>
       </div>
 
@@ -217,7 +177,7 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
         <Button
           size="lg"
           onClick={handleSubmit}
-          disabled={isPending || isQuizIncomplete || (questions.some((q) => q.type !== "multiple_choice") && !openAnswer.trim())}
+          disabled={isPending || isQuizIncomplete || !openAnswer.trim()}
           className="px-8 font-semibold"
         >
           {isPending ? (

@@ -96,6 +96,266 @@ export type Database = {
         }
         Relationships: []
       }
+      certificate_events: {
+        Row: {
+          certificate_id: string
+          created_at: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          certificate_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          certificate_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_events_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "certificates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      certificate_settings: {
+        Row: {
+          auto_generate_pdf: boolean | null
+          auto_send_email: boolean | null
+          certificate_prefix: string | null
+          created_at: string
+          default_template_id: string | null
+          director_name: string | null
+          director_title: string | null
+          enable_qrcode: boolean | null
+          id: string
+          logo_url: string | null
+          organization_name: string | null
+          signature_url: string | null
+          updated_at: string
+          verification_base_url: string | null
+        }
+        Insert: {
+          auto_generate_pdf?: boolean | null
+          auto_send_email?: boolean | null
+          certificate_prefix?: string | null
+          created_at?: string
+          default_template_id?: string | null
+          director_name?: string | null
+          director_title?: string | null
+          enable_qrcode?: boolean | null
+          id?: string
+          logo_url?: string | null
+          organization_name?: string | null
+          signature_url?: string | null
+          updated_at?: string
+          verification_base_url?: string | null
+        }
+        Update: {
+          auto_generate_pdf?: boolean | null
+          auto_send_email?: boolean | null
+          certificate_prefix?: string | null
+          created_at?: string
+          default_template_id?: string | null
+          director_name?: string | null
+          director_title?: string | null
+          enable_qrcode?: boolean | null
+          id?: string
+          logo_url?: string | null
+          organization_name?: string | null
+          signature_url?: string | null
+          updated_at?: string
+          verification_base_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_settings_default_template_id_fkey"
+            columns: ["default_template_id"]
+            isOneToOne: false
+            referencedRelation: "certificate_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      certificate_templates: {
+        Row: {
+          active: boolean
+          background_url: string | null
+          created_at: string
+          css_template: string | null
+          description: string | null
+          html_template: string
+          id: string
+          logo_url: string | null
+          name: string
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          background_url?: string | null
+          created_at?: string
+          css_template?: string | null
+          description?: string | null
+          html_template: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          background_url?: string | null
+          created_at?: string
+          css_template?: string | null
+          description?: string | null
+          html_template?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      certificates: {
+        Row: {
+          certificate_number: string
+          completion_percentage: number | null
+          course_id: string
+          created_at: string
+          download_count: number
+          email_sent: boolean
+          expires_at: string | null
+          id: string
+          issued_at: string
+          issued_by: string | null
+          last_download_at: string | null
+          module_id: string | null
+          pdf_generated: boolean
+          pdf_url: string | null
+          public_id: string
+          score: number | null
+          status: string
+          subtitle: string | null
+          template_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          verification_token: string
+        }
+        Insert: {
+          certificate_number: string
+          completion_percentage?: number | null
+          course_id: string
+          created_at?: string
+          download_count?: number
+          email_sent?: boolean
+          expires_at?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          last_download_at?: string | null
+          module_id?: string | null
+          pdf_generated?: boolean
+          pdf_url?: string | null
+          public_id?: string
+          score?: number | null
+          status?: string
+          subtitle?: string | null
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          verification_token?: string
+        }
+        Update: {
+          certificate_number?: string
+          completion_percentage?: number | null
+          course_id?: string
+          created_at?: string
+          download_count?: number
+          email_sent?: boolean
+          expires_at?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          last_download_at?: string | null
+          module_id?: string | null
+          pdf_generated?: boolean
+          pdf_url?: string | null
+          public_id?: string
+          score?: number | null
+          status?: string
+          subtitle?: string | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          verification_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificates_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "student_courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "certificates_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "course_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "certificate_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon_redemptions: {
         Row: {
           coupon_id: string
@@ -189,22 +449,43 @@ export type Database = {
       }
       course_categories: {
         Row: {
+          color_theme: string | null
           created_at: string
+          description: string | null
+          display_order: number
+          icon_name: string | null
           id: string
+          is_featured: boolean
           name: string
           slug: string
+          updated_at: string
+          visible_home: boolean
         }
         Insert: {
+          color_theme?: string | null
           created_at?: string
+          description?: string | null
+          display_order?: number
+          icon_name?: string | null
           id?: string
+          is_featured?: boolean
           name: string
           slug: string
+          updated_at?: string
+          visible_home?: boolean
         }
         Update: {
+          color_theme?: string | null
           created_at?: string
+          description?: string | null
+          display_order?: number
+          icon_name?: string | null
           id?: string
+          is_featured?: boolean
           name?: string
           slug?: string
+          updated_at?: string
+          visible_home?: boolean
         }
         Relationships: []
       }
@@ -467,60 +748,6 @@ export type Database = {
         }
         Relationships: []
       }
-      lessons: {
-        Row: {
-          content_type: string
-          created_at: string
-          duration: number
-          google_drive_url: string | null
-          id: string
-          module_id: string
-          quiz_id: string | null
-          sort_order: number
-          title: string
-          youtube_url: string | null
-        }
-        Insert: {
-          content_type: string
-          created_at?: string
-          duration: number
-          google_drive_url?: string | null
-          id?: string
-          module_id: string
-          quiz_id?: string | null
-          sort_order?: number
-          title: string
-          youtube_url?: string | null
-        }
-        Update: {
-          content_type?: string
-          created_at?: string
-          duration?: number
-          google_drive_url?: string | null
-          id?: string
-          module_id?: string
-          quiz_id?: string | null
-          sort_order?: number
-          title?: string
-          youtube_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lessons_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "course_modules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lessons_quiz_id_fkey"
-            columns: ["quiz_id"]
-            isOneToOne: false
-            referencedRelation: "quizzes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       mail_logs: {
         Row: {
           created_at: string
@@ -622,6 +849,80 @@ export type Database = {
           {
             foreignKeyName: "mail_templates_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_completions: {
+        Row: {
+          certificate_generated: boolean
+          completed: boolean
+          completed_at: string | null
+          completion_percentage: number
+          course_id: string
+          created_at: string
+          id: string
+          module_id: string
+          quiz_score: number | null
+          updated_at: string
+          user_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          certificate_generated?: boolean
+          completed?: boolean
+          completed_at?: string | null
+          completion_percentage?: number
+          course_id: string
+          created_at?: string
+          id?: string
+          module_id: string
+          quiz_score?: number | null
+          updated_at?: string
+          user_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          certificate_generated?: boolean
+          completed?: boolean
+          completed_at?: string | null
+          completion_percentage?: number
+          course_id?: string
+          created_at?: string
+          id?: string
+          module_id?: string
+          quiz_score?: number | null
+          updated_at?: string
+          user_id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_completions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_completions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "student_courses"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "module_completions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "course_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_completions_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1436,11 +1737,13 @@ export type Database = {
       }
       quizzes: {
         Row: {
+          course_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
           id: string
           max_score: number
+          module_id: string | null
           negative_mark: number
           passing_score: number
           penalty_enabled: boolean
@@ -1449,11 +1752,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          course_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           max_score?: number
+          module_id?: string | null
           negative_mark?: number
           passing_score?: number
           penalty_enabled?: boolean
@@ -1462,11 +1767,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          course_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           max_score?: number
+          module_id?: string | null
           negative_mark?: number
           passing_score?: number
           penalty_enabled?: boolean
@@ -1476,10 +1783,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "quizzes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "student_courses"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "quizzes_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "course_modules"
             referencedColumns: ["id"]
           },
         ]

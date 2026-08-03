@@ -3,6 +3,7 @@ export interface SendEmailOptions {
   subject: string;
   html: string;
   fromName?: string;
+  attachments?: any[];
 }
 
 export interface EmailProvider {

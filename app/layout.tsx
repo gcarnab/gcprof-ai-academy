@@ -7,9 +7,11 @@ import { siteConfig } from "@/shared/config/site";
 import { ThemeProvider } from "@/features/theme/context/ThemeContext";
 import { PageTracker } from "@/features/admin/tracking/components/PageTracker";
 
+// Configurazione del font Geist ottimizzata con 'display: swap' per Turbopack
 const geist = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
 });
 
 // ============================================================================
@@ -104,7 +106,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="it" className={cn("font-sans", geist.variable)}>
+    <html lang="it" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider>
           <AuthProvider>

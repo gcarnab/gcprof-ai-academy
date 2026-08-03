@@ -206,6 +206,7 @@ export default function Navbar() {
                 </li>
               ))}
 
+              {/*
               {!user && (
                 <li>
                   <Link
@@ -216,6 +217,8 @@ export default function Navbar() {
                   </Link>
                 </li>
               )}
+              */}
+
             </ul>
           </nav>
 

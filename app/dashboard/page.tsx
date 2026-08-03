@@ -7,11 +7,13 @@ import { getLiveCourses } from "@/features/courses/services/courseActions";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { StudentQuizDashboard } from "@/features/quiz/components/StudentQuizDashboard";
 import GamificationBar from "@/features/gamification/components/GamificationBar";
-import BadgeGrid from "@/features/gamification/components/BadgeGrid";
 import type { Metadata } from "next";
-import { GamificationTestButton } from "@/features/gamification/components/GamificationTestButton";
 import { getUserGamificationOverview } from "@/features/gamification/actions/gamification";
 import { StudentGamificationDashboard } from "@/features/gamification/components/StudentGamificationDashboard";
+
+// Certificati
+import { CertificateService } from "@/features/certificates/services/CertificateService";
+import StudentCertificatesDashboard from "@/features/certificates/components/StudentCertificatesDashboard";
 
 export const metadata: Metadata = {
   title: "Dashboard Studente",
@@ -44,16 +46,24 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
 
   const userId = user.id || user.sub;
   const supabase = getSupabaseAdmin();
+  const certificateService = new CertificateService();
 
   // Leggiamo il tab attivo dall'URL (default: "courses")
   const resolvedParams = await searchParams;
   const rawTab = resolvedParams?.tab;
-  const activeTab = rawTab === "quizzes" ? "quizzes" : rawTab === "badges" ? "badges" : "courses";
+  const activeTab =
+    rawTab === "quizzes"
+      ? "quizzes"
+      : rawTab === "badges"
+      ? "badges"
+      : rawTab === "certificates"
+      ? "certificates"
+      : "courses";
 
   // ==========================================
-  // 📡 FLUSSO DATI PROFILO E GAMIFICATION
+  // 📡 FLUSSO DATI PROFILO, GAMIFICATION E CERTIFICATI
   // ==========================================
-  const [profileRes, gamificationRes, coursesResult, liveCourses] = await Promise.all([
+  const [profileRes, gamificationRes, coursesResult, liveCourses, userCertificates] = await Promise.all([
     supabase
       .from("profiles")
       .select("total_minutes_active, total_xp, current_level")
@@ -61,7 +71,8 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
       .single(),
     getUserGamificationOverview(userId),
     getStudentCoursesAction(userId),
-    getLiveCourses()
+    getLiveCourses(),
+    certificateService.getStudentCertificates(userId)
   ]);
 
   const profileData = profileRes.data;
@@ -249,10 +260,10 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
         </div>
 
         {/* TAB SWITCHER */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 overflow-x-auto">
           <Link
             href="/dashboard?tab=courses"
-            className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+            className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "courses"
                 ? "border-blue-500 text-slate-900 dark:text-white"
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
@@ -262,7 +273,7 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
           </Link>
           <Link
             href="/dashboard?tab=quizzes"
-            className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+            className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "quizzes"
                 ? "border-blue-500 text-slate-900 dark:text-white"
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
@@ -277,13 +288,30 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
           </Link>
           <Link
             href="/dashboard?tab=badges"
-            className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 ${
+            className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "badges"
                 ? "border-amber-500 text-amber-500 dark:text-amber-400"
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
             <span>🏆</span> Medagliere &amp; Badge
+          </Link>
+
+          {/* NUOVA TAB CERTIFICATI */}
+          <Link
+            href="/dashboard?tab=certificates"
+            className={`pb-3 text-sm font-bold tracking-wide border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "certificates"
+                ? "border-indigo-500 text-indigo-500 dark:text-indigo-400"
+                : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            <span>📜</span> Certificati
+            {userCertificates.length > 0 && (
+              <span className="bg-indigo-600/10 dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.2 text-[10px] rounded-full border border-indigo-500/20 dark:border-indigo-500/30 font-bold">
+                {userCertificates.length}
+              </span>
+            )}
           </Link>
         </div>
 
@@ -385,11 +413,12 @@ export default async function StudentDashboardPage({ searchParams }: PageProps) 
                 Nessun dato di gamification disponibile al momento.
               </div>
             )}
-
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-              <GamificationTestButton />
-            </div>
           </div>
+        )}
+
+        {/* CONTENUTO TAB CERTIFICATI */}
+        {activeTab === "certificates" && (
+          <StudentCertificatesDashboard certificates={userCertificates} />
         )}
 
       </div>

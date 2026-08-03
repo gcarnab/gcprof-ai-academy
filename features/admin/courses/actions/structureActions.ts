@@ -21,7 +21,7 @@ export async function getCourseStructureAction(courseId: string) {
         `
         id, title,
         course_modules (
-          id, title, order_index, is_preview,
+          id, title, module_code, order_index, is_preview,
           course_lessons (
             id, title, slug, content_type, external_url, video_url, content, duration, order_index
           )
@@ -57,12 +57,24 @@ export async function addModule(
   title: string,
   orderIndex: number,
   isPreview: boolean = false,
+  moduleCode?: string,
 ) {
+  // Genera un codice univoco/slug dal titolo se non viene passato esplicitamente
+  const generatedCode =
+    moduleCode?.trim() ||
+    title
+      .toLowerCase()
+      .trim()
+      .replace(/[\s_]+/g, "-")
+      .replace(/[^\w-]+/g, "") ||
+    `mod-${Date.now()}`;
+
   const { error } = await supabaseAdmin
     .from("course_modules")
     .insert({
       course_id: courseId,
-      title,
+      title: title.trim(),
+      module_code: generatedCode,
       order_index: orderIndex,
       is_preview: isPreview,
     });
@@ -79,12 +91,14 @@ export async function updateModule(
   moduleId: string,
   data: {
     title?: string;
+    moduleCode?: string;
     isPreview?: boolean;
     orderIndex?: number;
   },
 ) {
   const updatePayload: Record<string, any> = {};
   if (data.title !== undefined) updatePayload.title = data.title;
+  if (data.moduleCode !== undefined) updatePayload.module_code = data.moduleCode;
   if (data.isPreview !== undefined) updatePayload.is_preview = data.isPreview;
   if (data.orderIndex !== undefined) updatePayload.order_index = data.orderIndex;
 

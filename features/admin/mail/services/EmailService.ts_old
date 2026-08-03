@@ -6,68 +6,17 @@ export class EmailService {
   private adminEmail: string;
 
   constructor() {
+    // Inizializziamo il provider SMTP di Gmail appena creato
     this.provider = new GmailProvider();
+    // Email dell'amministratore per le notifiche di sistema
     this.adminEmail = process.env.GMAIL_SMTP_USER || "gcarnab74@gmail.com";
   }
 
   /**
-   * Metodo generico per l'invio di email, ora con supporto agli allegati
+   * Metodo generico per l'invio di email
    */
-  async sendGenericEmail(
-    to: string,
-    subject: string,
-    html: string,
-    fromName?: string,
-    attachments?: any[],
-  ) {
-    // Assumiamo che il provider GmailProvider accetti 'attachments' nel payload
-    return this.provider.sendEmail({
-      to,
-      subject,
-      html,
-      fromName,
-      attachments,
-    });
-  }
-
-  /**
-   * Invia l'email con il certificato allo studente
-   */
-  async sendCertificateEmail(
-    studentEmail: string,
-    studentName: string,
-    courseTitle: string,
-    pdfBuffer: Buffer,
-    pdfUrl: string,
-  ) {
-    const subject = `🎉 Congratulazioni! Ecco il tuo certificato per ${courseTitle}`;
-    const html = `
-      <div style="font-family: sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-        <h2 style="color: #2563eb;">Ottimo lavoro, ${studentName}!</h2>
-        <p>Hai completato con successo il modulo: <strong>${courseTitle}</strong>.</p>
-        <p>In allegato a questa mail trovi il tuo certificato ufficiale in formato PDF.</p>
-        <p>Puoi anche scaricarlo in qualsiasi momento dal seguente link oppure dal tuo pannello studente:</p>
-        <p><a href="${pdfUrl}" style="display: inline-block; padding: 10px 20px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px;">Scarica Certificato</a></p>
-        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-        <p style="font-size: 12px; color: #64748b;">GCPROF-ACADEMY.COM Backoffice</p>
-      </div>
-    `;
-
-    const attachments = [
-      {
-        filename: `Certificato-${courseTitle.replace(/\s+/g, "-")}.pdf`,
-        content: pdfBuffer,
-        contentType: "application/pdf",
-      },
-    ];
-
-    return this.sendGenericEmail(
-      studentEmail,
-      subject,
-      html,
-      "GCProf Academy",
-      attachments,
-    );
+  async sendGenericEmail(to: string, subject: string, html: string, fromName?: string) {
+    return this.provider.sendEmail({ to, subject, html, fromName });
   }
 
   /**
@@ -91,11 +40,7 @@ export class EmailService {
   /**
    * Invia una notifica all'amministratore per richiedere l'approvazione del nuovo studente
    */
-  async sendAdminNotificationEmail(
-    studentName: string,
-    studentEmail: string,
-    classSlug: string,
-  ) {
+  async sendAdminNotificationEmail(studentName: string, studentEmail: string, classSlug: string) {
     const subject = `🚨 Nuovo studente in attesa di approvazione: ${studentName}`;
     const html = `
       <div style="font-family: sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">

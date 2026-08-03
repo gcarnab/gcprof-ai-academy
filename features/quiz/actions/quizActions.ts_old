@@ -9,15 +9,13 @@ import { sendQuizSubmittedMail, sendQuizGradedMail } from "./quizMailActions";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
-// Gamification, Badge e Certificati
+// Gamification e Badge Actions
 import { onQuizCompletedAction } from "@/features/gamification/actions/awardXpAction";
 import { unlockQuizBadge } from "@/features/gamification/actions/badgeActions";
-import { CertificateAutoIssueService } from "@/features/certificates/services/CertificateAutoIssueService";
 
 const quizRepository = new SupabaseQuizRepository();
 const tokenService = new JoseTokenService();
 const cookieService = new NextCookieService();
-const autoIssueService = new CertificateAutoIssueService();
 
 interface UserSession {
   id: string;
@@ -43,83 +41,6 @@ async function getAuthenticatedSession(
   }
 
   return payload;
-}
-
-// ======================================================
-// HELPER PER EMISSIONE AUTOMATICA CERTIFICATO & GAMIFICATION
-// ======================================================
-async function processGamificationAndCertificates(
-  userId: string,
-  quizId: string,
-  quiz: any,
-  finalScore: number,
-) {
-  try {
-    // 1. Assegnazione XP per il completamento del quiz
-    await onQuizCompletedAction({
-      userId,
-      quizId,
-      finalScore,
-    });
-
-    // 2. Sblocco Badge
-    const quizCode = quiz?.code || quiz?.slug || quizId;
-    await unlockQuizBadge(userId, quizCode);
-
-    // 3. Recupero relazioni Corso, Modulo e Lezione
-    const courseId = quiz?.courseId || quiz?.course_id;
-    const moduleId = quiz?.moduleId || quiz?.module_id;
-    const lessonId = quiz?.lessonId || quiz?.lesson_id;
-
-    let certResult = null;
-
-    if (courseId && moduleId) {
-      const maxScore = Number(quiz?.maxScore ?? 10);
-      const scorePercentage = (finalScore / maxScore) * 100;
-
-      logger.info("👉 Avvio automatico generazione certificato...", {
-        userId,
-        courseId,
-        moduleId,
-        lessonId,
-        finalScore,
-        maxScore,
-        scorePercentage,
-      });
-
-      certResult = await autoIssueService.processAndIssue({
-        userId,
-        courseId,
-        moduleId,
-        lessonId,
-        title: quiz?.title
-          ? `Attestato: ${quiz.title}`
-          : "Certificato di Completamento Modulo",
-        subtitle: `Modulo superato con esito positivo (Voto: ${finalScore.toFixed(2)} / ${maxScore})`,
-        score: scorePercentage,
-        completionPercentage: 100,
-      });
-    } else {
-      logger.warn(
-        "⚠️ Impossibile emettere certificato: courseId o moduleId mancanti nel quiz",
-        { quizId, courseId, moduleId, lessonId }
-      );
-    }
-
-    logger.info("Gamification, Badge e Certificati elaborati con successo", {
-      userId,
-      quizId,
-      finalScore,
-    });
-
-    return certResult;
-  } catch (error) {
-    logger.error(
-      "❌ Errore durante l'elaborazione di Gamification/Certificati:",
-      error
-    );
-    return null;
-  }
 }
 
 // ======================================================
@@ -169,11 +90,10 @@ export async function updateQuizStatusAction(
 export async function assignQuizToCourseAction(
   quizId: string,
   courseId: string,
-  moduleId: string,
 ) {
   try {
     await getAuthenticatedSession("admin");
-    await quizRepository.assignToCourse(quizId, courseId, moduleId);
+    await quizRepository.assignToCourse(quizId, courseId);
 
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
@@ -218,7 +138,6 @@ export async function submitStudentAttemptAction(
 
     let calculatedAutoScore = 0.0;
     let wrongClosedAnswers = 0;
-    let hasOpenQuestions = false;
 
     const finalAnswersPayload: any[] = [];
 
@@ -245,7 +164,6 @@ export async function submitStudentAttemptAction(
           score: scoreForQuestion,
         });
       } else {
-        hasOpenQuestions = true;
         finalAnswersPayload.push({
           questionId: q.id,
           openAnswerText: studentAns?.openAnswerText || "",
@@ -285,32 +203,15 @@ export async function submitStudentAttemptAction(
       display_name: studentProfile?.display_name ?? "",
       quiz_title: quiz.title,
       auto_score: calculatedAutoScore.toFixed(2),
-      quiz_status: hasOpenQuestions
-        ? "In attesa della correzione della domanda aperta"
-        : "Completato",
+      quiz_status: "In attesa della correzione della domanda aperta",
     });
 
-    let certResult = null;
-
-    // ⚡ SE IL QUIZ HA SOLO DOMANDE CHIUSE: Emissione immediata Certificato + Gamification
-    if (!hasOpenQuestions) {
-      certResult = await processGamificationAndCertificates(
-        studentSession.id,
-        quizId,
-        quiz,
-        calculatedAutoScore,
-      );
-    }
-
-    revalidatePath("/dashboard", "layout");
     revalidatePath("/dashboard/courses", "layout");
 
     return {
       success: true,
       attemptId: attempt.id,
       autoScore: calculatedAutoScore,
-      hasOpenQuestions,
-      certificate: certResult?.certificate || null,
     };
   } catch (error: any) {
     logger.error(
@@ -402,15 +303,41 @@ export async function gradeOpenAnswerAction(payload: {
       });
     }
 
-    // ⚡ GAMIFICATION, BADGE & CERTIFICATE EMISSION
-    await processGamificationAndCertificates(
-      currentAttempt.studentId,
-      currentAttempt.quizId,
-      quiz,
-      finalScore,
-    );
+    // ==========================================================
+    // GAMIFICATION & BADGES
+    // ==========================================================
+    try {
+      // 1. Assegnazione XP in base al voto
+      await onQuizCompletedAction({
+        userId: currentAttempt.studentId,
+        quizId: currentAttempt.quizId,
+        finalScore,
+      });
 
-    // Invalidazione cache Next.js per aggiornare la UI
+      // 2. Sblocco Badge tramite la RPC Postgres 'award_quiz_badge'
+      const quizCode =
+        (quiz as any)?.code || (quiz as any)?.slug || currentAttempt.quizId;
+
+      const badgeResult = await unlockQuizBadge(
+        currentAttempt.studentId,
+        quizCode,
+      );
+
+      logger.info("Gamification e Badge elaborati con successo", {
+        studentId: currentAttempt.studentId,
+        quizId: currentAttempt.quizId,
+        quizCode,
+        finalScore,
+        badgeResult,
+      });
+    } catch (gamificationError) {
+      logger.error(
+        "Errore durante l'assegnazione di XP/Badge nel quiz",
+        gamificationError,
+      );
+    }
+
+    // Invalidazione cache Next.js per riflettere immediatamente badge e XP nella UI
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
     revalidatePath(`/admin/quiz/${payload.attemptId}`, "layout");
