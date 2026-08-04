@@ -18,12 +18,10 @@ async function resolveImageAsBase64(
   if (!imagePath) return "";
 
   try {
-    // 1. Se è già un Data URL Base64
     if (imagePath.startsWith("data:")) {
       return imagePath;
     }
 
-    // 2. Se è un URL remoto HTTPS/HTTP (es. Supabase Storage o CDN esterna)
     if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
       const response = await fetch(imagePath);
       if (response.ok) {
@@ -34,7 +32,6 @@ async function resolveImageAsBase64(
       }
     }
 
-    // 3. Se è un percorso relativo locale nella cartella /public
     const cleanPath = imagePath.startsWith("/")
       ? imagePath.slice(1)
       : imagePath;
@@ -46,14 +43,10 @@ async function resolveImageAsBase64(
         path.extname(fullPath).replace(".", "").toLowerCase() || "png";
       const mimeType = ext === "svg" ? "image/svg+xml" : `image/${ext}`;
       return `data:${mimeType};base64,${fileBuffer.toString("base64")}`;
-    } else {
-      logger.warn(
-        `⚠️ [CertificateService] File immagine non trovato sul filesystem locale: ${fullPath}`,
-      );
     }
   } catch (err) {
     logger.error(
-      "❌ [CertificateService] Errore nella conversione dell'immagine in Base64:",
+      "❌ [CertificateService] Errore conversione immagine Base64:",
       err,
     );
   }
@@ -66,6 +59,27 @@ export class CertificateService {
 
   constructor(private repository = new SupabaseCertificateRepository()) {
     this.emailService = new EmailService();
+  }
+
+  /**
+   * Helper privato per estrarre il voto percentuale dal testo del sottotitolo se omesso
+   * Es: "Modulo superato (Voto: 8.00 / 10)" -> 80
+   */
+  private parseScoreFromSubtitle(subtitle?: string | null): number | null {
+    if (!subtitle) return null;
+    const voteMatch = subtitle.match(/Voto:\s*([\d.]+)\s*\/\s*10/i);
+    if (voteMatch && voteMatch[1]) {
+      const vote10 = parseFloat(voteMatch[1]);
+      if (!isNaN(vote10)) {
+        return vote10 <= 10 ? vote10 * 10 : vote10;
+      }
+    }
+    const percentMatch = subtitle.match(/([\d.]+)\s*%/);
+    if (percentMatch && percentMatch[1]) {
+      const val = parseFloat(percentMatch[1]);
+      if (!isNaN(val)) return val;
+    }
+    return null;
   }
 
   async getStudentCertificates(userId: string): Promise<Certificate[]> {
@@ -150,25 +164,87 @@ export class CertificateService {
     title: string;
     subtitle?: string;
     completionPercentage?: number;
-    score?: number;
+    score?: number | string;
   }): Promise<Certificate> {
-    const alreadyExists = await this.hasCertificate(
+    // 1. Lettura diretta da module_completions per dare priorità a quiz_score dal DB
+    const completion = await this.repository.getModuleCompletion(
       data.userId,
       data.moduleId,
-      data.lessonId,
     );
 
-    if (alreadyExists) {
-      throw new Error("Certificate already exists.");
+    let rawScore: number | null = null;
+
+    if (completion?.quizScore != null && !isNaN(Number(completion.quizScore))) {
+      rawScore = Number(completion.quizScore);
+    } else if (data.score != null && !isNaN(Number(data.score))) {
+      rawScore = Number(data.score);
+    } else {
+      rawScore = this.parseScoreFromSubtitle(data.subtitle);
     }
 
-    // Sanitizzazione preventiva: evita che undefined/falsy finiscano come "false" su colonne INTEGER o UUID
-    const safeScore = typeof data.score === "number" ? data.score : null;
+    // Normalizzazione scala: se <= 10 (es. 8.00 o 8.50), converte in percentuale (80 o 85)
+    const finalScore =
+      rawScore != null ? (rawScore <= 10 ? rawScore * 10 : rawScore) : 100;
+
+    // Generazione o mantenimento del sottotitolo sincronizzato
+    const voteOutOfTen = (finalScore / 10).toFixed(2);
+    const finalSubtitle =
+      data.subtitle ||
+      `Modulo superato con esito positivo (Voto: ${voteOutOfTen} / 10)`;
+
     const safePercentage =
-      typeof data.completionPercentage === "number"
-        ? data.completionPercentage
+      data.completionPercentage != null &&
+      !isNaN(Number(data.completionPercentage))
+        ? Number(data.completionPercentage)
         : 100;
 
+    const userCertificates = await this.repository.getUserCertificates(
+      data.userId,
+    );
+    const existingCertificate = userCertificates.find((c) => {
+      if (data.lessonId && c.lessonId) {
+        return c.moduleId === data.moduleId && c.lessonId === data.lessonId;
+      }
+      return c.moduleId === data.moduleId;
+    });
+
+    if (existingCertificate) {
+      const currentScore =
+        existingCertificate.score != null
+          ? Number(existingCertificate.score)
+          : null;
+
+      const scoreChanged = currentScore !== finalScore;
+      const subtitleChanged =
+        data.subtitle !== undefined &&
+        data.subtitle !== existingCertificate.subtitle;
+      const titleChanged =
+        data.title !== undefined && data.title !== existingCertificate.title;
+
+      if (scoreChanged || subtitleChanged || titleChanged) {
+        logger.info(
+          `🔄 [CertificateService] Aggiornamento certificato ${existingCertificate.id} con quiz_score (${currentScore} ➔ ${finalScore})...`,
+        );
+
+        const updatedCertificate = await this.repository.updateCertificate(
+          existingCertificate.id,
+          {
+            score: finalScore,
+            completionPercentage: safePercentage,
+            title: data.title ?? existingCertificate.title,
+            subtitle: finalSubtitle,
+            pdfGenerated: false,
+            emailSent: false,
+          },
+        );
+
+        return updatedCertificate;
+      }
+
+      return existingCertificate;
+    }
+
+    // Creazione nuovo certificato
     const certificatePayload = {
       userId: data.userId,
       courseId: data.courseId,
@@ -177,9 +253,9 @@ export class CertificateService {
       templateId: data.templateId ?? null,
       issuedBy: data.issuedBy ?? null,
       title: data.title,
-      subtitle: data.subtitle ?? null,
+      subtitle: finalSubtitle,
       completionPercentage: safePercentage,
-      score: safeScore,
+      score: finalScore,
       certificateNumber: `CERT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
     };
 
@@ -188,11 +264,6 @@ export class CertificateService {
     );
 
     await this.logEvent(certificate.id, "GENERATED");
-
-    const completion = await this.repository.getModuleCompletion(
-      data.userId,
-      data.moduleId,
-    );
 
     if (completion) {
       await this.repository.updateModuleCompletion(completion.id, {
@@ -209,7 +280,13 @@ export class CertificateService {
     studentEmail: string,
   ): Promise<void> {
     const settings = await this.repository.getSettings();
-    if (!settings) return;
+
+    if (!settings) {
+      logger.warn(
+        `⚠️ [CertificateService] Impostazioni certificato mancanti.`,
+      );
+      return;
+    }
 
     let pdfBuffer: Buffer | null = null;
     let pdfUrl = certificate.pdfUrl;
@@ -225,22 +302,19 @@ export class CertificateService {
             process.env.NEXT_PUBLIC_APP_URL || "https://gcprof-academy.com";
           const verificationUrl = `${appUrl}/verify-certificate/${certificate.verificationToken || certificate.id}`;
 
-          // Gerarchia logo: Template Logo -> Settings Logo -> Local Fallback Logo
           const rawLogoPath =
             template.logoUrl ||
             settings.logoUrl ||
             "/gcprof-ai-academy_logo_01.png";
 
-          // Conversione automatica in Base64
           const logoBase64 = await resolveImageAsBase64(rawLogoPath);
 
-          // Punteggio formattato
-          const scoreFormatted =
-            certificate.score != null && typeof certificate.score === "number"
-              ? Number(certificate.score).toFixed(0)
-              : "100";
+          const numericScore =
+            certificate.score != null ? Number(certificate.score) : NaN;
+          const scoreFormatted = !isNaN(numericScore)
+            ? numericScore.toFixed(0)
+            : "100";
 
-          // Sostituzione dei Placeholder nell'HTML
           const compiledHtml = template.htmlTemplate
             .replace(/\{\{logoUrl\}\}/g, logoBase64)
             .replace(/\{\{studentName\}\}/g, studentName)
@@ -248,6 +322,7 @@ export class CertificateService {
               /\{\{courseTitle\}\}/g,
               certificate.title || "Corso di Formazione",
             )
+            .replace(/\{\{subtitle\}\}/g, certificate.subtitle || "")
             .replace(/\{\{score\}\}/g, scoreFormatted)
             .replace(/\{\{date\}\}/g, new Date().toLocaleDateString("it-IT"))
             .replace(
@@ -256,7 +331,6 @@ export class CertificateService {
             )
             .replace(/\{\{verificationUrl\}\}/g, verificationUrl);
 
-          // Documento HTML completo con stili CSS e Meta Tag UTF-8
           const fullHtml = `
             <!DOCTYPE html>
             <html lang="it">
@@ -273,15 +347,14 @@ export class CertificateService {
             </html>
           `;
 
-          // Genera il PDF tramite Puppeteer
           pdfBuffer = await generatePdfFromHtml(fullHtml);
 
-          // Upload su Supabase Storage
           const { error: uploadError } = await supabase.storage
             .from("certificates")
             .upload(filePath, pdfBuffer, {
               contentType: "application/pdf",
               upsert: true,
+              cacheControl: "0",
             });
 
           if (!uploadError) {
@@ -289,7 +362,7 @@ export class CertificateService {
               .from("certificates")
               .getPublicUrl(filePath);
 
-            pdfUrl = publicUrlData.publicUrl;
+            pdfUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
 
             await this.repository.updateCertificate(certificate.id, {
               pdfUrl: pdfUrl,
@@ -308,7 +381,6 @@ export class CertificateService {
       }
     }
 
-    // Fallback invio Email: recupera il PDF dallo Storage se non appena generato in memoria
     if (
       settings.autoSendEmail &&
       !certificate.emailSent &&

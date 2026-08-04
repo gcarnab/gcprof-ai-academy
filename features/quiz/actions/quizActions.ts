@@ -53,7 +53,7 @@ async function processGamificationAndCertificates(
   quizId: string,
   quiz: any,
   finalScore: number,
-) {
+): Promise<{ success: boolean; certificate?: any; error?: string }> {
   try {
     // 1. Assegnazione XP per il completamento del quiz
     await onQuizCompletedAction({
@@ -71,54 +71,50 @@ async function processGamificationAndCertificates(
     const moduleId = quiz?.moduleId || quiz?.module_id;
     const lessonId = quiz?.lessonId || quiz?.lesson_id;
 
-    let certResult = null;
-
-    if (courseId && moduleId) {
-      const maxScore = Number(quiz?.maxScore ?? 10);
-      const scorePercentage = (finalScore / maxScore) * 100;
-
-      logger.info("👉 Avvio automatico generazione certificato...", {
-        userId,
-        courseId,
-        moduleId,
-        lessonId,
-        finalScore,
-        maxScore,
-        scorePercentage,
-      });
-
-      certResult = await autoIssueService.processAndIssue({
-        userId,
-        courseId,
-        moduleId,
-        lessonId,
-        title: quiz?.title
-          ? `Attestato: ${quiz.title}`
-          : "Certificato di Completamento Modulo",
-        subtitle: `Modulo superato con esito positivo (Voto: ${finalScore.toFixed(2)} / ${maxScore})`,
-        score: scorePercentage,
-        completionPercentage: 100,
-      });
-    } else {
+    if (!courseId || !moduleId) {
       logger.warn(
-        "⚠️ Impossibile emettere certificato: courseId o moduleId mancanti nel quiz",
-        { quizId, courseId, moduleId, lessonId }
+        "⚠️ Impossibile emettere certificato: courseId o moduleId mancanti nel record del quiz",
+        { quizId, courseId, moduleId }
       );
+      return { success: false, error: "Dati corso/modulo mancanti nel quiz. Controllare le relazioni." };
     }
 
-    logger.info("Gamification, Badge e Certificati elaborati con successo", {
+    const maxScore = Number(quiz?.maxScore ?? 10);
+    const scorePercentage = (finalScore / maxScore) * 100;
+
+    logger.info("👉 Avvio automatico generazione certificato...", {
+      userId,
+      courseId,
+      moduleId,
+      lessonId,
+      finalScore,
+      maxScore,
+      scorePercentage,
+    });
+
+    const certResult = await autoIssueService.processAndIssue({
+      userId,
+      courseId,
+      moduleId,
+      lessonId,
+      title: quiz?.title
+        ? `Attestato: ${quiz.title}`
+        : "Certificato di Completamento Modulo",
+      subtitle: `Modulo superato con esito positivo (Voto: ${finalScore.toFixed(2)} / ${maxScore})`,
+      score: scorePercentage,
+      completionPercentage: 100,
+    });
+
+    logger.info("✅ Gamification, Badge e Certificati elaborati con successo", {
       userId,
       quizId,
       finalScore,
     });
 
-    return certResult;
-  } catch (error) {
-    logger.error(
-      "❌ Errore durante l'elaborazione di Gamification/Certificati:",
-      error
-    );
-    return null;
+    return { success: true, certificate: certResult?.certificate };
+  } catch (error: any) {
+    logger.error("❌ Errore durante l'elaborazione di Gamification/Certificati:", error);
+    return { success: false, error: error.message || "Errore sconosciuto." };
   }
 }
 
@@ -213,8 +209,7 @@ export async function submitStudentAttemptAction(
       throw new Error("Hai già sottomesso un tentativo per questo quiz.");
     }
 
-    const { quiz, questions } =
-      await quizRepository.findFullQuizStructure(quizId);
+    const { quiz, questions } = await quizRepository.findFullQuizStructure(quizId);
 
     let calculatedAutoScore = 0.0;
     let wrongClosedAnswers = 0;
@@ -292,7 +287,7 @@ export async function submitStudentAttemptAction(
 
     let certResult = null;
 
-    // ⚡ SE IL QUIZ HA SOLO DOMANDE CHIUSE: Emissione immediata Certificato + Gamification
+    // ⚡ SE IL QUIZ HA SOLO DOMANDE CHIUSE: Emissione immediata
     if (!hasOpenQuestions) {
       certResult = await processGamificationAndCertificates(
         studentSession.id,
@@ -386,8 +381,16 @@ export async function gradeOpenAnswerAction(payload: {
         .single(),
     ]);
 
-    const targetEmail = studentProfile?.email;
+    // ⚡ 1. ESECUZIONE GAMIFICATION & CERTIFICATO (Prima dell'email)
+    const certResult = await processGamificationAndCertificates(
+      currentAttempt.studentId,
+      currentAttempt.quizId,
+      quiz,
+      finalScore,
+    );
 
+    // ⚡ 2. INVIO EMAIL CON EVENTUALE LINK AL CERTIFICATO
+    const targetEmail = studentProfile?.email;
     if (targetEmail) {
       await sendQuizGradedMail(targetEmail, {
         first_name: studentProfile?.first_name ?? "",
@@ -397,18 +400,10 @@ export async function gradeOpenAnswerAction(payload: {
         score: finalScore.toFixed(2),
         final_score: finalScore.toFixed(2),
         max_score: quiz?.maxScore?.toString() ?? "10",
-        comment:
-          payload.comment ?? "Nessun commento aggiuntivo fornito dal docente.",
+        comment: payload.comment ?? "Nessun commento aggiuntivo fornito dal docente.",
+        certificate_url: certResult?.certificate?.pdfUrl || "",
       });
     }
-
-    // ⚡ GAMIFICATION, BADGE & CERTIFICATE EMISSION
-    await processGamificationAndCertificates(
-      currentAttempt.studentId,
-      currentAttempt.quizId,
-      quiz,
-      finalScore,
-    );
 
     // Invalidazione cache Next.js per aggiornare la UI
     revalidatePath("/admin/quiz", "layout");
@@ -420,6 +415,8 @@ export async function gradeOpenAnswerAction(payload: {
     return {
       success: true,
       finalScore,
+      certificate: certResult?.certificate || null,
+      certificateError: certResult?.error || null,
     };
   } catch (error: any) {
     logger.error(

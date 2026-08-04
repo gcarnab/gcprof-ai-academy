@@ -42,8 +42,8 @@ export class SupabaseQuizRepository implements IQuizRepository {
         penalty_enabled: parsedQuiz.metadata.penalty_enabled,
         negative_mark: parsedQuiz.metadata.negative_mark,
         created_by: adminId,
-        course_id: parsedQuiz.metadata.courseId || null, // 👈 Aggiunto
-        module_id: parsedQuiz.metadata.moduleId || null, // 👈 Aggiunto
+        course_id: parsedQuiz.metadata.courseId || null,
+        module_id: parsedQuiz.metadata.moduleId || null,
       })
       .select("*")
       .single();
@@ -161,52 +161,51 @@ export class SupabaseQuizRepository implements IQuizRepository {
     courseId: string,
     moduleId?: string,
   ): Promise<void> {
+    // FIX: Costruiamo il payload in modo condizionale per non sovrascrivere module_id a null
+    // se non viene passato.
+    const payload: any = {
+      course_id: courseId,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (moduleId !== undefined) {
+      payload.module_id = moduleId ?? null;
+    }
+
     const { error } = await supabase
       .from("quizzes")
-      .update({
-        course_id: courseId,
-        module_id: moduleId ?? null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq("id", quizId);
 
     if (error) throw new Error(error.message);
   }
 
   async removeFromCourse(quizId: string, courseId: string): Promise<void> {
-    const { error } = await supabase
-      .from("course_quizzes")
-      .delete()
-      .eq("course_id", courseId)
-      .eq("quiz_id", quizId);
+    // FIX: Allineato alla struttura diretta per rimuovere l'associazione dal quiz stesso
+    const { error: updateError } = await supabase
+      .from("quizzes")
+      .update({
+        course_id: null,
+        module_id: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", quizId);
 
-    if (error) throw new Error(error.message);
+    if (updateError) throw new Error(updateError.message);
   }
 
   async findActiveQuizzesByCourse(courseId: string): Promise<Quiz[]> {
+    // FIX: Ora la query viene effettuata direttamente sulla tabella quizzes.
+    // Questo risolve l'omissione di course_id e module_id nella SELECT precedente.
     const { data, error } = await supabase
-      .from("course_quizzes")
-      .select(
-        `
-        quizzes(
-          id,
-          title,
-          description,
-          status,
-          penalty_enabled,
-          negative_mark,
-          max_score,
-          created_by,
-          created_at,
-          updated_at
-        )
-      `,
-      )
+      .from("quizzes")
+      .select("*")
       .eq("course_id", courseId)
-      .eq("quizzes.status", "active");
+      .eq("status", "active")
+      .order("created_at", { ascending: true });
 
     if (error) throw new Error(error.message);
-    return (data ?? []).map((item: any) => this.mapToQuizEntity(item.quizzes));
+    return (data ?? []).map((item: any) => this.mapToQuizEntity(item));
   }
 
   async delete(id: string): Promise<void> {
@@ -587,8 +586,8 @@ export class SupabaseQuizRepository implements IQuizRepository {
       negativeMark: Number(q.negative_mark ?? 0.25),
       maxScore: Number(q.max_score ?? 10),
       passingScore: Number(q.passing_score ?? 60),
-      courseId: q.course_id ?? undefined, // 👈 Aggiunto
-      moduleId: q.module_id ?? undefined, // 👈 Aggiunto
+      courseId: q.course_id ?? undefined,
+      moduleId: q.module_id ?? undefined,
       createdBy: q.created_by ?? undefined,
       createdAt: new Date(q.created_at),
       updatedAt: new Date(q.updated_at),

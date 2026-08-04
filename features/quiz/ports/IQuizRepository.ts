@@ -37,7 +37,7 @@ export interface IQuizRepository {
   updateStatus(id: string, status: QuizStatus): Promise<void>;
 
   /**
-   * Associa un quiz specifico a un determinato corso (Tabella pivot course_quizzes).
+   * Associa un quiz specifico a un determinato corso .
    */
   assignToCourse(quizId: string, courseId: string): Promise<void>;
 
