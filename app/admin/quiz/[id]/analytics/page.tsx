@@ -168,12 +168,13 @@ export default async function AdminQuizAnalyticsPage({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 
           <AssignQuizButton
             quizId={quiz.id}
             quizTitle={quiz.title}
             courses={courses}
           />
-
+        */}
           <Button asChild>
             <Link href={`/admin/quiz/${quiz.id}/review`}>Correggi Quiz</Link>
           </Button>

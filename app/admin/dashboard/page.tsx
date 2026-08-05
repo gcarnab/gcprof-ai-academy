@@ -45,7 +45,9 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
 
   // Inizializzazione repository e servizio per le impostazioni
   const systemSettingsRepository = new SupabaseSystemSettingsRepository();
-  const systemSettingsService = new SystemSettingsService(systemSettingsRepository);
+  const systemSettingsService = new SystemSettingsService(
+    systemSettingsRepository,
+  );
 
   // 📡 Esecuzione in parallelo delle chiamate principali
   const [
@@ -60,10 +62,45 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     getAdminDashboardStats(),
     getTrackingStats(),
     getAllResourcesAdmin(),
+
+    /*
+
     supabase
       .from("quizzes")
       .select("id, title, status, passing_score, created_at")
       .order("created_at", { ascending: false }),
+*/
+
+    supabase
+      .from("quizzes")
+      .select(
+        `
+    id,
+    title,
+    status,
+    passing_score,
+    created_at,
+    course_id,
+    module_id,
+
+    courses (
+      id,
+      title
+    ),
+
+    course_modules (
+      id,
+      title
+    ),
+
+    quiz_attempts (
+      id,
+      status
+    )
+  `,
+      )
+      .order("created_at", { ascending: false }),
+
     supabase
       .from("courses")
       .select("id, title, slug, published, difficulty, created_at")
@@ -141,7 +178,19 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     courseStats,
     raw: {
       ...(stats?.raw || {}),
-      quizzes: quizzesRes.data || [],
+      quizzes: (quizzesRes.data || []).map((quiz: any) => ({
+        ...quiz,
+
+        attemptsCount: quiz.quiz_attempts?.length ?? 0,
+
+        pendingReviews:
+          quiz.quiz_attempts?.filter((a: any) => a.status === "submitted")
+            .length ?? 0,
+
+        assignedCourse: quiz.courses ?? null,
+
+        assignedModule: quiz.course_modules ?? null,
+      })),
     },
   };
 

@@ -49,6 +49,7 @@ export default function AdminDashboard({
     (c: any) => c.name
   );
   const availableQuizzes = stats.raw?.quizzes || [];
+  const availableCourses = stats.courseStats || [];
 
   function changeTab(tab: string) {
     router.push(`/admin/dashboard?tab=${tab}`);
@@ -102,7 +103,7 @@ export default function AdminDashboard({
 
           {/* QUIZZES */}
           {currentTab === "quizzes" && (
-            <QuizzesTab availableQuizzes={availableQuizzes} />
+            <QuizzesTab availableQuizzes={availableQuizzes} availableCourses={availableCourses} />
           )}
 
           {/* REQUESTS */}
