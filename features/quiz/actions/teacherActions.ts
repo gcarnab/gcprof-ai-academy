@@ -44,6 +44,7 @@ async function processGamificationAndCertificates(
   quizId: string,
   quiz: any,
   finalScore: number,
+  issuedBy?: string,
 ) {
   try {
     await onQuizCompletedAction({ userId, quizId, finalScore });
@@ -72,6 +73,7 @@ async function processGamificationAndCertificates(
       subtitle: `Modulo superato con esito positivo (Voto: ${finalScore.toFixed(2)} / ${maxScore})`,
       score: scorePercentage,
       completionPercentage: 100,
+      issuedBy,
     });
 
     return { success: true, certificate: certResult?.certificate };
@@ -153,6 +155,7 @@ export async function gradeOpenAnswerAction(payload: {
       currentAttempt.quizId,
       quiz,
       finalScore,
+      adminSession.id,
     );
 
     const targetEmail = studentProfile?.email;

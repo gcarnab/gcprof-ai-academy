@@ -198,6 +198,10 @@ export class CertificateService {
         ? Number(data.completionPercentage)
         : 100;
 
+    // Recupero preventivo delle impostazioni di sistema per risolvere il template_id predefinito prima dell'inserimento
+    const settings = await this.repository.getSettings();
+    const effectiveTemplateId = data.templateId || settings?.defaultTemplateId || null;
+
     const userCertificates = await this.repository.getUserCertificates(
       data.userId,
     );
@@ -220,10 +224,14 @@ export class CertificateService {
         data.subtitle !== existingCertificate.subtitle;
       const titleChanged =
         data.title !== undefined && data.title !== existingCertificate.title;
+      const templateChanged =
+        effectiveTemplateId !== null && existingCertificate.templateId !== effectiveTemplateId;
+      const issuedByChanged =
+        data.issuedBy !== undefined && data.issuedBy !== existingCertificate.issuedBy;
 
-      if (scoreChanged || subtitleChanged || titleChanged) {
+      if (scoreChanged || subtitleChanged || titleChanged || templateChanged || issuedByChanged) {
         logger.info(
-          `🔄 [CertificateService] Aggiornamento certificato ${existingCertificate.id} con quiz_score (${currentScore} ➔ ${finalScore})...`,
+          `🔄 [CertificateService] Aggiornamento certificato ${existingCertificate.id} con nuovi dati...`,
         );
 
         const updatedCertificate = await this.repository.updateCertificate(
@@ -233,6 +241,8 @@ export class CertificateService {
             completionPercentage: safePercentage,
             title: data.title ?? existingCertificate.title,
             subtitle: finalSubtitle,
+            templateId: effectiveTemplateId ?? existingCertificate.templateId,
+            issuedBy: data.issuedBy ?? existingCertificate.issuedBy,
             pdfGenerated: false,
             emailSent: false,
           },
@@ -244,13 +254,13 @@ export class CertificateService {
       return existingCertificate;
     }
 
-    // Creazione nuovo certificato
+    // Creazione nuovo certificato con templateId ed issuedBy valorizzati in origine
     const certificatePayload = {
       userId: data.userId,
       courseId: data.courseId,
       moduleId: data.moduleId,
       lessonId: data.lessonId ?? null,
-      templateId: data.templateId ?? null,
+      templateId: effectiveTemplateId,
       issuedBy: data.issuedBy ?? null,
       title: data.title,
       subtitle: finalSubtitle,
@@ -279,146 +289,156 @@ export class CertificateService {
     studentName: string,
     studentEmail: string,
   ): Promise<void> {
-    const settings = await this.repository.getSettings();
+    try {
+      const settings = await this.repository.getSettings();
 
-    if (!settings) {
-      logger.warn(
-        `⚠️ [CertificateService] Impostazioni certificato mancanti.`,
-      );
-      return;
-    }
+      if (!settings) {
+        logger.warn(
+          `⚠️ [CertificateService] Impostazioni certificato mancanti.`,
+        );
+        return;
+      }
 
-    let pdfBuffer: Buffer | null = null;
-    let pdfUrl = certificate.pdfUrl;
-    const supabase = getSupabaseAdmin();
-    const filePath = `${certificate.userId}/${certificate.id}.pdf`;
+      let pdfBuffer: Buffer | null = null;
+      let pdfUrl = certificate.pdfUrl;
+      const supabase = getSupabaseAdmin();
+      const filePath = `${certificate.userId}/${certificate.id}.pdf`;
 
-    if (settings.autoGeneratePdf && !certificate.pdfGenerated) {
-      const templateId = certificate.templateId || settings.defaultTemplateId;
-      if (templateId) {
-        const template = await this.repository.getTemplate(templateId);
-        if (template) {
-          const appUrl =
-            process.env.NEXT_PUBLIC_APP_URL || "https://gcprof-academy.com";
-          const verificationUrl = `${appUrl}/verify-certificate/${certificate.verificationToken || certificate.id}`;
+      if (settings.autoGeneratePdf && !certificate.pdfGenerated) {
+        const templateId = certificate.templateId || settings.defaultTemplateId;
+        if (templateId) {
+          const template = await this.repository.getTemplate(templateId);
+          if (template) {
+            const appUrl =
+              process.env.NEXT_PUBLIC_APP_URL || "https://gcprof-academy.com";
+            const verificationUrl = `${appUrl}/verify-certificate/${certificate.verificationToken || certificate.id}`;
 
-          const rawLogoPath =
-            template.logoUrl ||
-            settings.logoUrl ||
-            "/gcprof-ai-academy_logo_01.png";
+            const rawLogoPath =
+              template.logoUrl ||
+              settings.logoUrl ||
+              "/gcprof-ai-academy_logo_01.png";
 
-          const logoBase64 = await resolveImageAsBase64(rawLogoPath);
+            const logoBase64 = await resolveImageAsBase64(rawLogoPath);
 
-          const numericScore =
-            certificate.score != null ? Number(certificate.score) : NaN;
-          const scoreFormatted = !isNaN(numericScore)
-            ? numericScore.toFixed(0)
-            : "100";
+            const numericScore =
+              certificate.score != null ? Number(certificate.score) : NaN;
+            const scoreFormatted = !isNaN(numericScore)
+              ? numericScore.toFixed(0)
+              : "100";
 
-          const compiledHtml = template.htmlTemplate
-            .replace(/\{\{logoUrl\}\}/g, logoBase64)
-            .replace(/\{\{studentName\}\}/g, studentName)
-            .replace(
-              /\{\{courseTitle\}\}/g,
-              certificate.title || "Corso di Formazione",
-            )
-            .replace(/\{\{subtitle\}\}/g, certificate.subtitle || "")
-            .replace(/\{\{score\}\}/g, scoreFormatted)
-            .replace(/\{\{date\}\}/g, new Date().toLocaleDateString("it-IT"))
-            .replace(
-              /\{\{certificateNumber\}\}/g,
-              certificate.certificateNumber || certificate.id,
-            )
-            .replace(/\{\{verificationUrl\}\}/g, verificationUrl);
+            const compiledHtml = template.htmlTemplate
+              .replace(/\{\{logoUrl\}\}/g, logoBase64)
+              .replace(/\{\{studentName\}\}/g, studentName)
+              .replace(
+                /\{\{courseTitle\}\}/g,
+                certificate.title || "Corso di Formazione",
+              )
+              .replace(/\{\{subtitle\}\}/g, certificate.subtitle || "")
+              .replace(/\{\{score\}\}/g, scoreFormatted)
+              .replace(/\{\{date\}\}/g, new Date().toLocaleDateString("it-IT"))
+              .replace(
+                /\{\{certificateNumber\}\}/g,
+                certificate.certificateNumber || certificate.id,
+              )
+              .replace(/\{\{verificationUrl\}\}/g, verificationUrl);
 
-          const fullHtml = `
-            <!DOCTYPE html>
-            <html lang="it">
-              <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                  ${template.cssTemplate || ""}
-                </style>
-              </head>
-              <body>
-                ${compiledHtml}
-              </body>
-            </html>
-          `;
+            const fullHtml = `
+              <!DOCTYPE html>
+              <html lang="it">
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <style>
+                    ${template.cssTemplate || ""}
+                  </style>
+                </head>
+                <body>
+                  ${compiledHtml}
+                </body>
+              </html>
+            `;
 
-          pdfBuffer = await generatePdfFromHtml(fullHtml);
+            try {
+              pdfBuffer = await generatePdfFromHtml(fullHtml);
 
-          const { error: uploadError } = await supabase.storage
-            .from("certificates")
-            .upload(filePath, pdfBuffer, {
-              contentType: "application/pdf",
-              upsert: true,
-              cacheControl: "0",
-            });
+              const { error: uploadError } = await supabase.storage
+                .from("certificates")
+                .upload(filePath, pdfBuffer, {
+                  contentType: "application/pdf",
+                  upsert: true,
+                  cacheControl: "0",
+                });
 
-          if (!uploadError) {
-            const { data: publicUrlData } = supabase.storage
-              .from("certificates")
-              .getPublicUrl(filePath);
+              if (!uploadError) {
+                const { data: publicUrlData } = supabase.storage
+                  .from("certificates")
+                  .getPublicUrl(filePath);
 
-            pdfUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+                pdfUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
 
-            await this.repository.updateCertificate(certificate.id, {
-              pdfUrl: pdfUrl,
-              pdfGenerated: true,
-            });
+                await this.repository.updateCertificate(certificate.id, {
+                  pdfUrl: pdfUrl,
+                  pdfGenerated: true,
+                });
 
-            certificate.pdfUrl = pdfUrl;
-            certificate.pdfGenerated = true;
+                certificate.pdfUrl = pdfUrl;
+                certificate.pdfGenerated = true;
+              } else {
+                logger.error(
+                  "❌ Errore durante l'upload del PDF nello Storage:",
+                  uploadError,
+                );
+              }
+            } catch (pdfErr) {
+              logger.error("❌ Errore durante la generazione del PDF:", pdfErr);
+            }
           } else {
-            logger.error(
-              "❌ Errore durante l'upload del PDF nello Storage:",
-              uploadError,
-            );
+            logger.warn(`⚠️ Template con ID ${templateId} non trovato per il certificato ${certificate.id}`);
           }
         }
       }
-    }
 
-    if (
-      settings.autoSendEmail &&
-      !certificate.emailSent &&
-      !pdfBuffer &&
-      pdfUrl
-    ) {
-      try {
-        const { data: fileData, error: downloadError } = await supabase.storage
-          .from("certificates")
-          .download(filePath);
+      if (
+        settings.autoSendEmail &&
+        !certificate.emailSent &&
+        !pdfBuffer &&
+        pdfUrl
+      ) {
+        try {
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from("certificates")
+            .download(filePath);
 
-        if (!downloadError && fileData) {
-          const arrayBuffer = await fileData.arrayBuffer();
-          pdfBuffer = Buffer.from(arrayBuffer);
+          if (!downloadError && fileData) {
+            const arrayBuffer = await fileData.arrayBuffer();
+            pdfBuffer = Buffer.from(arrayBuffer);
+          }
+        } catch (err) {
+          logger.error("Impossibile recuperare il PDF dallo Storage:", err);
         }
-      } catch (err) {
-        logger.error("Impossibile recuperare il PDF dallo Storage:", err);
       }
-    }
 
-    if (
-      settings.autoSendEmail &&
-      !certificate.emailSent &&
-      pdfBuffer &&
-      pdfUrl
-    ) {
-      try {
-        await this.emailService.sendCertificateEmail(
-          studentEmail,
-          studentName,
-          certificate.title || "Corso",
-          pdfBuffer,
-          pdfUrl,
-        );
-        await this.markEmailSent(certificate.id);
-      } catch (error) {
-        logger.error("Errore durante l'invio dell'email certificato:", error);
+      if (
+        settings.autoSendEmail &&
+        !certificate.emailSent &&
+        pdfBuffer &&
+        pdfUrl
+      ) {
+        try {
+          await this.emailService.sendCertificateEmail(
+            studentEmail,
+            studentName,
+            certificate.title || "Corso",
+            pdfBuffer,
+            pdfUrl,
+          );
+          await this.markEmailSent(certificate.id);
+        } catch (error) {
+          logger.error("Errore durante l'invio dell'email certificato:", error);
+        }
       }
+    } catch (err) {
+      logger.error("❌ Errore generale in processAutomations:", err);
     }
   }
 
