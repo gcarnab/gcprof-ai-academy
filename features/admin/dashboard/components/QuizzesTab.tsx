@@ -34,6 +34,9 @@ export default function QuizzesTab({
   const [assignmentFilter, setAssignmentFilter] = useState<
     "all" | "assigned" | "unassigned"
   >("all");
+  const [reviewFilter, setReviewFilter] = useState<
+    "all" | "has_pending" | "no_pending"
+  >("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -84,6 +87,10 @@ export default function QuizzesTab({
     () => availableQuizzes.filter((q) => q.status === "draft").length,
     [availableQuizzes],
   );
+  const pendingReviewsQuizzesCount = useMemo(
+    () => availableQuizzes.filter((q) => (q.pendingReviews || 0) > 0).length,
+    [availableQuizzes],
+  );
 
   // Filtraggio lato client
   const filteredQuizzes = useMemo(() => {
@@ -102,9 +109,19 @@ export default function QuizzesTab({
             ? !!quiz.assignedCourse
             : !quiz.assignedCourse;
 
-      return matchesTitle && matchesStatus && matchesAssignment;
+      const pendingCount = quiz.pendingReviews || 0;
+      const matchesReview =
+        reviewFilter === "all"
+          ? true
+          : reviewFilter === "has_pending"
+            ? pendingCount > 0
+            : pendingCount === 0;
+
+      return (
+        matchesTitle && matchesStatus && matchesAssignment && matchesReview
+      );
     });
-  }, [availableQuizzes, searchTerm, statusFilter]);
+  }, [availableQuizzes, searchTerm, statusFilter, assignmentFilter, reviewFilter]);
 
   // Gestione Paginazione
   const totalPages = Math.max(
@@ -137,6 +154,7 @@ export default function QuizzesTab({
     setSearchTerm("");
     setStatusFilter("all");
     setAssignmentFilter("all");
+    setReviewFilter("all");
     setCurrentPage(1);
   };
 
@@ -163,6 +181,9 @@ export default function QuizzesTab({
             </span>
             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-500/20">
               Bozze: <strong className="ml-1">{draftQuizzesCount}</strong>
+            </span>
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-500/20">
+              Da Correggere: <strong className="ml-1">{pendingReviewsQuizzesCount}</strong>
             </span>
           </div>
         </div>
@@ -195,9 +216,9 @@ export default function QuizzesTab({
       </div>
 
       {/* BARRA FILTRI E RICERCA */}
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center bg-card p-3 rounded-xl border">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-card p-3 rounded-xl border">
         {/* Input Ricerca per Titolo */}
-        <div className="sm:col-span-6 relative">
+        <div className="md:col-span-4 relative">
           <input
             type="text"
             placeholder="🔍 Cerca quiz per titolo..."
@@ -217,7 +238,7 @@ export default function QuizzesTab({
         </div>
 
         {/* Filtro per Stato */}
-        <div className="sm:col-span-4">
+        <div className="md:col-span-2">
           <select
             value={statusFilter}
             onChange={(e) => handleStatusFilterChange(e.target.value as any)}
@@ -229,15 +250,17 @@ export default function QuizzesTab({
           </select>
         </div>
 
-        <div className="sm:col-span-3">
+        {/* Filtro Assegnazione */}
+        <div className="md:col-span-2">
           <select
             value={assignmentFilter}
-            onChange={(e) =>
+            onChange={(e) => {
               setAssignmentFilter(
                 e.target.value as "all" | "assigned" | "unassigned",
-              )
-            }
-            className="w-full px-3 py-2 text-sm rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-violet-500"
+              );
+              setCurrentPage(1);
+            }}
+            className="w-full px-3 py-2 text-sm rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-violet-500 cursor-pointer"
           >
             <option value="all">Tutti i quiz</option>
             <option value="assigned">Solo assegnati</option>
@@ -245,13 +268,42 @@ export default function QuizzesTab({
           </select>
         </div>
 
+        {/* NUOVO: Filtro da Correggere */}
+        <div className="md:col-span-2">
+          <select
+            value={reviewFilter}
+            onChange={(e) => {
+              setReviewFilter(
+                e.target.value as "all" | "has_pending" | "no_pending",
+              );
+              setCurrentPage(1);
+            }}
+            className="w-full px-3 py-2 text-sm rounded-lg border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-violet-500 cursor-pointer font-medium text-orange-600 dark:text-orange-400"
+          >
+            <option value="all" className="text-foreground">
+              Tutte le revisioni
+            </option>
+            <option value="has_pending" className="text-foreground">
+              ⚠️ Da correggere (&gt; 0)
+            </option>
+            <option value="no_pending" className="text-foreground">
+              ✅ Completati (0)
+            </option>
+          </select>
+        </div>
+
         {/* Bottone Reset Filtri */}
-        <div className="sm:col-span-2">
+        <div className="md:col-span-2">
           <Button
             variant="outline"
             size="sm"
             onClick={resetFilters}
-            disabled={!searchTerm && statusFilter === "all"}
+            disabled={
+              !searchTerm &&
+              statusFilter === "all" &&
+              assignmentFilter === "all" &&
+              reviewFilter === "all"
+            }
             className="w-full text-xs"
           >
             Reset Filtri
@@ -349,7 +401,7 @@ export default function QuizzesTab({
 
                     <td className="p-4 text-center">
                       {quiz.pendingReviews > 0 ? (
-                        <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2 py-1 text-xs font-bold text-orange-700 dark:text-orange-400">
+                        <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2 py-1 text-xs font-bold text-orange-700 dark:text-orange-400 border border-orange-500/20">
                           {quiz.pendingReviews}
                         </span>
                       ) : (

@@ -1,3 +1,38 @@
+--================ PULIZIA DB ================
+
+TRUNCATE TABLE 
+  quiz_answers,
+  quiz_attempts,
+  certificates,
+  user_badges,
+  module_completions,
+  profile_lessons_progress,
+  user_course_stats,
+  user_page_views,
+  user_sessions
+RESTART IDENTITY CASCADE;
+
+
+-- 1. Tabelle figlie / dipendenti da tentativi quiz
+DELETE FROM quiz_answers;
+
+-- 2. Tentativi quiz e certificati
+DELETE FROM quiz_attempts;
+DELETE FROM certificates;
+
+-- 3. Gamification e progresso
+DELETE FROM user_badges;
+DELETE FROM module_completions;
+DELETE FROM profile_lessons_progress;
+DELETE FROM user_course_stats;
+
+-- 4. Tracciamento utenti e sessioni
+DELETE FROM user_page_views;
+DELETE FROM user_sessions;
+
+
+
+
 SELECT pg_get_functiondef('public.track_lesson_activity'::regproc);
 
 

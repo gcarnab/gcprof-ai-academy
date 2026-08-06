@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
-// ⚡ Import aggiornato verso teacherActions
 import { gradeOpenAnswerAction } from "../actions/teacherActions";
+import { StudentProfile } from "../types/quizReview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, GraduationCap, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface CorrectionFormProps {
@@ -16,11 +17,12 @@ interface CorrectionFormProps {
   questionId: string;
   questionText: string;
   studentAnswerText: string;
-  studentEmail: string;
+  studentProfile: StudentProfile;
   editMode?: boolean;
   initialScore?: number | string;
   initialComment?: string;
   reviewId?: string;
+  onGradedSuccess?: (attemptId: string, finalScore: number) => void;
 }
 
 const normalizeScore = (val: number | string | undefined): string => {
@@ -34,11 +36,12 @@ export function CorrectionForm({
   questionId,
   questionText,
   studentAnswerText,
-  studentEmail,
+  studentProfile,
   editMode = false,
   initialScore,
   initialComment,
   reviewId,
+  onGradedSuccess,
 }: CorrectionFormProps) {
   const [score, setScore] = useState<string>(normalizeScore(initialScore));
   const [comment, setComment] = useState<string>(initialComment || "");
@@ -65,11 +68,14 @@ export function CorrectionForm({
         reviewId: editMode ? reviewId : undefined,
       });
 
-      if (response.success) {
+      if (response.success && response.finalScore !== undefined) {
         setResult({
           success: true,
-          message: `Valutazione ${editMode ? "aggiornata" : "registrata"} con successo! Voto finale ricalcolato: ${response.finalScore?.toFixed(2)} / 10.00`,
+          message: `Valutazione ${editMode ? "aggiornata" : "registrata"} con successo! Voto finale ricalcolato: ${response.finalScore.toFixed(2)} / 10.00`,
         });
+        if (onGradedSuccess) {
+          onGradedSuccess(attemptId, response.finalScore);
+        }
       } else {
         setResult({
           success: false,
@@ -81,17 +87,30 @@ export function CorrectionForm({
 
   const scoreOptions = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6];
 
+  const fullName = `${studentProfile.firstName || ""} ${studentProfile.lastName || ""}`.trim() || studentProfile.email;
+
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-6">
       <Card className="border-border bg-card">
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl font-bold">Valutazione Risposta Aperta</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-6 w-6 text-primary" />
+              <CardTitle className="text-xl font-bold">Valutazione Risposta Aperta</CardTitle>
+            </div>
+            <Badge variant={studentProfile.userType === "SCHOOL_STUDENT" ? "default" : "secondary"}>
+              {studentProfile.userType === "SCHOOL_STUDENT" ? "Studente Scolastico" : "Utente Esterno"}
+            </Badge>
           </div>
-          <CardDescription>
+          <CardDescription className="pt-2">
             {editMode ? "Modifica della revisione per:" : "Revisione del tentativo sottomesso da:"}{" "}
-            <span className="font-semibold text-foreground">{studentEmail}</span>
+            <span className="font-semibold text-foreground">{fullName}</span> ({studentProfile.email})
+            {studentProfile.studyPath && (
+              <span className="block text-xs mt-1">
+                Indirizzo: <strong className="text-foreground">{studentProfile.studyPath}</strong>
+                {studentProfile.section && ` | Sezione: ${studentProfile.section}`}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
 

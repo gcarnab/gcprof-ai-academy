@@ -173,9 +173,11 @@ export async function gradeOpenAnswerAction(payload: {
       });
     }
 
+    // Revalidation puntuale sulle rotte del Quiz
+    revalidatePath(`/admin/quiz/${currentAttempt.quizId}/review`, "page");
+    revalidatePath(`/admin/quiz/${currentAttempt.quizId}/analytics`, "page");
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
-    revalidatePath(`/admin/quiz/${payload.attemptId}`, "layout");
     revalidatePath("/dashboard", "layout");
     revalidatePath("/dashboard/gamification", "layout");
 

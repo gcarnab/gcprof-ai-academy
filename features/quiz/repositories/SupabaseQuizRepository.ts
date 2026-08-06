@@ -187,7 +187,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .update({
         course_id: null,
         module_id: null,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq("id", quizId);
 

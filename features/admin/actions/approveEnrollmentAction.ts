@@ -67,6 +67,14 @@ export async function approveEnrollmentAction(
     };
   }
 
+  // Sanitizzazione parametri d'ingresso
+  if (!profileId || !courseId) {
+    return {
+      success: false,
+      error: "ID profilo o ID corso non valido.",
+    };
+  }
+
   try {
     logger.info(
       `Approvazione iscrizione corso. Profile=${profileId} Course=${courseId}`,
@@ -251,9 +259,20 @@ export async function syncUserCoursesAction(
     };
   }
 
+  // Sanitizzazione parametri d'ingresso per prevenire valori null/undefined/vuoti
+  if (!profileId) {
+    return { success: false, error: "ID Profilo mancante." };
+  }
+
+  const validCourseIds = Array.isArray(newCourseIds)
+    ? newCourseIds.filter(
+        (id): id is string => typeof id === "string" && id.trim() !== "",
+      )
+    : [];
+
   try {
     logger.info(
-      `Sincronizzazione corsi. Profile=${profileId} Nuovi Corsi=[${newCourseIds.join(",")}]`,
+      `Sincronizzazione corsi. Profile=${profileId} Nuovi Corsi=[${validCourseIds.join(",")}]`,
     );
 
     // 2. Attiva il profilo utente (indispensabile per le nuove approvazioni)
@@ -272,18 +291,20 @@ export async function syncUserCoursesAction(
 
     if (fetchError) throw fetchError;
 
-    const currentCourseIds = currentCourses.map((c) => c.course_id);
+    const currentCourseIds = (currentCourses || [])
+      .map((c) => c.course_id)
+      .filter((id): id is string => Boolean(id));
 
     // 4. Calcola le differenze
-    const coursesToAdd = newCourseIds.filter(
+    const coursesToAdd = validCourseIds.filter(
       (id) => !currentCourseIds.includes(id),
     );
     const coursesToRemove = currentCourseIds.filter(
-      (id) => !newCourseIds.includes(id),
+      (id) => !validCourseIds.includes(id),
     );
     const coursesToKeep = currentCourseIds.filter((id) =>
-      newCourseIds.includes(id),
-    ); // <-- NUOVO: Corsi già presenti
+      validCourseIds.includes(id),
+    ); // Corsi già presenti
 
     // 5. Rimuovi i corsi deselezionati
     if (coursesToRemove.length > 0) {
@@ -301,7 +322,7 @@ export async function syncUserCoursesAction(
       const insertData = coursesToAdd.map((courseId) => ({
         profile_id: profileId,
         course_id: courseId,
-        status: "active", // <-- Imposta i nuovi ad active
+        status: "active", // Imposta i nuovi ad active
       }));
 
       const { error: insertError } = await supabaseAdmin
@@ -311,11 +332,11 @@ export async function syncUserCoursesAction(
       if (insertError) throw insertError;
     }
 
-    // 6.5. ATTIVA I CORSI PREESISTENTI (Il fix per il tuo bug)
+    // 6.5. ATTIVA I CORSI PREESISTENTI (Sblocca il corso in "pending")
     if (coursesToKeep.length > 0) {
       const { error: updateError } = await supabaseAdmin
         .from("profile_courses")
-        .update({ status: "active" }) // <-- Sblocca il corso in "pending"
+        .update({ status: "active" })
         .eq("profile_id", profileId)
         .in("course_id", coursesToKeep);
 
@@ -324,7 +345,7 @@ export async function syncUserCoursesAction(
 
     // --- 7. INVIO EMAIL DI CONFERMA ---
     // Procediamo solo se ci sono corsi assegnati
-    if (newCourseIds.length > 0) {
+    if (validCourseIds.length > 0) {
       // A. Recupero dati utente
       const { data: profileData, error: profileFetchError } =
         await supabaseAdmin
@@ -338,7 +359,7 @@ export async function syncUserCoursesAction(
         await supabaseAdmin
           .from("courses")
           .select("title")
-          .in("id", newCourseIds);
+          .in("id", validCourseIds);
 
       if (profileFetchError || coursesFetchError) {
         logger.error("Errore recupero dati per email cumulativa:", {
