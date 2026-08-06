@@ -42,6 +42,21 @@ export interface AdminCourseStat {
   avg_xp_per_student: number;
 }
 
+interface ProgressRecord {
+  course_id: string | number | null;
+  user_id: string;
+}
+
+interface XpRecord {
+  course_id: string | number | null;
+  xp?: number | null;
+}
+
+interface BadgeRecord {
+  course_id: string | number | null;
+  id: string;
+}
+
 /**
  * Recupera la panoramica Gamification dell'utente (Globale + Dettaglio Corsi Iscritti)
  * e filtra restituendo SOLO i corsi a pagamento (is_paid = true)
@@ -83,8 +98,6 @@ export async function getUserGamificationOverview(
           userId, 
           error: coursesError.message 
         });
-        // In caso di errore alla tabella courses, potresti voler gestire un fallback. 
-        // Qui per sicurezza restituiamo errore, o potresti decidere di svuotare l'array.
         return { success: false, error: "Errore nella verifica dei permessi dei corsi." };
       }
 
@@ -128,7 +141,7 @@ export async function getAdminGamificationStats(): Promise<{
         return { success: true, data: [] };
       }
 
-      const { data: xpData } = await supabase.from("profile_course_xp").select("course_id, xp, user_id");
+      const { data: xpData } = await supabase.from("user_xp").select("course_id, xp");
       const { data: badgeData } = await supabase.from("user_badges").select("course_id, id");
       const { data: progressData } = await supabase.from("profile_lessons_progress").select("course_id, user_id");
 
@@ -136,17 +149,17 @@ export async function getAdminGamificationStats(): Promise<{
         const courseIdStr = String(c.id);
 
         const activeStudents = new Set(
-          (progressData || [])
-            .filter((p) => String(p.course_id) === courseIdStr)
-            .map((p) => p.user_id)
+          ((progressData || []) as ProgressRecord[])
+            .filter((p: ProgressRecord) => String(p.course_id) === courseIdStr)
+            .map((p: ProgressRecord) => p.user_id)
         ).size;
 
-        const totalXp = (xpData || [])
-          .filter((x) => String(x.course_id) === courseIdStr)
-          .reduce((acc, curr) => acc + (curr.xp || 0), 0);
+        const totalXp = ((xpData || []) as XpRecord[])
+          .filter((x: XpRecord) => String(x.course_id) === courseIdStr)
+          .reduce((acc: number, curr: XpRecord) => acc + (curr.xp || 0), 0);
 
-        const totalBadges = (badgeData || [])
-          .filter((b) => String(b.course_id) === courseIdStr).length;
+        const totalBadges = ((badgeData || []) as BadgeRecord[])
+          .filter((b: BadgeRecord) => String(b.course_id) === courseIdStr).length;
 
         const avgXp = activeStudents > 0 ? Math.round((totalXp / activeStudents) * 10) / 10 : 0;
 

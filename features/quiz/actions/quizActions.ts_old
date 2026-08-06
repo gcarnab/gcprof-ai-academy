@@ -5,7 +5,7 @@ import { SupabaseQuizRepository } from "../repositories/SupabaseQuizRepository";
 import { parseQuizMarkdown } from "../markdown/parser/quizParser";
 import { JoseTokenService } from "@/features/auth/infrastructure/JoseTokenService";
 import { NextCookieService } from "@/features/auth/infrastructure/NextCookieService";
-import { sendQuizSubmittedMail } from "./quizMailActions";
+import { sendQuizSubmittedMail, sendQuizGradedMail } from "./quizMailActions";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
@@ -55,15 +55,18 @@ async function processGamificationAndCertificates(
   finalScore: number,
 ): Promise<{ success: boolean; certificate?: any; error?: string }> {
   try {
+    // 1. Assegnazione XP per il completamento del quiz
     await onQuizCompletedAction({
       userId,
       quizId,
       finalScore,
     });
 
+    // 2. Sblocco Badge
     const quizCode = quiz?.code || quiz?.slug || quizId;
     await unlockQuizBadge(userId, quizCode);
 
+    // 3. Recupero relazioni Corso, Modulo e Lezione
     const courseId = quiz?.courseId || quiz?.course_id;
     const moduleId = quiz?.moduleId || quiz?.module_id;
     const lessonId = quiz?.lessonId || quiz?.lesson_id;
@@ -79,6 +82,16 @@ async function processGamificationAndCertificates(
     const maxScore = Number(quiz?.maxScore ?? 10);
     const scorePercentage = (finalScore / maxScore) * 100;
 
+    logger.info("👉 Avvio automatico generazione certificato...", {
+      userId,
+      courseId,
+      moduleId,
+      lessonId,
+      finalScore,
+      maxScore,
+      scorePercentage,
+    });
+
     const certResult = await autoIssueService.processAndIssue({
       userId,
       courseId,
@@ -90,6 +103,12 @@ async function processGamificationAndCertificates(
       subtitle: `Modulo superato con esito positivo (Voto: ${finalScore.toFixed(2)} / ${maxScore})`,
       score: scorePercentage,
       completionPercentage: 100,
+    });
+
+    logger.info("✅ Gamification, Badge e Certificati elaborati con successo", {
+      userId,
+      quizId,
+      finalScore,
     });
 
     return { success: true, certificate: certResult?.certificate };
@@ -268,6 +287,7 @@ export async function submitStudentAttemptAction(
 
     let certResult = null;
 
+    // ⚡ SE IL QUIZ HA SOLO DOMANDE CHIUSE: Emissione immediata
     if (!hasOpenQuestions) {
       certResult = await processGamificationAndCertificates(
         studentSession.id,
@@ -296,6 +316,142 @@ export async function submitStudentAttemptAction(
     return {
       success: false,
       error: error.message || "Errore durante il salvataggio delle risposte.",
+    };
+  }
+}
+
+// ======================================================
+// TEACHER ACTIONS
+// ======================================================
+
+export async function gradeOpenAnswerAction(payload: {
+  attemptId: string;
+  questionId: string;
+  score: number;
+  comment?: string;
+  reviewId?: string;
+}) {
+  try {
+    const adminSession = await getAuthenticatedSession("admin");
+
+    if (payload.score < 0 || payload.score > 6) {
+      throw new Error(
+        "Il punteggio della domanda aperta deve essere compreso tra 0 e 6.",
+      );
+    }
+
+    const currentAttempt = await quizRepository.findAttemptById(
+      payload.attemptId,
+    );
+    if (!currentAttempt) {
+      throw new Error("Tentativo dello studente non trovato.");
+    }
+
+    const finalScore = Number(currentAttempt.autoScore) + Number(payload.score);
+
+    const existingReview = await quizRepository.findReviewByAttemptAndQuestion(
+      payload.attemptId,
+      payload.questionId,
+    );
+
+    const reviewPayload = {
+      attemptId: payload.attemptId,
+      teacherId: adminSession.id,
+      questionId: payload.questionId,
+      score: payload.score,
+      comment: payload.comment,
+    };
+
+    if (existingReview) {
+      await quizRepository.updateReviewAndGrade(
+        existingReview.id,
+        reviewPayload,
+        finalScore,
+      );
+    } else {
+      await quizRepository.submitReviewAndGrade(reviewPayload, finalScore);
+    }
+
+    const [quiz, { data: studentProfile }] = await Promise.all([
+      quizRepository.findById(currentAttempt.quizId),
+      getSupabaseAdmin()
+        .from("profiles")
+        .select("email, first_name, last_name, display_name")
+        .eq("id", currentAttempt.studentId)
+        .single(),
+    ]);
+
+    // ⚡ 1. ESECUZIONE GAMIFICATION & CERTIFICATO (Prima dell'email)
+    const certResult = await processGamificationAndCertificates(
+      currentAttempt.studentId,
+      currentAttempt.quizId,
+      quiz,
+      finalScore,
+    );
+
+    // ⚡ 2. INVIO EMAIL CON EVENTUALE LINK AL CERTIFICATO
+    const targetEmail = studentProfile?.email;
+    if (targetEmail) {
+      await sendQuizGradedMail(targetEmail, {
+        first_name: studentProfile?.first_name ?? "",
+        last_name: studentProfile?.last_name ?? "",
+        display_name: studentProfile?.display_name ?? "",
+        quiz_title: quiz?.title ?? "Quiz",
+        score: finalScore.toFixed(2),
+        final_score: finalScore.toFixed(2),
+        max_score: quiz?.maxScore?.toString() ?? "10",
+        comment: payload.comment ?? "Nessun commento aggiuntivo fornito dal docente.",
+        certificate_url: certResult?.certificate?.pdfUrl || "",
+      });
+    }
+
+    // Invalidazione cache Next.js per aggiornare la UI
+    revalidatePath("/admin/quiz", "layout");
+    revalidatePath("/admin/dashboard", "layout");
+    revalidatePath(`/admin/quiz/${payload.attemptId}`, "layout");
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard/gamification", "layout");
+
+    return {
+      success: true,
+      finalScore,
+      certificate: certResult?.certificate || null,
+      certificateError: certResult?.error || null,
+    };
+  } catch (error: any) {
+    logger.error(
+      `Errore durante la valutazione della risposta aperta per il tentativo ${payload.attemptId}`,
+      error,
+    );
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function getAttemptOpenAnswerAction(
+  attemptId: string,
+  questionId: string,
+) {
+  try {
+    await getAuthenticatedSession("admin");
+
+    const answers = await quizRepository.findAnswersByAttemptId(attemptId);
+    const answer = answers.find((a) => a.questionId === questionId);
+
+    return {
+      success: true,
+      answerText: answer?.openAnswerText ?? "",
+    };
+  } catch (error: any) {
+    logger.error(
+      `Errore nel recupero della risposta aperta del tentativo ${attemptId}`,
+      error,
+    );
+    return {
+      success: false,
+      error: error.message,
     };
   }
 }

@@ -13,10 +13,6 @@ export class SupabaseCertificateRepository {
     return getSupabaseAdmin();
   }
 
-  /**
-   * Converte in modo sicuro i valori numerici per il DB.
-   * Impedisce il passaggio accidentale di valori boolean ("false" / false).
-   */
   private safeNum(val: any, fallback: number | null = null): number | null {
     if (typeof val === "number" && !isNaN(val)) return val;
     if (typeof val === "string" && val.trim() !== "" && !isNaN(Number(val))) {
@@ -25,9 +21,6 @@ export class SupabaseCertificateRepository {
     return fallback;
   }
 
-  /**
-   * Converte in modo sicuro le stringhe / UUID per il DB.
-   */
   private safeStr(val: any): string | null {
     if (typeof val === "string" && val.trim() !== "") return val;
     return null;
@@ -132,6 +125,11 @@ export class SupabaseCertificateRepository {
     if (data.title !== undefined) dbPayload.title = data.title;
     if (data.subtitle !== undefined)
       dbPayload.subtitle = this.safeStr(data.subtitle);
+    // ⚡ MAPPATURA AGGIUNTA: Aggiornamento score e completion_percentage nel DB
+    if (data.score !== undefined)
+      dbPayload.score = this.safeNum(data.score, null);
+    if (data.completionPercentage !== undefined)
+      dbPayload.completion_percentage = this.safeNum(data.completionPercentage, 100);
     if (data.pdfUrl !== undefined)
       dbPayload.pdf_url = this.safeStr(data.pdfUrl);
     if (data.pdfGenerated !== undefined)

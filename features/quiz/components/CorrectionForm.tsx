@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
-import { gradeOpenAnswerAction } from "../actions/quizActions";
+// ⚡ Import aggiornato verso teacherActions
+import { gradeOpenAnswerAction } from "../actions/teacherActions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,17 +17,12 @@ interface CorrectionFormProps {
   questionText: string;
   studentAnswerText: string;
   studentEmail: string;
-  /**
-   * true = modifica una correzione già presente
-   * false = nuova correzione
-   */
   editMode?: boolean;
-  initialScore?: number | string; // Riceve il voto dal DB (può essere "3.5" o 3.5)
-  initialComment?: string;        // Riceve il commento dal DB
-  reviewId?: string;              // ID della recensione esistente per l'update
+  initialScore?: number | string;
+  initialComment?: string;
+  reviewId?: string;
 }
 
-// Forza la conversione pulita in stringa (es. "3.5" -> "3.5", 4 -> "4") evitando sfasamenti del Select
 const normalizeScore = (val: number | string | undefined): string => {
   if (val === undefined || val === null || val === "") return "";
   const num = parseFloat(val.toString());
@@ -44,17 +40,15 @@ export function CorrectionForm({
   initialComment,
   reviewId,
 }: CorrectionFormProps) {
-  // Inizializziamo lo stato con i dati provenienti dal DB
   const [score, setScore] = useState<string>(normalizeScore(initialScore));
   const [comment, setComment] = useState<string>(initialComment || "");
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Sincronizza lo stato se cambiano le props (es. cambio studente senza ricaricare la pagina)
   useEffect(() => {
     setScore(normalizeScore(initialScore));
     setComment(initialComment || "");
-    setResult(null); // Resetta eventuali messaggi di successo/errore precedenti
+    setResult(null);
   }, [initialScore, initialComment, attemptId]);
 
   const handleGrade = () => {
@@ -68,7 +62,7 @@ export function CorrectionForm({
         questionId,
         score: numericScore,
         comment: comment.trim() || undefined,
-        reviewId: editMode ? reviewId : undefined, // Passiamo il reviewId se siamo in modifica
+        reviewId: editMode ? reviewId : undefined,
       });
 
       if (response.success) {
@@ -102,7 +96,6 @@ export function CorrectionForm({
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Box Quesito Originale */}
           <div className="p-4 rounded-lg bg-muted/60 border">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">
               Testo della Domanda Aperta (Max 6.00 Punti)
@@ -110,7 +103,6 @@ export function CorrectionForm({
             <p className="text-sm font-medium leading-relaxed text-foreground">{questionText}</p>
           </div>
 
-          {/* Box Risposta dello Studente */}
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Risposta fornita dallo Studente
@@ -122,7 +114,6 @@ export function CorrectionForm({
 
           <hr className="border-muted" />
 
-          {/* Input per l'assegnazione del Voto e Commento */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
             <div className="space-y-2 md:col-span-1">
               <Label htmlFor="score-select" className="text-sm font-semibold">Assegna Punteggio</Label>
@@ -153,7 +144,6 @@ export function CorrectionForm({
             </div>
           </div>
 
-          {/* Feedback all'utente */}
           {result && (
             <Alert variant={result.success ? "default" : "destructive"} className="mt-4">
               {result.success ? (

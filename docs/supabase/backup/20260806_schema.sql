@@ -283,16 +283,15 @@ BEGIN
     END IF;
 
     ------------------------------------------------------------------
-    -- 2. Identificazione Quiz e Relativo Corso (via course_quizzes / quiz_assignments)
+    -- 2. Identificazione Quiz e Relativo Corso (senza course_quizzes)
     ------------------------------------------------------------------
     SELECT 
         q.id, 
-        COALESCE(cq.course_id, qa.course_id)
+        COALESCE(q.course_id, qa.course_id)
     INTO 
         v_quiz_id, 
         v_course_id
     FROM public.quizzes q
-    LEFT JOIN public.course_quizzes cq ON cq.quiz_id = q.id
     LEFT JOIN public.quiz_assignments qa ON qa.quiz_id = q.id
     WHERE q.id::text = p_quiz_code OR q.title = p_quiz_code
     LIMIT 1;
@@ -308,15 +307,12 @@ BEGIN
     ------------------------------------------------------------------
     -- 4. Logica Assegnazione Badge (Specifico o Milestone)
     ------------------------------------------------------------------
-    -- A. Badge legato al codice/quiz specifico
     SELECT code INTO v_target_badge_code
     FROM public.badges
     WHERE code = p_quiz_code
     LIMIT 1;
 
-    -- B. Regole Milestone se non c'è un badge diretto
     IF v_target_badge_code IS NULL THEN
-        -- Punteggio Massimo
         IF p_score > 0 AND p_score >= p_max_score AND NOT EXISTS (
             SELECT 1 FROM public.user_badges ub 
             JOIN public.badges b ON b.id = ub.badge_id 
@@ -324,7 +320,6 @@ BEGIN
         ) THEN
             v_target_badge_code := 'PERFECT_SCORE';
 
-        -- Primo Quiz
         ELSIF v_completed_count >= 1 AND NOT EXISTS (
             SELECT 1 FROM public.user_badges ub 
             JOIN public.badges b ON b.id = ub.badge_id 
@@ -332,7 +327,6 @@ BEGIN
         ) THEN
             v_target_badge_code := 'FIRST_QUIZ';
 
-        -- Traguardo 10 Quiz
         ELSIF v_completed_count >= 10 AND NOT EXISTS (
             SELECT 1 FROM public.user_badges ub 
             JOIN public.badges b ON b.id = ub.badge_id 
@@ -340,7 +334,6 @@ BEGIN
         ) THEN
             v_target_badge_code := 'QUIZ_10';
 
-        -- Traguardo 25 Quiz
         ELSIF v_completed_count >= 25 AND NOT EXISTS (
             SELECT 1 FROM public.user_badges ub 
             JOIN public.badges b ON b.id = ub.badge_id 
@@ -348,7 +341,6 @@ BEGIN
         ) THEN
             v_target_badge_code := 'QUIZ_25';
 
-        -- Traguardo 50 Quiz
         ELSIF v_completed_count >= 50 AND NOT EXISTS (
             SELECT 1 FROM public.user_badges ub 
             JOIN public.badges b ON b.id = ub.badge_id 
@@ -395,7 +387,7 @@ BEGIN
     END IF;
 
     ------------------------------------------------------------------
-    -- 8. Inserimento in user_badges (con eventuale course_id)
+    -- 8. Inserimento in user_badges
     ------------------------------------------------------------------
     INSERT INTO public.user_badges (
         profile_id,
@@ -411,7 +403,7 @@ BEGIN
     ON CONFLICT DO NOTHING;
 
     ------------------------------------------------------------------
-    -- 9. Aggiornamento Gamification per Corso (se legato a un corso)
+    -- 9. Aggiornamento Gamification per Corso
     ------------------------------------------------------------------
     IF v_course_id IS NOT NULL THEN
         INSERT INTO public.user_course_stats (
@@ -436,7 +428,7 @@ BEGIN
     END IF;
 
     ------------------------------------------------------------------
-    -- 10. Aggiornamento XP e Livello Globale (Formula / 500 + 1)
+    -- 10. Aggiornamento XP e Livello Globale
     ------------------------------------------------------------------
     UPDATE public.profiles p
     SET
@@ -1205,6 +1197,7 @@ CREATE TABLE IF NOT EXISTS "public"."certificates" (
     "status" character varying(20) DEFAULT 'ACTIVE'::character varying NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "lesson_id" "uuid",
     CONSTRAINT "certificate_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['ACTIVE'::character varying, 'REVOKED'::character varying, 'EXPIRED'::character varying])::"text"[])))
 );
 
@@ -1305,7 +1298,7 @@ CREATE TABLE IF NOT EXISTS "public"."course_modules" (
     "order_index" integer DEFAULT 0 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
     "is_preview" boolean DEFAULT false NOT NULL,
-    "module_code" character varying(30) NOT NULL
+    "module_code" character varying(255) NOT NULL
 );
 
 
@@ -1318,15 +1311,6 @@ COMMENT ON COLUMN "public"."course_modules"."is_preview" IS 'Modulo visibile anc
 
 COMMENT ON COLUMN "public"."course_modules"."module_code" IS 'Codice logico del modulo utilizzato dalla gamification (es. MODULE_01).';
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."course_quizzes" (
-    "course_id" "uuid" NOT NULL,
-    "quiz_id" "uuid" NOT NULL
-);
-
-
-ALTER TABLE "public"."course_quizzes" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."courses" (
@@ -1384,24 +1368,6 @@ CREATE TABLE IF NOT EXISTS "public"."document_configs" (
 
 
 ALTER TABLE "public"."document_configs" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."lessons" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "module_id" "uuid" NOT NULL,
-    "title" "text" NOT NULL,
-    "duration" integer NOT NULL,
-    "content_type" "text" NOT NULL,
-    "youtube_url" "text",
-    "google_drive_url" "text",
-    "quiz_id" "uuid",
-    "sort_order" integer DEFAULT 0 NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
-    CONSTRAINT "lessons_content_type_check" CHECK (("content_type" = ANY (ARRAY['video'::"text", 'document'::"text", 'mixed'::"text"])))
-);
-
-
-ALTER TABLE "public"."lessons" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."mail_logs" (
@@ -1695,19 +1661,6 @@ CREATE TABLE IF NOT EXISTS "public"."profile_classes" (
 ALTER TABLE "public"."profile_classes" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."profile_course_xp" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "course_id" "uuid" NOT NULL,
-    "xp" integer DEFAULT 0 NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
-);
-
-
-ALTER TABLE "public"."profile_course_xp" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."profile_courses" (
     "profile_id" "uuid" NOT NULL,
     "course_id" "uuid" NOT NULL,
@@ -1862,7 +1815,9 @@ CREATE TABLE IF NOT EXISTS "public"."quizzes" (
     "created_by" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "passing_score" numeric(5,2) DEFAULT 60.00 NOT NULL
+    "passing_score" numeric(5,2) DEFAULT 60.00 NOT NULL,
+    "course_id" "uuid",
+    "module_id" "uuid"
 );
 
 
@@ -2129,11 +2084,6 @@ ALTER TABLE ONLY "public"."course_modules"
 
 
 
-ALTER TABLE ONLY "public"."course_quizzes"
-    ADD CONSTRAINT "course_quizzes_pkey" PRIMARY KEY ("course_id", "quiz_id");
-
-
-
 ALTER TABLE ONLY "public"."courses"
     ADD CONSTRAINT "courses_pkey" PRIMARY KEY ("id");
 
@@ -2146,21 +2096,6 @@ ALTER TABLE ONLY "public"."courses"
 
 ALTER TABLE ONLY "public"."document_configs"
     ADD CONSTRAINT "document_configs_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."lessons"
-    ADD CONSTRAINT "lessons_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."lessons"
-    ADD CONSTRAINT "lessons_unique_sort" UNIQUE ("module_id", "sort_order");
-
-
-
-ALTER TABLE ONLY "public"."lessons"
-    ADD CONSTRAINT "lessons_unique_title" UNIQUE ("module_id", "title");
 
 
 
@@ -2251,16 +2186,6 @@ ALTER TABLE ONLY "public"."payments"
 
 ALTER TABLE ONLY "public"."profile_classes"
     ADD CONSTRAINT "profile_classes_pkey" PRIMARY KEY ("profile_id", "class_id");
-
-
-
-ALTER TABLE ONLY "public"."profile_course_xp"
-    ADD CONSTRAINT "profile_course_xp_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."profile_course_xp"
-    ADD CONSTRAINT "profile_course_xp_user_course_unique" UNIQUE ("user_id", "course_id");
 
 
 
@@ -2430,6 +2355,10 @@ CREATE INDEX "idx_certificates_course" ON "public"."certificates" USING "btree" 
 
 
 
+CREATE INDEX "idx_certificates_lesson" ON "public"."certificates" USING "btree" ("lesson_id");
+
+
+
 CREATE INDEX "idx_certificates_module" ON "public"."certificates" USING "btree" ("module_id");
 
 
@@ -2478,23 +2407,7 @@ CREATE INDEX "idx_course_modules_module_code" ON "public"."course_modules" USING
 
 
 
-CREATE INDEX "idx_course_quizzes_course" ON "public"."course_quizzes" USING "btree" ("course_id");
-
-
-
-CREATE INDEX "idx_course_quizzes_quiz" ON "public"."course_quizzes" USING "btree" ("quiz_id");
-
-
-
 CREATE INDEX "idx_courses_slug" ON "public"."courses" USING "btree" ("slug");
-
-
-
-CREATE INDEX "idx_lessons_module" ON "public"."lessons" USING "btree" ("module_id");
-
-
-
-CREATE INDEX "idx_lessons_quiz" ON "public"."lessons" USING "btree" ("quiz_id");
 
 
 
@@ -2615,6 +2528,14 @@ CREATE INDEX "idx_quiz_options_question" ON "public"."quiz_options" USING "btree
 
 
 CREATE INDEX "idx_quiz_questions_quiz" ON "public"."quiz_questions" USING "btree" ("quiz_id");
+
+
+
+CREATE INDEX "idx_quizzes_course_id" ON "public"."quizzes" USING "btree" ("course_id");
+
+
+
+CREATE INDEX "idx_quizzes_module_id" ON "public"."quizzes" USING "btree" ("module_id");
 
 
 
@@ -2763,6 +2684,11 @@ ALTER TABLE ONLY "public"."certificates"
 
 
 ALTER TABLE ONLY "public"."certificates"
+    ADD CONSTRAINT "certificates_lesson_id_fkey" FOREIGN KEY ("lesson_id") REFERENCES "public"."course_lessons"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."certificates"
     ADD CONSTRAINT "certificates_module_id_fkey" FOREIGN KEY ("module_id") REFERENCES "public"."course_modules"("id") ON DELETE SET NULL;
 
 
@@ -2809,26 +2735,6 @@ ALTER TABLE ONLY "public"."course_lessons"
 
 ALTER TABLE ONLY "public"."course_modules"
     ADD CONSTRAINT "course_modules_course_id_fkey" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."course_quizzes"
-    ADD CONSTRAINT "course_quizzes_course_id_fkey" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."course_quizzes"
-    ADD CONSTRAINT "course_quizzes_quiz_id_fkey" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."lessons"
-    ADD CONSTRAINT "lessons_module_id_fkey" FOREIGN KEY ("module_id") REFERENCES "public"."course_modules"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."lessons"
-    ADD CONSTRAINT "lessons_quiz_id_fkey" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id") ON DELETE SET NULL;
 
 
 
@@ -2978,7 +2884,17 @@ ALTER TABLE ONLY "public"."quiz_reviews"
 
 
 ALTER TABLE ONLY "public"."quizzes"
+    ADD CONSTRAINT "quizzes_course_id_fkey" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."quizzes"
     ADD CONSTRAINT "quizzes_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."quizzes"
+    ADD CONSTRAINT "quizzes_module_id_fkey" FOREIGN KEY ("module_id") REFERENCES "public"."course_modules"("id") ON DELETE SET NULL;
 
 
 
@@ -3081,6 +2997,14 @@ CREATE POLICY "Admins can do everything" ON "public"."resources" USING ((("auth"
 
 
 
+CREATE POLICY "Allow system/admin write on certificates" ON "public"."certificates" USING (true) WITH CHECK (true);
+
+
+
+CREATE POLICY "Allow system/admin write on module_completions" ON "public"."module_completions" USING (true) WITH CHECK (true);
+
+
+
 CREATE POLICY "Assegnazioni leggibili da autenticati" ON "public"."course_classes" FOR SELECT TO "authenticated" USING (true);
 
 
@@ -3104,10 +3028,6 @@ CREATE POLICY "Lezioni leggibili da autenticati" ON "public"."course_lessons" FO
 
 
 CREATE POLICY "Moduli leggibili da autenticati" ON "public"."course_modules" FOR SELECT TO "authenticated" USING (true);
-
-
-
-CREATE POLICY "Permetti lettura agli utenti autenticati" ON "public"."profile_course_xp" FOR SELECT TO "authenticated" USING (true);
 
 
 
@@ -3163,16 +3083,10 @@ ALTER TABLE "public"."course_lessons" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."course_modules" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."course_quizzes" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."courses" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."document_configs" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."lessons" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."mail_logs" ENABLE ROW LEVEL SECURITY;
@@ -3260,9 +3174,6 @@ CREATE POLICY "payments_admin_shopping_carts" ON "public"."shopping_carts" TO "a
 
 
 ALTER TABLE "public"."profile_classes" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."profile_course_xp" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profile_courses" ENABLE ROW LEVEL SECURITY;
@@ -3727,12 +3638,6 @@ GRANT ALL ON TABLE "public"."course_modules" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."course_quizzes" TO "anon";
-GRANT ALL ON TABLE "public"."course_quizzes" TO "authenticated";
-GRANT ALL ON TABLE "public"."course_quizzes" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."courses" TO "anon";
 GRANT ALL ON TABLE "public"."courses" TO "authenticated";
 GRANT ALL ON TABLE "public"."courses" TO "service_role";
@@ -3742,12 +3647,6 @@ GRANT ALL ON TABLE "public"."courses" TO "service_role";
 GRANT ALL ON TABLE "public"."document_configs" TO "anon";
 GRANT ALL ON TABLE "public"."document_configs" TO "authenticated";
 GRANT ALL ON TABLE "public"."document_configs" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."lessons" TO "anon";
-GRANT ALL ON TABLE "public"."lessons" TO "authenticated";
-GRANT ALL ON TABLE "public"."lessons" TO "service_role";
 
 
 
@@ -3820,12 +3719,6 @@ GRANT ALL ON TABLE "public"."payments" TO "service_role";
 GRANT ALL ON TABLE "public"."profile_classes" TO "anon";
 GRANT ALL ON TABLE "public"."profile_classes" TO "authenticated";
 GRANT ALL ON TABLE "public"."profile_classes" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."profile_course_xp" TO "anon";
-GRANT ALL ON TABLE "public"."profile_course_xp" TO "authenticated";
-GRANT ALL ON TABLE "public"."profile_course_xp" TO "service_role";
 
 
 

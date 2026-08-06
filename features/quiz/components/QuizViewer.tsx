@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useMemo } from "react";
 import { Quiz } from "../domain/Quiz";
 import { QuizQuestion } from "../domain/Question";
 import { submitStudentAttemptAction } from "../actions/quizActions";
@@ -17,6 +17,18 @@ interface QuizViewerProps {
   questions: QuizQuestion[];
 }
 
+/**
+ * Algoritmo Fisher-Yates per rimescolare un array in modo imparziale.
+ */
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export function QuizViewer({ quiz, questions }: QuizViewerProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [openAnswer, setOpenAnswer] = useState<string>("");
@@ -29,12 +41,25 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
     certificate?: any;
   } | null>(null);
 
+  // ⚡ SHUFFLE OPZIONI: Memoizzato per avvenire una sola volta al caricamento del quiz
+  const shuffledQuestions = useMemo(() => {
+    return questions.map((q) => {
+      if (q.type === "multiple_choice" && q.options && q.options.length > 0) {
+        return {
+          ...q,
+          options: shuffleArray(q.options),
+        };
+      }
+      return q;
+    });
+  }, [questions]);
+
   const handleOptionChange = (questionId: string, optionId: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
   };
 
   const handleSubmit = () => {
-    const payload = questions.map((q) => {
+    const payload = shuffledQuestions.map((q) => {
       if (q.type === "multiple_choice") {
         return {
           questionId: q.id,
@@ -67,7 +92,7 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
     });
   };
 
-  const isQuizIncomplete = questions
+  const isQuizIncomplete = shuffledQuestions
     .filter((q) => q.type === "multiple_choice")
     .some((q) => !answers[q.id]);
 
@@ -162,7 +187,7 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
       )}
 
       <div className="space-y-6">
-        {questions.map((question, qIdx) => (
+        {shuffledQuestions.map((question, qIdx) => (
           <Card key={question.id} className="border-border bg-card">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -217,7 +242,7 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
         <Button
           size="lg"
           onClick={handleSubmit}
-          disabled={isPending || isQuizIncomplete || (questions.some((q) => q.type !== "multiple_choice") && !openAnswer.trim())}
+          disabled={isPending || isQuizIncomplete || (shuffledQuestions.some((q) => q.type !== "multiple_choice") && !openAnswer.trim())}
           className="px-8 font-semibold"
         >
           {isPending ? (
