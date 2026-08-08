@@ -5,16 +5,17 @@ import { getAllCoursesList } from "../../courses/services/adminStructureService"
 import { getCourseClasses } from "@/features/courses/services/courseActions";
 import { logger } from "@/lib/logger";
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
+// 🎯 Interfaccia esportata per ProgressChartCard.tsx
 export interface ChartDataPoint {
   date: string;
   views: number;
   completions: number;
 }
+
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
 export async function getAdminDashboardStats() {
   const statsWindowDays = parseInt(
@@ -29,7 +30,6 @@ export async function getAdminDashboardStats() {
     `Estrazione statistiche admin con finestra temporale di ${statsWindowDays} giorni.`,
   );
 
-  // 🎯 FIX: Aggiunta query a profile_lessons_progress in Promise.all
   const [
     users,
     classes,
@@ -38,6 +38,7 @@ export async function getAdminDashboardStats() {
     sessionsResponse,
     pageViewsResponse,
     progressResponse,
+    aiReviewsResponse,
   ] = await Promise.all([
     getAdminUsersList(),
     getAvailableClassesForCourses(),
@@ -54,11 +55,31 @@ export async function getAdminDashboardStats() {
     supabaseAdmin
       .from("profile_lessons_progress")
       .select("course_id, user_id, minutes_watched, is_completed"),
+    supabaseAdmin
+      .from("quiz_ai_reviews")
+      .select(
+        "prompt_tokens, completion_tokens, model, created_at",
+      )
+      .gte("created_at", twoWeeksAgo.toISOString()),
   ]);
+
+  // 🔍 DEBUG: Verifica errori o dati restituiti da Supabase
+  if (aiReviewsResponse.error) {
+    logger.error(
+      "❌ Errore Supabase quiz_ai_reviews:",
+      aiReviewsResponse.error,
+    );
+  } else {
+    logger.info(
+      `✅ Trovate ${aiReviewsResponse.data?.length || 0} righe in quiz_ai_reviews.`,
+    );
+    console.log("Esempio riga AI:", aiReviewsResponse.data?.[0]);
+  }
 
   const sessions = sessionsResponse.data ?? [];
   const pageViews = pageViewsResponse.data ?? [];
   const lessonProgress = progressResponse.data ?? [];
+  const aiReviews = aiReviewsResponse.data ?? [];
 
   const statsLimit = parseInt(
     process.env.NEXT_PUBLIC_ADMIN_STATS_LIMIT || "5",
@@ -74,6 +95,57 @@ export async function getAdminDashboardStats() {
   const totalClasses = classes.length;
 
   // ============================================================================
+  // 🤖 METRICHE E AGGREGAZIONE CONSUMI AI & TOKEN
+  // ============================================================================
+  let totalPromptTokens = 0;
+  let totalCompletionTokens = 0;
+  let totalAiTokens = 0;
+  const totalAiReviews = aiReviews.length;
+
+  const aiDailyTokensTrend: Record<string, number> = {};
+  const aiDailyReviewsTrend: Record<string, number> = {};
+  const aiModelDistribution: Record<string, number> = {};
+
+  for (let i = statsWindowDays - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dayKey = d.toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+    });
+    aiDailyTokensTrend[dayKey] = 0;
+    aiDailyReviewsTrend[dayKey] = 0;
+  }
+
+  aiReviews.forEach((review: any) => {
+    const pTokens = Number(review.prompt_tokens || 0);
+    const cTokens = Number(review.completion_tokens || 0);
+    const tTokens = Number(review.total_tokens || pTokens + cTokens);
+
+    totalPromptTokens += pTokens;
+    totalCompletionTokens += cTokens;
+    totalAiTokens += tTokens;
+
+    // Modello AI
+    const modelName = review.model || "Gemini / AI Standard";
+    aiModelDistribution[modelName] = (aiModelDistribution[modelName] || 0) + 1;
+
+    // Trend giornaliero
+    if (review.created_at) {
+      const reviewDate = new Date(review.created_at);
+      const dayStr = reviewDate.toLocaleDateString("it-IT", {
+        day: "2-digit",
+        month: "2-digit",
+      });
+
+      if (aiDailyTokensTrend[dayStr] !== undefined) {
+        aiDailyTokensTrend[dayStr] += tTokens;
+        aiDailyReviewsTrend[dayStr] += 1;
+      }
+    }
+  });
+
+  // ============================================================================
   // 🏆 CALCOLO GAMIFICATION & TEMPO CUMULATO GLOBALE
   // ============================================================================
   let totalXp = 0;
@@ -82,15 +154,12 @@ export async function getAdminDashboardStats() {
   let studentCount = 0;
 
   users.forEach((u: any) => {
-    // Aggregazione XP
     const userXp = Number(u.xp ?? u.total_xp ?? u.experience_points ?? 0);
     totalXp += userXp;
 
-    // Aggregazione Minuti Attivi
     const minutes = Number(u.total_minutes_active ?? u.minutes_active ?? 0);
     totalMinutesActive += minutes;
 
-    // Calcolo Livello Medio per gli studenti
     if (u.role === "student" || !u.role) {
       const userLevel = Number(u.level ?? u.user_level ?? 1);
       totalLevelSum += userLevel;
@@ -100,12 +169,10 @@ export async function getAdminDashboardStats() {
 
   const totalHoursActive = Math.round(totalMinutesActive / 60);
   const averageLevel =
-    studentCount > 0
-      ? Number((totalLevelSum / studentCount).toFixed(1))
-      : 1;
+    studentCount > 0 ? Number((totalLevelSum / studentCount).toFixed(1)) : 1;
 
   // ============================================================================
-  // 📊 CALCOLO AGGREGATO GAMIFICATION PER SINGOLO CORSO (courseStats)
+  // 📊 CALCOLO AGGREGATO GAMIFICATION PER SINGOLO CORSO
   // ============================================================================
   const courseProgressMap = new Map<
     string,
@@ -138,8 +205,7 @@ export async function getAdminDashboardStats() {
     const courseIdStr = String(c.id);
     const courseSlugStr = String(c.slug || "");
 
-    const progData =
-      courseProgressMap.get(courseIdStr) ||
+    const progData = courseProgressMap.get(courseIdStr) ||
       courseProgressMap.get(courseSlugStr) || {
         totalMinutes: 0,
         uniqueStudents: new Set<string>(),
@@ -154,7 +220,7 @@ export async function getAdminDashboardStats() {
       difficulty: c.difficulty || "Facile",
       enrolledStudentsCount: progData.uniqueStudents.size,
       totalMinutesStudied: progData.totalMinutes,
-      totalXp: progData.completedLessons * 50, // 50 XP indicativi per lezione completata
+      totalXp: progData.completedLessons * 50,
       averageLevel: 1,
     };
   });
@@ -285,7 +351,7 @@ export async function getAdminDashboardStats() {
   });
 
   // ============================================================================
-  // 🚀 TRASFORMAZIONE IN OGGETTI PIATTI PER COMPONENTI GRAFICI
+  // 🚀 TRASFORMAZIONE DIVERSE
   // ============================================================================
   const courseViewsMap = pageViews.reduce((acc: Record<string, number>, pv) => {
     if (pv.course_slug) acc[pv.course_slug] = (acc[pv.course_slug] || 0) + 1;
@@ -434,8 +500,6 @@ export async function getAdminDashboardStats() {
     }
   });
 
-  logger.info("Stats di tracking elaborate correttamente per la dashboard.");
-
   return {
     totals: {
       users: totalUsers,
@@ -446,8 +510,14 @@ export async function getAdminDashboardStats() {
       totalXp,
       totalHoursActive,
       averageLevel,
+      ai: {
+        totalReviews: totalAiReviews,
+        promptTokens: totalPromptTokens,
+        completionTokens: totalCompletionTokens,
+        totalTokens: totalAiTokens,
+      },
     },
-    courseStats, // 🎯 FIX: Restituita la proprietà attesa da StatsTab.tsx
+    courseStats,
     charts: {
       usersByRole,
       usersByStatus,
@@ -466,6 +536,9 @@ export async function getAdminDashboardStats() {
       deviceDistribution,
       mostViewedCourses,
       mostViewedLessons,
+      aiDailyTokensTrend,
+      aiDailyReviewsTrend,
+      aiModelDistribution,
     },
     raw: { users, classes, courses, course_classes: courseClasses },
   };

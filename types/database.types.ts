@@ -63,6 +63,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_settings: {
+        Row: {
+          enabled: boolean
+          grading_model: string | null
+          grading_prompt: string
+          id: string
+          master_model: string | null
+          master_prompt: string
+          max_tokens: number
+          model: string
+          provider: string
+          system_prompt: string
+          temperature: number
+          timeout_ms: number
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          grading_model?: string | null
+          grading_prompt: string
+          id?: string
+          master_model?: string | null
+          master_prompt: string
+          max_tokens?: number
+          model?: string
+          provider?: string
+          system_prompt: string
+          temperature?: number
+          timeout_ms?: number
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          grading_model?: string | null
+          grading_prompt?: string
+          id?: string
+          master_model?: string | null
+          master_prompt?: string
+          max_tokens?: number
+          model?: string
+          provider?: string
+          system_prompt?: string
+          temperature?: number
+          timeout_ms?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           badge_type: string
@@ -1414,6 +1462,81 @@ export type Database = {
           user_type?: string
         }
         Relationships: []
+      }
+      quiz_ai_reviews: {
+        Row: {
+          attempt_id: string
+          completion_tokens: number | null
+          confidence: number | null
+          created_at: string
+          elapsed_ms: number | null
+          feedback: string
+          grading_prompt: string | null
+          id: string
+          master_answer: string | null
+          max_score: number
+          model: string
+          prompt_tokens: number | null
+          provider: string
+          question_id: string
+          student_answer: string
+          suggested_score: number
+          system_prompt: string | null
+        }
+        Insert: {
+          attempt_id: string
+          completion_tokens?: number | null
+          confidence?: number | null
+          created_at?: string
+          elapsed_ms?: number | null
+          feedback: string
+          grading_prompt?: string | null
+          id?: string
+          master_answer?: string | null
+          max_score?: number
+          model: string
+          prompt_tokens?: number | null
+          provider: string
+          question_id: string
+          student_answer: string
+          suggested_score: number
+          system_prompt?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          completion_tokens?: number | null
+          confidence?: number | null
+          created_at?: string
+          elapsed_ms?: number | null
+          feedback?: string
+          grading_prompt?: string | null
+          id?: string
+          master_answer?: string | null
+          max_score?: number
+          model?: string
+          prompt_tokens?: number | null
+          provider?: string
+          question_id?: string
+          student_answer?: string
+          suggested_score?: number
+          system_prompt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_ai_reviews_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_ai_reviews_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quiz_answers: {
         Row: {

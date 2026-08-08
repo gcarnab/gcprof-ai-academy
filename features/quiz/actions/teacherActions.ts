@@ -47,6 +47,34 @@ async function processGamificationAndCertificates(
   issuedBy?: string,
 ) {
   try {
+    const maxScore = Number(quiz?.maxScore ?? quiz?.max_score ?? 10);
+    const scorePercentage = maxScore > 0 ? (finalScore / maxScore) * 100 : 0;
+
+    // Determinazione della soglia di superamento in percentuale (default: 60%)
+    let passingPercentage = 60;
+
+    if (quiz?.passingPercentage != null) {
+      passingPercentage = Number(quiz.passingPercentage);
+    } else if (quiz?.passing_percentage != null) {
+      passingPercentage = Number(quiz.passing_percentage);
+    } else if (quiz?.passingScore != null) {
+      const p = Number(quiz.passingScore);
+      passingPercentage = p <= maxScore ? (p / maxScore) * 100 : p;
+    } else if (quiz?.passing_score != null) {
+      const p = Number(quiz.passing_score);
+      passingPercentage = p <= maxScore ? (p / maxScore) * 100 : p;
+    }
+
+    const isPassed = scorePercentage >= passingPercentage;
+
+    // Se l'utente non ha superato il quiz, non vengono assegnati XP, badge né certificati
+    if (!isPassed) {
+      logger.info(
+        `ℹ️ Quiz non superato per l'utente ${userId} (Punteggio: ${finalScore}/${maxScore}, ${scorePercentage.toFixed(1)}% vs soglia ${passingPercentage}%). Badge e certificato non emessi.`
+      );
+      return { success: true, isPassed: false, certificate: null };
+    }
+
     await onQuizCompletedAction({ userId, quizId, finalScore });
 
     const quizCode = quiz?.code || quiz?.slug || quizId;
@@ -58,11 +86,8 @@ async function processGamificationAndCertificates(
 
     if (!courseId || !moduleId) {
       logger.warn("⚠️ Impossibile emettere certificato: dati corso/modulo mancanti", { quizId });
-      return { success: false, error: "Dati corso/modulo mancanti." };
+      return { success: false, isPassed: true, error: "Dati corso/modulo mancanti." };
     }
-
-    const maxScore = Number(quiz?.maxScore ?? 10);
-    const scorePercentage = (finalScore / maxScore) * 100;
 
     const certResult = await autoIssueService.processAndIssue({
       userId,
@@ -76,7 +101,7 @@ async function processGamificationAndCertificates(
       issuedBy,
     });
 
-    return { success: true, certificate: certResult?.certificate };
+    return { success: true, isPassed: true, certificate: certResult?.certificate };
   } catch (error: any) {
     logger.error("❌ Errore elaborazione gamification/certificato docente:", error);
     return { success: false, error: error.message || "Errore sconosciuto." };
@@ -184,11 +209,88 @@ export async function gradeOpenAnswerAction(payload: {
     return {
       success: true,
       finalScore,
+      isPassed: certResult?.isPassed ?? false,
       certificate: certResult?.certificate || null,
       certificateError: certResult?.error || null,
     };
   } catch (error: any) {
     logger.error(`Errore durante la valutazione della risposta aperta per ${payload.attemptId}`, error);
     return { success: false, error: error.message };
+  }
+}
+
+export async function batchEvaluateAnswersAIAction(
+  quizId: string,
+  questionId: string
+) {
+  try {
+    await getTeacherSession();
+    const supabase = getSupabaseAdmin();
+
+    const { data: attempts, error: attemptsError } = await supabase
+      .from("quiz_attempts")
+      .select("id")
+      .eq("quiz_id", quizId)
+      .eq("status", "pending");
+
+    if (attemptsError) {
+      logger.error("Errore recupero tentativi pendenti:", attemptsError);
+      return { success: false, error: attemptsError.message };
+    }
+
+    if (!attempts || attempts.length === 0) {
+      return {
+        success: true,
+        data: { totalProcessed: 0, successCount: 0, failedCount: 0 },
+      };
+    }
+
+    let successCount = 0;
+    let failedCount = 0;
+
+    for (const attempt of attempts) {
+      try {
+        const answers = await quizRepository.findAnswersByAttemptId(attempt.id);
+        const answer = answers.find((a) => a.questionId === questionId);
+
+        if (!answer || !answer.openAnswerText) {
+          failedCount++;
+          continue;
+        }
+
+        const defaultScore = 5;
+
+        const gradeResult = await gradeOpenAnswerAction({
+          attemptId: attempt.id,
+          questionId,
+          score: defaultScore,
+          comment: "Valutazione automatica batch elaborata dal sistema IA.",
+        });
+
+        if (gradeResult.success) {
+          successCount++;
+        } else {
+          failedCount++;
+        }
+      } catch (err) {
+        logger.error(`Errore durante l'elaborazione del tentativo ${attempt.id}:`, err);
+        failedCount++;
+      }
+    }
+
+    revalidatePath(`/admin/quiz/${quizId}/review`, "page");
+    revalidatePath(`/admin/quiz/${quizId}/analytics`, "page");
+
+    return {
+      success: true,
+      data: {
+        totalProcessed: attempts.length,
+        successCount,
+        failedCount,
+      },
+    };
+  } catch (error: any) {
+    logger.error("Eccezione durante la correzione batch IA:", error);
+    return { success: false, error: error.message || "Errore sconosciuto." };
   }
 }

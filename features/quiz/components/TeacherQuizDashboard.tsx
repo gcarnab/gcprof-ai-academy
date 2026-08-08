@@ -10,6 +10,7 @@ import { CorrectionForm } from "./CorrectionForm";
 import { QuizAttemptFilterBar } from "./QuizAttemptFilterBar";
 import { QuizAttemptList } from "./QuizAttemptList";
 import { GradedAttemptSummary } from "./GradedAttemptSummary";
+import { BatchCorrectionModal } from "./BatchCorrectionModal";
 import {
   useQuizAttemptsFilter,
   AttemptWithUser,
@@ -160,31 +161,40 @@ export function TeacherQuizDashboard({
             <span className="font-semibold text-foreground">{quiz.title}</span>
           </p>
         </div>
-        <div className="flex bg-muted p-1 rounded-lg border">
-          <Button
-            variant={activeTab === "pending" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("pending")}
-            className="gap-2"
-          >
-            <Clock className="h-4 w-4" />
-            Da Correggere
-            <span className="ml-1 px-1.5 py-0.5 bg-background text-foreground text-xs rounded-full font-bold">
-              {pendingAttemptsCount}
-            </span>
-          </Button>
-          <Button
-            variant={activeTab === "graded" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("graded")}
-            className="gap-2"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Valutati
-            <span className="ml-1 px-1.5 py-0.5 bg-background text-foreground text-xs rounded-full font-bold">
-              {gradedAttemptsCount}
-            </span>
-          </Button>
+
+        <div className="flex items-center gap-3">
+          <BatchCorrectionModal
+            quizId={quiz.id}
+            openQuestion={openQuestion}
+            pendingAttemptsCount={pendingAttemptsCount}
+          />
+
+          <div className="flex bg-muted p-1 rounded-lg border">
+            <Button
+              variant={activeTab === "pending" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("pending")}
+              className="gap-2"
+            >
+              <Clock className="h-4 w-4" />
+              Da Correggere
+              <span className="ml-1 px-1.5 py-0.5 bg-background text-foreground text-xs rounded-full font-bold">
+                {pendingAttemptsCount}
+              </span>
+            </Button>
+            <Button
+              variant={activeTab === "graded" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("graded")}
+              className="gap-2"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Valutati
+              <span className="ml-1 px-1.5 py-0.5 bg-background text-foreground text-xs rounded-full font-bold">
+                {gradedAttemptsCount}
+              </span>
+            </Button>
+          </div>
         </div>
       </div>
 

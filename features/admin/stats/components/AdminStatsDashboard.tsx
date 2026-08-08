@@ -12,9 +12,6 @@ type Props = {
 };
 
 export default function AdminStatsDashboard({ stats }: Props) {
-  // ---------------------------------------------------------------------------
-  // 🧮 MEMO & DATING PREPARATION
-  // ---------------------------------------------------------------------------
   const avgLessonsPerModule = useMemo(() => {
     return stats?.totals?.modules > 0
       ? (stats.totals.lessons / stats.totals.modules).toFixed(1)
@@ -32,7 +29,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
     }));
   }, [stats?.charts?.studentEngagement]);
 
-  // Moduli e Lezioni per corso isolati dal JSX
   const modulesPerCourseData = useMemo(() => {
     return Object.fromEntries(
       (stats?.charts?.modulesPerCourse || []).map((c: any) => [
@@ -51,13 +47,19 @@ export default function AdminStatsDashboard({ stats }: Props) {
     );
   }, [stats?.charts?.lessonsPerCourse]);
 
+  const aiTotals = stats?.totals?.ai || {
+    totalReviews: 0,
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+  };
+
   return (
     <div className="space-y-10 p-6">
       {/* ==========================================
           📊 SEZIONE KPI PRINCIPALI & METRICHE RAPIDE
           ========================================== */}
       <div className="relative">
-        
         <StatsKpiCards
           totalUsers={stats?.totals?.users || 0}
           totalCourses={stats?.totals?.courses || 0}
@@ -98,6 +100,64 @@ export default function AdminStatsDashboard({ stats }: Props) {
       </div>
 
       {/* ==========================================
+          🤖 SEZIONE 0: INTELLIGENZA ARTIFICIALE & TOKEN
+          ========================================== */}
+      <div className="space-y-4 pt-2">
+        <div className="border-b border-border pb-2">
+          <h2 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
+            🤖 Consumo AI & Correzioni Automatiche
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Monitoraggio in tempo reale dell'uso dei token, modelli e valutazioni generate dall'AI.
+          </p>
+        </div>
+
+        {/* KPI Sintetici AI */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
+            <p className="text-xs font-medium text-muted-foreground">Valutazioni AI Totali</p>
+            <p className="mt-1 text-2xl font-extrabold text-foreground">
+              {aiTotals.totalReviews.toLocaleString("it-IT")}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
+            <p className="text-xs font-medium text-muted-foreground">Token Totali Consumati</p>
+            <p className="mt-1 text-2xl font-extrabold text-purple-600 dark:text-purple-400">
+              {aiTotals.totalTokens.toLocaleString("it-IT")}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
+            <p className="text-xs font-medium text-muted-foreground">Prompt Tokens (Input)</p>
+            <p className="mt-1 text-2xl font-extrabold text-blue-600 dark:text-blue-400">
+              {aiTotals.promptTokens.toLocaleString("it-IT")}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
+            <p className="text-xs font-medium text-muted-foreground">Completion Tokens (Output)</p>
+            <p className="mt-1 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+              {aiTotals.completionTokens.toLocaleString("it-IT")}
+            </p>
+          </div>
+        </div>
+
+        {/* Grafici AI */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <BarChartCard
+            title="Consumo Token AI (Finestra temporale)"
+            data={stats?.charts?.aiDailyTokensTrend || {}}
+          />
+          <BarChartCard
+            title="Correzioni Quiz Per Giorno"
+            data={stats?.charts?.aiDailyReviewsTrend || {}}
+          />
+          <DonutChartCard
+            title="Distribuzione Modelli AI"
+            data={stats?.charts?.aiModelDistribution || {}}
+          />
+        </div>
+      </div>
+
+      {/* ==========================================
           👥 SEZIONE 1: ANALYTICS COMMUNITY & STUDENTI
           ========================================== */}
       <div className="space-y-4">
@@ -110,7 +170,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
           </p>
         </div>
 
-        {/* Layout Tablet/Desktop coerente: 2 col su tablet, 4 su desktop */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <PieChartCard
             title="Studenti per Classe"
@@ -159,12 +218,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
             title="Complessità dei Corsi"
             data={stats?.charts?.courseComplexity || {}}
           />
-          {/* 
-          <DonutChartCard
-            title="Stato Pubblicazione Corsi"
-            data={stats?.charts?.publishedCourses || {}}
-          />
-          */}
         </div>
       </div>
 
@@ -172,7 +225,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
           🛰️ SEZIONE 3: MONITORAGGIO ACCESSI & TRAFFICO
           ========================================== */}
       <div className="space-y-6 pt-2">
-        {/* Intestazione Sezione */}
         <div className="border-b border-border pb-2">
           <h2 className="text-lg font-bold text-foreground tracking-tight">
             Monitoraggio Accessi & Piattaforma
@@ -183,7 +235,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
           </p>
         </div>
 
-        {/* 🔹 GRUPPO 1: FLUSSI DI ACCESSO, SESSIONI E DISPOSITIVI */}
         <div className="space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Flussi di Accesso & Dispositivi
@@ -208,7 +259,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
           </div>
         </div>
 
-        {/* 🔹 GRUPPO 2: FRUIZIONE CONTENUTI & ENGAGEMENT */}
         <div className="space-y-3 pt-2">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Fruizione Contenuti & Attività

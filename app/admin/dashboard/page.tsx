@@ -15,9 +15,10 @@ import { getTrackingStats } from "@/features/admin/tracking/services/trackingQue
 import { PaymentsTabContent } from "@/features/payments/components/PaymentsTabContent";
 import { logger } from "@/lib/logger";
 
-// Import dell'infrastruttura di gestione configurazioni di sistema
+// Import dell'infrastruttura di gestione configurazioni di sistema e IA
 import { SupabaseSystemSettingsRepository } from "@/features/system/repositories/SupabaseSystemSettingsRepository";
 import { SystemSettingsService } from "@/features/system/services/SystemSettingsService";
+import { getAiSettingsAction } from "@/features/ai/actions/aiActions";
 
 import type { Metadata } from "next";
 
@@ -49,7 +50,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     systemSettingsRepository,
   );
 
-  // 📡 Esecuzione in parallelo delle chiamate principali
+  // 📡 Esecuzione in parallelo delle chiamate principali (incluso il recupero impostazioni IA)
   const [
     stats,
     trackingStats,
@@ -58,46 +59,39 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     coursesRes,
     courseStatsRes,
     initialSystemSettings,
+    aiSettingsRes,
   ] = await Promise.all([
     getAdminDashboardStats(),
     getTrackingStats(),
     getAllResourcesAdmin(),
 
-    /*
-
-    supabase
-      .from("quizzes")
-      .select("id, title, status, passing_score, created_at")
-      .order("created_at", { ascending: false }),
-*/
-
     supabase
       .from("quizzes")
       .select(
         `
-    id,
-    title,
-    status,
-    passing_score,
-    created_at,
-    course_id,
-    module_id,
+        id,
+        title,
+        status,
+        passing_score,
+        created_at,
+        course_id,
+        module_id,
 
-    courses (
-      id,
-      title
-    ),
+        courses (
+          id,
+          title
+        ),
 
-    course_modules (
-      id,
-      title
-    ),
+        course_modules (
+          id,
+          title
+        ),
 
-    quiz_attempts (
-      id,
-      status
-    )
-  `,
+        quiz_attempts (
+          id,
+          status
+        )
+      `,
       )
       .order("created_at", { ascending: false }),
 
@@ -109,6 +103,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       .from("user_course_stats")
       .select("course_id, profile_id, course_xp, course_level"),
     systemSettingsService.getHomeBannerSettings(),
+    getAiSettingsAction(),
   ]);
 
   if (quizzesRes.error) {
@@ -131,6 +126,9 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       courseStatsRes.error,
     );
   }
+
+  // Estrazione dati delle impostazioni IA con fallback sicuro
+  const initialAiSettings = aiSettingsRes?.success ? aiSettingsRes.data : null;
 
   // 🧮 Aggregazione delle metriche di Gamification e Utilizzo per Singolo Corso
   const coursesList = coursesRes.data || [];
@@ -205,6 +203,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           trackingStats={trackingStats}
           initialResources={resources}
           initialSystemSettings={initialSystemSettings}
+          initialAiSettings={initialAiSettings}
           paymentsTab={
             <Suspense
               key={params.subtab || "overview"}
