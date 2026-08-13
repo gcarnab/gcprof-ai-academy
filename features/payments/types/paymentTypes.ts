@@ -200,7 +200,7 @@ export interface PaymentLog {
 }
 
 // =============================================================================
-// 3. DTO & DOMAIN INTERFACES (Carrello e Checkout)
+// 3. DTO & DOMAIN INTERFACES (Carrello, Checkout & Pricing)
 // =============================================================================
 
 export interface CartSummaryDTO {
@@ -230,4 +230,38 @@ export interface CheckoutSessionResult {
   order_number: string;
   checkout_url: string;
   session_id: string;
+}
+
+/**
+ * Rappresentazione commerciale di un corso nel listino
+ */
+export interface CoursePricing {
+  course_id: string;
+  slug: string;
+  title: string;
+  price: number;
+  currency: CurrencyEnum;
+  is_paid: boolean;
+  stripe_product_id?: string | null;
+  stripe_price_id?: string | null;
+}
+
+/**
+ * DTO per l'aggiornamento dei parametri commerciali e Stripe di un corso
+ */
+export interface UpdateCoursePricingDTO {
+  price?: number;
+  currency?: CurrencyEnum;
+  is_paid?: boolean;
+  stripe_product_id?: string | null;
+  stripe_price_id?: string | null;
+}
+
+/**
+ * Wrapper generico per le risposte delle Server Actions di Payment
+ */
+export interface PaymentActionResponse<T = void> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }

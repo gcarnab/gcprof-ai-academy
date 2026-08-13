@@ -7,27 +7,8 @@
  */
 
 import { SupabaseClient } from "@supabase/supabase-js";
-import { CurrencyEnum } from "../types/paymentTypes";
+import { CurrencyEnum, CoursePricing, UpdateCoursePricingDTO } from "../types/paymentTypes";
 import { logger } from "@/lib/logger";
-
-export interface CoursePricing {
-  course_id: string;
-  slug: string;
-  title: string;
-  price: number;
-  currency: CurrencyEnum;
-  is_paid: boolean;
-  stripe_product_id?: string | null;
-  stripe_price_id?: string | null;
-}
-
-export interface UpdateCoursePricingDTO {
-  price?: number;
-  currency?: CurrencyEnum;
-  is_paid?: boolean;
-  stripe_product_id?: string | null;
-  stripe_price_id?: string | null;
-}
 
 export class CoursePricingService {
   constructor(private supabase: SupabaseClient) {}

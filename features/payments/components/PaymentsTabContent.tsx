@@ -14,6 +14,7 @@ import {
 } from "./OverviewComponents";
 import { OrdersTabContent } from "./OrdersTabContent";
 import { SettingsTabContent } from "./SettingsTabContent";
+import { CoursePricingManager } from "./CoursePricingManager";
 
 const SUB_TABS = [
   { id: "overview", label: "Overview", icon: "📊" },
@@ -104,14 +105,16 @@ export async function PaymentsTabContent({
 
         {/* 4. COURSES (Fase 4) */}
         {subtab === "courses" && (
-          <div className="p-12 text-center text-muted-foreground border border-dashed rounded-xl bg-card/50">
-            <span className="text-3xl block mb-2">🏷️</span>
-            <h3 className="font-semibold text-foreground">
-              Prezzi e Pacchetti Corsi
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Fase 4: Configurazione prezzi commerciali, valute e bundle.
-            </p>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                Listino Corsi & Prezzi
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Gestisci la modalità di accesso (Gratuito o A Pagamento) e la configurazione dei prezzi per ciascun corso.
+              </p>
+            </div>
+            <CoursePricingManager />
           </div>
         )}
 
