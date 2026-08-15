@@ -1,0 +1,10 @@
+# .clineignore
+.env.local
+.env*.local
+node_modules/
+.next/
+.vercel/
+*.lock
+test-results/
+logs/
+supabase/.temp/
