@@ -1,10 +1,32 @@
-# .clineignore
+# Segreti e credenziali - MAI leggibili da Cline
 .env.local
 .env*.local
+.env
+
+# Dipendenze e build - inutili da indicizzare, sprecano token
 node_modules/
 .next/
 .vercel/
-*.lock
-test-results/
-logs/
+dist/
+build/
+*.tsbuildinfo
+
+# Lock file - enormi, mai utili al contesto
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Supabase locale/temp - può contenere riferimenti a progetto/credenziali locali
 supabase/.temp/
+
+# Log e risultati di test - rumore, non contesto utile
+logs/
+*.log
+test-results/
+
+# File di sistema
+.DS_Store
+Thumbs.db
+
+# Cartelle di lavoro Cline stesso
+.clineignore

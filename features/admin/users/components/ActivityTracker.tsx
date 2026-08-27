@@ -33,11 +33,11 @@ export default function ActivityTracker({
   const isSendingRef = useRef(false);
 
   useEffect(() => {
-    logger.warn("====================================");
-    logger.warn("TRACKER MOUNT");
-    logger.warn("lessonId:", lessonId);
-    logger.warn("courseId:", courseId);
-    logger.warn("====================================");
+    //logger.warn("====================================");
+    //logger.warn("TRACKER MOUNT");
+    //logger.warn("lessonId:", lessonId);
+    //logger.warn("courseId:", courseId);
+    //logger.warn("====================================");
 
     if (!user) {
       logger.debug("ActivityTracker: utente non ancora disponibile.");
@@ -56,26 +56,20 @@ export default function ActivityTracker({
       // Rimosso document.hasFocus() che si disattivava cliccando sugli iframe (YouTube / PDF Drive).
       const isVisible = typeof document !== "undefined" && document.visibilityState === "visible";
 
-      logger.warn(
-        `⏱️ Controllo visibilità (${intervalSeconds}s) - Visibile: ${isVisible}`,
-      );
+      //logger.warn(`⏱️ Controllo visibilità (${intervalSeconds}s) - Visibile: ${isVisible}`,);
 
       if (isVisible) {
         accumulatedSecondsRef.current += intervalSeconds;
 
         const pendingMinutes = Math.floor(accumulatedSecondsRef.current / 60);
 
-        logger.warn("⏱️ Tempo accumulato lato client:", {
-          accumulatedSeconds: accumulatedSecondsRef.current,
-          pendingMinutes,
-          batchThresholdMinutes: TRACKING_BATCH_MINUTES,
-        });
+        //logger.warn("⏱️ Tempo accumulato lato client:", {accumulatedSeconds: accumulatedSecondsRef.current,pendingMinutes,batchThresholdMinutes: TRACKING_BATCH_MINUTES,});
 
         if (pendingMinutes >= TRACKING_BATCH_MINUTES && !isSendingRef.current) {
           isSendingRef.current = true;
 
           try {
-            logger.warn("🚀 Invio batch al server...", { minutesToAdd: pendingMinutes, courseId, lessonId });
+            //logger.warn("🚀 Invio batch al server...", { minutesToAdd: pendingMinutes, courseId, lessonId });
             const res = await incrementStudentMinutes(
               user.id,
               courseId,
@@ -86,7 +80,7 @@ export default function ActivityTracker({
             if (res.success) {
               // Sottraiamo solo i minuti effettivamente inviati
               accumulatedSecondsRef.current -= pendingMinutes * 60;
-              logger.warn("✅ Batch inviato e confermato dal DB", res);
+              //logger.warn("✅ Batch inviato e confermato dal DB", res);
 
               // 🔔 Notifica Evento Globale per aggiornare al volo i widget
               if (typeof window !== "undefined") {
@@ -110,7 +104,7 @@ export default function ActivityTracker({
           }
         }
       } else {
-        logger.warn("⏳ Battito saltato: scheda in background non visibile.");
+        //logger.warn("⏳ Battito saltato: scheda in background non visibile.");
       }
     }, HEARTBEAT_INTERVAL_MS);
 
@@ -123,7 +117,7 @@ export default function ActivityTracker({
       const remainingMinutes = Math.floor(accumulated / 60) || (accumulated >= 30 ? 1 : 0);
 
       if (remainingMinutes > 0 && user?.id && courseId && lessonId) {
-        logger.warn("🧹 Flush finale al cambio lezione/corso", { remainingMinutes, accumulated, courseId, lessonId });
+        //logger.warn("🧹 Flush finale al cambio lezione/corso", { remainingMinutes, accumulated, courseId, lessonId });
         incrementStudentMinutes(user.id, courseId, lessonId, remainingMinutes).then((res) => {
           if (res?.success && typeof window !== "undefined") {
             window.dispatchEvent(

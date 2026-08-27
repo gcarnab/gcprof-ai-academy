@@ -36,6 +36,7 @@ export async function getAdminDashboardStats() {
     courses,
     courseClasses,
     sessionsResponse,
+    pageViewsResponse,
     progressResponse,
     aiReviewsResponse,
   ] = await Promise.all([
@@ -48,11 +49,17 @@ export async function getAdminDashboardStats() {
       .select("login_at, user_agent, session_duration_seconds")
       .gte("login_at", twoWeeksAgo.toISOString()),
     supabaseAdmin
+      .from("user_page_views")
+      .select("course_slug, lesson_slug, path")
+      .gte("viewed_at", twoWeeksAgo.toISOString()),
+    supabaseAdmin
       .from("profile_lessons_progress")
       .select("course_id, user_id, minutes_watched, is_completed"),
     supabaseAdmin
       .from("quiz_ai_reviews")
-      .select("prompt_tokens, completion_tokens, model, created_at")
+      .select(
+        "prompt_tokens, completion_tokens, model, created_at",
+      )
       .gte("created_at", twoWeeksAgo.toISOString()),
   ]);
 
@@ -66,9 +73,11 @@ export async function getAdminDashboardStats() {
     logger.info(
       `✅ Trovate ${aiReviewsResponse.data?.length || 0} righe in quiz_ai_reviews.`,
     );
+    console.log("Esempio riga AI:", aiReviewsResponse.data?.[0]);
   }
 
   const sessions = sessionsResponse.data ?? [];
+  const pageViews = pageViewsResponse.data ?? [];
   const lessonProgress = progressResponse.data ?? [];
   const aiReviews = aiReviewsResponse.data ?? [];
 
@@ -342,6 +351,91 @@ export async function getAdminDashboardStats() {
   });
 
   // ============================================================================
+  // 🚀 TRASFORMAZIONE DIVERSE
+  // ============================================================================
+  const courseViewsMap = pageViews.reduce((acc: Record<string, number>, pv) => {
+    if (pv.course_slug) acc[pv.course_slug] = (acc[pv.course_slug] || 0) + 1;
+    return acc;
+  }, {});
+
+  const mostViewedCoursesRaw = Object.entries(courseViewsMap)
+    .map(([slug, count]) => {
+      const courseObj = courses.find(
+        (c: any) => c.slug === slug || c.id === slug,
+      );
+      return { label: courseObj?.title || slug, count };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, statsLimit);
+
+  const mostViewedCourses: Record<string, number> = {};
+  if (mostViewedCoursesRaw.length > 0) {
+    mostViewedCoursesRaw.forEach((item) => {
+      mostViewedCourses[item.label] = item.count;
+    });
+  } else {
+    mostViewedCourses["Nessun dato di navigazione"] = 0;
+  }
+
+  const lessonTitleMap = new Map<string, string>();
+  const lessonSlugsList: string[] = [];
+
+  courses.forEach((c: any) => {
+    (c.course_modules || []).forEach((m: any) => {
+      (m.course_lessons || []).forEach((l: any) => {
+        if (l.slug && l.title) {
+          lessonTitleMap.set(l.slug, l.title);
+          lessonSlugsList.push(l.slug);
+        }
+      });
+    });
+  });
+
+  lessonSlugsList.sort((a, b) => b.length - a.length);
+
+  const lessonViewsMap = pageViews.reduce(
+    (acc: Record<string, number>, pv: any) => {
+      let matchedTitle = "";
+
+      if (pv.lesson_slug && lessonTitleMap.has(pv.lesson_slug)) {
+        matchedTitle = lessonTitleMap.get(pv.lesson_slug)!;
+      } else if (pv.path) {
+        const foundSlug = lessonSlugsList.find((slug) =>
+          pv.path.includes(slug),
+        );
+        if (foundSlug) {
+          matchedTitle = lessonTitleMap.get(foundSlug)!;
+        }
+      }
+
+      if (!matchedTitle) {
+        if (!pv.path && !pv.lesson_slug) return acc;
+        const rawKey = pv.lesson_slug || pv.path;
+        matchedTitle = rawKey.split("/").filter(Boolean).pop() || rawKey;
+        matchedTitle = matchedTitle.replace(/-/g, " ");
+      }
+
+      acc[matchedTitle] = (acc[matchedTitle] || 0) + 1;
+      return acc;
+    },
+    {},
+  );
+
+  const mostViewedLessonsRaw = Object.entries(lessonViewsMap)
+    .map(([label, count]) => ({ label, count: count as number }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, statsLimit);
+
+  const mostViewedLessons: Record<string, number> = {};
+  if (mostViewedLessonsRaw.length > 0) {
+    mostViewedLessonsRaw.forEach((item) => {
+      mostViewedLessons[item.label] = item.count;
+    });
+  } else {
+    mostViewedLessons["Nessun dato di navigazione"] = 0;
+  }
+
+  // ============================================================================
   // 🎓 COURSES CHARTS
   // ============================================================================
   const coursesByCategory = courses.reduce((acc: any, c: any) => {
@@ -405,14 +499,6 @@ export async function getAdminDashboardStats() {
       courseComplexity["Facile"]++;
     }
   });
-
-  const mostViewedCourses: Record<string, number> = {
-    "Page view disabilitate": 0,
-  };
-
-  const mostViewedLessons: Record<string, number> = {
-    "Page view disabilitate": 0,
-  };
 
   return {
     totals: {
