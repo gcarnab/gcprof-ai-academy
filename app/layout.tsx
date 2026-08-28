@@ -6,6 +6,7 @@ import { AuthProvider } from "@/features/auth/context/AuthContext";
 import { siteConfig } from "@/shared/config/site";
 import { ThemeProvider } from "@/features/theme/context/ThemeContext";
 import { PageTracker } from "@/features/admin/tracking/components/PageTracker";
+import { Analytics } from "@vercel/analytics/react";
 
 // Configurazione del font Geist ottimizzata con 'display: swap' per Turbopack
 const geist = Geist({
@@ -114,6 +115,9 @@ export default function RootLayout({
             {children}
           </AuthProvider>
         </ThemeProvider>
+
+        <Analytics />
+
       </body>
     </html>
   );
