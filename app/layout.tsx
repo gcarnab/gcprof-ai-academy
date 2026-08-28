@@ -7,6 +7,7 @@ import { siteConfig } from "@/shared/config/site";
 import { ThemeProvider } from "@/features/theme/context/ThemeContext";
 import { PageTracker } from "@/features/admin/tracking/components/PageTracker";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Configurazione del font Geist ottimizzata con 'display: swap' per Turbopack
 const geist = Geist({
@@ -117,6 +118,7 @@ export default function RootLayout({
         </ThemeProvider>
 
         <Analytics />
+        <SpeedInsights />
 
       </body>
     </html>
