@@ -81,27 +81,7 @@ export async function onLessonCompletedAction(payload: LessonCompletedPayload) {
       current_level: newLevel,
     })
     .eq("id", userId);
-
-  // ======================================================
-  // NOTA IMPORTANTE
-  // ======================================================
-  //
-  // Da questo momento i badge NON vengono più assegnati qui.
-  //
-  // Il badge del modulo viene conferito esclusivamente tramite:
-  //
-  // unlockModuleBadge(...)
-  //
-  // presente in:
-  //
-  // features/gamification/actions/badgeActions.ts
-  //
-  // che richiama la RPC SQL award_module_badge.
-  //
-  // In questo modo esiste un solo punto di gestione
-  // dei badge ed evitiamo duplicazioni.
-  // ======================================================
-
+ 
   return {
     success: true,
     xpGained,

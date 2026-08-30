@@ -456,6 +456,16 @@ $$;
 ALTER FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric, "p_max_score" numeric) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."calculate_level"("p_xp" integer) RETURNS integer
+    LANGUAGE "sql" IMMUTABLE PARALLEL SAFE
+    AS $$
+    SELECT LEAST(100, GREATEST(1, 1 + (COALESCE(p_xp, 0) / 500)));
+$$;
+
+
+ALTER FUNCTION "public"."calculate_level"("p_xp" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."fn_generate_order_number"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -1091,6 +1101,26 @@ CREATE TABLE IF NOT EXISTS "public"."academy_classes" (
 ALTER TABLE "public"."academy_classes" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."ai_settings" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "provider" character varying(50) DEFAULT 'openrouter'::character varying NOT NULL,
+    "model" character varying(100) DEFAULT 'deepseek/deepseek-chat'::character varying NOT NULL,
+    "master_model" character varying(100) DEFAULT 'deepseek/deepseek-chat'::character varying,
+    "grading_model" character varying(100) DEFAULT 'deepseek/deepseek-chat'::character varying,
+    "temperature" numeric(3,2) DEFAULT 0.20 NOT NULL,
+    "max_tokens" integer DEFAULT 2048 NOT NULL,
+    "timeout_ms" integer DEFAULT 30000 NOT NULL,
+    "system_prompt" "text" NOT NULL,
+    "master_prompt" "text" NOT NULL,
+    "grading_prompt" "text" NOT NULL,
+    "enabled" boolean DEFAULT true NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."ai_settings" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."badges" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "code" character varying(20) NOT NULL,
@@ -1719,6 +1749,30 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."quiz_ai_reviews" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "attempt_id" "uuid" NOT NULL,
+    "question_id" "uuid" NOT NULL,
+    "student_answer" "text" NOT NULL,
+    "master_answer" "text",
+    "suggested_score" numeric(4,2) NOT NULL,
+    "max_score" numeric(4,2) DEFAULT 6.00 NOT NULL,
+    "feedback" "text" NOT NULL,
+    "confidence" numeric(5,2),
+    "provider" character varying(50) NOT NULL,
+    "model" character varying(100) NOT NULL,
+    "system_prompt" "text",
+    "grading_prompt" "text",
+    "prompt_tokens" integer,
+    "completion_tokens" integer,
+    "elapsed_ms" integer,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."quiz_ai_reviews" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."quiz_answers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "attempt_id" "uuid" NOT NULL,
@@ -1979,6 +2033,11 @@ ALTER TABLE ONLY "public"."academy_classes"
 
 
 
+ALTER TABLE ONLY "public"."ai_settings"
+    ADD CONSTRAINT "ai_settings_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."badges"
     ADD CONSTRAINT "badges_code_key" UNIQUE ("code");
 
@@ -2211,6 +2270,16 @@ ALTER TABLE ONLY "public"."profiles"
 
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."quiz_ai_reviews"
+    ADD CONSTRAINT "quiz_ai_reviews_attempt_id_question_id_key" UNIQUE ("attempt_id", "question_id");
+
+
+
+ALTER TABLE ONLY "public"."quiz_ai_reviews"
+    ADD CONSTRAINT "quiz_ai_reviews_pkey" PRIMARY KEY ("id");
 
 
 
@@ -2523,6 +2592,14 @@ CREATE INDEX "idx_profile_progress_last_accessed" ON "public"."profile_lessons_p
 
 
 
+CREATE INDEX "idx_quiz_ai_reviews_attempt_question" ON "public"."quiz_ai_reviews" USING "btree" ("attempt_id", "question_id");
+
+
+
+CREATE INDEX "idx_quiz_ai_reviews_question" ON "public"."quiz_ai_reviews" USING "btree" ("question_id");
+
+
+
 CREATE INDEX "idx_quiz_options_question" ON "public"."quiz_options" USING "btree" ("question_id");
 
 
@@ -2828,6 +2905,16 @@ ALTER TABLE ONLY "public"."profile_lessons_progress"
 
 
 
+ALTER TABLE ONLY "public"."quiz_ai_reviews"
+    ADD CONSTRAINT "quiz_ai_reviews_attempt_id_fkey" FOREIGN KEY ("attempt_id") REFERENCES "public"."quiz_attempts"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."quiz_ai_reviews"
+    ADD CONSTRAINT "quiz_ai_reviews_question_id_fkey" FOREIGN KEY ("question_id") REFERENCES "public"."quiz_questions"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."quiz_answers"
     ADD CONSTRAINT "quiz_answers_attempt_id_fkey" FOREIGN KEY ("attempt_id") REFERENCES "public"."quiz_attempts"("id") ON DELETE CASCADE;
 
@@ -3050,6 +3137,9 @@ CREATE POLICY "Utenti possono leggere le proprie iscrizioni" ON "public"."profil
 ALTER TABLE "public"."academy_classes" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."ai_settings" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."badges" ENABLE ROW LEVEL SECURITY;
 
 
@@ -3183,6 +3273,9 @@ ALTER TABLE "public"."profile_lessons_progress" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."quiz_ai_reviews" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."quiz_answers" ENABLE ROW LEVEL SECURITY;
@@ -3431,6 +3524,12 @@ GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_co
 
 
 
+GRANT ALL ON FUNCTION "public"."calculate_level"("p_xp" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."calculate_level"("p_xp" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."calculate_level"("p_xp" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."fn_generate_order_number"() TO "anon";
 GRANT ALL ON FUNCTION "public"."fn_generate_order_number"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."fn_generate_order_number"() TO "service_role";
@@ -3563,6 +3662,12 @@ GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
 GRANT ALL ON TABLE "public"."academy_classes" TO "anon";
 GRANT ALL ON TABLE "public"."academy_classes" TO "authenticated";
 GRANT ALL ON TABLE "public"."academy_classes" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."ai_settings" TO "anon";
+GRANT ALL ON TABLE "public"."ai_settings" TO "authenticated";
+GRANT ALL ON TABLE "public"."ai_settings" TO "service_role";
 
 
 
@@ -3737,6 +3842,12 @@ GRANT ALL ON TABLE "public"."profile_lessons_progress" TO "service_role";
 GRANT ALL ON TABLE "public"."profiles" TO "anon";
 GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."profiles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."quiz_ai_reviews" TO "anon";
+GRANT ALL ON TABLE "public"."quiz_ai_reviews" TO "authenticated";
+GRANT ALL ON TABLE "public"."quiz_ai_reviews" TO "service_role";
 
 
 

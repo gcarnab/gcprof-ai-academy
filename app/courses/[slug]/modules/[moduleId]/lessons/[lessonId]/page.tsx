@@ -192,7 +192,7 @@ export default function LessonPage() {
   }, [lessonId]);
 
   // 🔴 CHECKPOINT 5: Stato dello switch di rendering
-  logger.warn("=== [CHECKPOINT 5] Stato render attuale:", {
+  logger.info("=== [CHECKPOINT 5] Stato render attuale:", {
     isLoading,
     haDati: !!data,
   });

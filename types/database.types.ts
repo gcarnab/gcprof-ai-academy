@@ -2289,6 +2289,7 @@ export type Database = {
           xp_gained: number
         }[]
       }
+      calculate_level: { Args: { p_xp: number }; Returns: number }
       get_admin_courses_gamification_stats: {
         Args: never
         Returns: {

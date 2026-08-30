@@ -121,7 +121,13 @@ export default function QuizzesTab({
         matchesTitle && matchesStatus && matchesAssignment && matchesReview
       );
     });
-  }, [availableQuizzes, searchTerm, statusFilter, assignmentFilter, reviewFilter]);
+  }, [
+    availableQuizzes,
+    searchTerm,
+    statusFilter,
+    assignmentFilter,
+    reviewFilter,
+  ]);
 
   // Gestione Paginazione
   const totalPages = Math.max(
@@ -183,7 +189,8 @@ export default function QuizzesTab({
               Bozze: <strong className="ml-1">{draftQuizzesCount}</strong>
             </span>
             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-500/20">
-              Da Correggere: <strong className="ml-1">{pendingReviewsQuizzesCount}</strong>
+              Da Correggere:{" "}
+              <strong className="ml-1">{pendingReviewsQuizzesCount}</strong>
             </span>
           </div>
         </div>
@@ -317,7 +324,7 @@ export default function QuizzesTab({
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="border-b bg-muted/30 text-muted-foreground font-semibold select-none">
-                <th className="p-4 text-left">Titolo del Quiz</th>
+                <th className="p-4 text-left w-full">Titolo del Quiz</th>
                 <th className="p-4 text-center">Stato</th>
                 <th className="p-4 text-center">Corso</th>
                 <th className="p-4 text-center">Tentativi</th>
@@ -368,10 +375,16 @@ export default function QuizzesTab({
                     key={quiz.id}
                     className="hover:bg-muted/10 transition-colors"
                   >
-                    <td className="p-4 font-semibold text-foreground max-w-xs sm:max-w-md truncate">
-                      {quiz.title}
+                    <td className="p-4 font-semibold text-foreground">
+                      <div
+                        className="line-clamp-2 break-words"
+                        title={quiz.title}
+                      >
+                        {quiz.title}
+                      </div>
                     </td>
-                    <td className="p-4 text-center">
+
+                    <td className="p-4 text-center whitespace-nowrap">
                       {quiz.status === "active" ? (
                         <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 px-2.5 py-0.5 text-xs font-semibold border border-green-200 dark:border-green-800/50">
                           Pubblicato
@@ -383,7 +396,7 @@ export default function QuizzesTab({
                       )}
                     </td>
 
-                    <td className="p-4 text-center">
+                    <td className="p-4 text-center whitespace-nowrap">
                       {quiz.assignedCourse ? (
                         <span className="font-medium">
                           {quiz.assignedCourse.title}
@@ -393,13 +406,13 @@ export default function QuizzesTab({
                       )}
                     </td>
 
-                    <td className="p-4 text-center">
+                    <td className="p-4 text-center whitespace-nowrap">
                       <span className="font-semibold">
                         {quiz.attemptsCount}
                       </span>
                     </td>
 
-                    <td className="p-4 text-center">
+                    <td className="p-4 text-center whitespace-nowrap">
                       {quiz.pendingReviews > 0 ? (
                         <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2 py-1 text-xs font-bold text-orange-700 dark:text-orange-400 border border-orange-500/20">
                           {quiz.pendingReviews}
@@ -415,7 +428,7 @@ export default function QuizzesTab({
                         : "—"}
                     </td>
 
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-right whitespace-nowrap w-px">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           size="sm"

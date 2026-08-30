@@ -82,7 +82,7 @@ export async function incrementStudentMinutes(
   lessonId?: string,
   minutesToAdd: number = 1,
 ) {
-  logger.warn("SERVER ACTION incrementStudentMinutes", {
+  logger.info("SERVER ACTION incrementStudentMinutes", {
     userId,
     courseId,
     lessonId,
