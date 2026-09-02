@@ -61,12 +61,17 @@ async function processGamificationAndCertificates(
       finalScore,
     });
 
-    const quizCode = quiz?.code || quiz?.slug || quizId;
-    await unlockQuizBadge(userId, quizCode);
-
-    const courseId = quiz?.courseId || quiz?.course_id;
-    const moduleId = quiz?.moduleId || quiz?.module_id;
+    let courseId = quiz?.courseId || quiz?.course_id;
+    let moduleId = quiz?.moduleId || quiz?.module_id;
     const lessonId = quiz?.lessonId || quiz?.lesson_id;
+
+    // Sblocco del badge passando direttamente quizId e courseId
+    await unlockQuizBadge(userId, quizId, courseId);
+
+    // Fallback difensivo centralizzato: usa la risoluzione del repository
+    if (!moduleId && courseId) {
+      moduleId = (await quizRepository.resolveMainCourseModule(courseId)) ?? undefined;
+    }
 
     if (!courseId || !moduleId) {
       logger.warn(
@@ -146,7 +151,7 @@ export async function updateQuizStatusAction(
 export async function assignQuizToCourseAction(
   quizId: string,
   courseId: string,
-  moduleId: string,
+  moduleId?: string,
 ) {
   try {
     await getAuthenticatedSession("admin");

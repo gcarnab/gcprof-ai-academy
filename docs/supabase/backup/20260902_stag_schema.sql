@@ -13,6 +13,11 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
+
+
+ALTER SCHEMA "public" OWNER TO "postgres";
+
+
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
@@ -140,119 +145,375 @@ CREATE TYPE "public"."quiz_status" AS ENUM (
 ALTER TYPE "public"."quiz_status" OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."award_module_badge"("p_user_id" "uuid", "p_lesson_id" "uuid") RETURNS TABLE("awarded" boolean, "badge_code" character varying, "badge_title" character varying, "xp_reward" integer, "course_xp" integer, "course_level" integer, "global_total_xp" integer, "global_level" integer)
+CREATE OR REPLACE FUNCTION "public"."award_module_badge"("p_user_id" "uuid", "p_lesson_id" "uuid") RETURNS TABLE("awarded" boolean, "badge_code" "text", "badge_title" character varying, "xp_reward" integer, "course_xp" integer, "course_level" integer, "global_total_xp" integer, "global_level" integer)
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
+
 DECLARE
-    v_module_code VARCHAR;
-    v_course_id UUID;
-    v_badge_id UUID;
-    v_badge_title VARCHAR;
-    v_badge_icon VARCHAR;
-    v_xp_reward INT := 0;
-    v_already_has_badge BOOLEAN := FALSE;
-    
-    v_updated_course_xp INT := 0;
-    v_updated_course_level INT := 1;
-    v_updated_global_xp INT := 0;
-    v_updated_global_level INT := 1;
+    -- ------------------------------------------------------------------------
+    -- Modulo / corso
+    -- ------------------------------------------------------------------------
+    v_module_id uuid;
+    v_course_id uuid;
+    v_module_code text;
+
+    -- ------------------------------------------------------------------------
+    -- Badge
+    -- ------------------------------------------------------------------------
+    v_badge_id uuid;
+    v_badge_code text;
+    v_badge_title varchar(100);
+    v_xp_reward integer := 0;
+
+    -- ------------------------------------------------------------------------
+    -- Completamento modulo
+    -- ------------------------------------------------------------------------
+    v_total_lessons integer := 0;
+    v_completed_lessons integer := 0;
+
+    -- ------------------------------------------------------------------------
+    -- Stato badge
+    -- ------------------------------------------------------------------------
+    v_badge_exists boolean := false;
+
+    -- ------------------------------------------------------------------------
+    -- Risultato XP
+    -- ------------------------------------------------------------------------
+    v_course_xp integer := 0;
+    v_course_level integer := 1;
+    v_global_total_xp integer := 0;
+    v_global_level integer := 1;
+
 BEGIN
-    -- A. Risaliamo a module_code e course_id partendo dalla lezione
-    SELECT cm.module_code, cm.course_id
-    INTO v_module_code, v_course_id
-    FROM public.course_lessons cl
-    JOIN public.course_modules cm ON cm.id = cl.module_id
+
+    -- ========================================================================
+    -- 1. VALIDAZIONE PARAMETRI
+    -- ========================================================================
+
+    IF p_user_id IS NULL THEN
+        RAISE EXCEPTION
+            'award_module_badge(): user_id mancante';
+    END IF;
+
+    IF p_lesson_id IS NULL THEN
+        RAISE EXCEPTION
+            'award_module_badge(): lesson_id mancante';
+    END IF;
+
+
+    -- ========================================================================
+    -- 2. IDENTIFICAZIONE MODULO / CORSO / MODULE CODE
+    -- ========================================================================
+
+    SELECT
+        cl.module_id,
+        cm.course_id,
+        cm.module_code
+    INTO
+        v_module_id,
+        v_course_id,
+        v_module_code
+    FROM public.course_lessons AS cl
+    INNER JOIN public.course_modules AS cm
+        ON cm.id = cl.module_id
     WHERE cl.id = p_lesson_id;
 
-    IF v_module_code IS NULL OR v_course_id IS NULL THEN
-        RAISE EXCEPTION 'Impossibile trovare il modulo o corso per la lezione ID %', p_lesson_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION
+            'Lezione % non trovata o non associata ad alcun modulo',
+            p_lesson_id;
     END IF;
 
-    -- B. Recuperiamo il badge dalla tabella badges
-    SELECT b.id, b.title, b.icon, b.xp_reward
-    INTO v_badge_id, v_badge_title, v_badge_icon, v_xp_reward
-    FROM public.badges b
-    WHERE b.code = v_module_code;
 
-    IF v_badge_id IS NULL THEN
-        RAISE EXCEPTION 'Badge con codice "%" non trovato nella tabella badges', v_module_code;
-    END IF;
+    -- ========================================================================
+    -- 3. CONTEGGIO LEZIONI DEL MODULO
+    -- ========================================================================
 
-    -- C. Verifichiamo se l'utente possiede già il badge PER QUESTO SPECIFICO CORSO
-    SELECT EXISTS (
-        SELECT 1 
-        FROM public.user_badges ub 
-        WHERE ub.profile_id = p_user_id 
-          AND ub.badge_id = v_badge_id 
-          AND ub.course_id = v_course_id
-    ) INTO v_already_has_badge;
+    SELECT COUNT(*)
+    INTO v_total_lessons
+    FROM public.course_lessons AS cl
+    WHERE cl.module_id = v_module_id;
 
-    IF v_already_has_badge THEN
-        -- Badge già assegnato per questo corso: ritorna lo stato corrente senza modifiche
-        SELECT ucs.course_xp, ucs.course_level 
-        INTO v_updated_course_xp, v_updated_course_level
-        FROM public.user_course_stats ucs
-        WHERE ucs.profile_id = p_user_id AND ucs.course_id = v_course_id;
 
-        SELECT p.total_xp, p.current_level 
-        INTO v_updated_global_xp, v_updated_global_level
-        FROM public.profiles p
+    -- ========================================================================
+    -- 4. CONTEGGIO LEZIONI COMPLETATE DALL'UTENTE
+    -- ========================================================================
+
+    SELECT COUNT(*)
+    INTO v_completed_lessons
+    FROM public.course_lessons AS cl
+    INNER JOIN public.profile_lessons_progress AS plp
+        ON plp.lesson_id = cl.id
+       AND plp.profile_id = p_user_id
+    WHERE cl.module_id = v_module_id
+      AND plp.is_completed = TRUE;
+
+
+    -- ========================================================================
+    -- 5. MODULO NON COMPLETATO
+    -- ========================================================================
+    --
+    -- Nessun badge.
+    -- Nessun XP.
+    --
+    -- Restituiamo semplicemente lo stato XP attuale dell'utente.
+    -- ========================================================================
+
+    IF v_total_lessons = 0
+       OR v_completed_lessons < v_total_lessons
+    THEN
+
+        SELECT
+            COALESCE(ucs.course_xp, 0),
+            COALESCE(ucs.course_level, 1)
+        INTO
+            v_course_xp,
+            v_course_level
+        FROM public.user_course_stats AS ucs
+        WHERE ucs.profile_id = p_user_id
+          AND ucs.course_id = v_course_id;
+
+
+        SELECT
+            COALESCE(p.total_xp, 0),
+            COALESCE(p.current_level, 1)
+        INTO
+            v_global_total_xp,
+            v_global_level
+        FROM public.profiles AS p
         WHERE p.id = p_user_id;
 
-        RETURN QUERY SELECT 
-            FALSE, 
-            v_module_code, 
-            v_badge_title, 
-            0, 
-            COALESCE(v_updated_course_xp, 0), 
-            COALESCE(v_updated_course_level, 1), 
-            COALESCE(v_updated_global_xp, 0), 
-            COALESCE(v_updated_global_level, 1);
+
+        RETURN QUERY
+        SELECT
+            FALSE,
+            v_module_code,
+            NULL::varchar(100),
+            0,
+            COALESCE(v_course_xp, 0),
+            COALESCE(v_course_level, 1),
+            COALESCE(v_global_total_xp, 0),
+            COALESCE(v_global_level, 1);
+
         RETURN;
+
     END IF;
 
-    -- D. Assegnazione badge legato al corso
-    INSERT INTO public.user_badges (profile_id, badge_id, course_id, awarded_at)
-    VALUES (p_user_id, v_badge_id, v_course_id, NOW())
-    ON CONFLICT (profile_id, badge_id, course_id) DO NOTHING;
 
-    -- E. Aggiornamento XP e Livello SPECIFICO PER CORSO (UPSERT)
-    INSERT INTO public.user_course_stats (profile_id, course_id, course_xp, course_level, updated_at)
-    VALUES (
-        p_user_id, 
-        v_course_id, 
-        v_xp_reward, 
-        (v_xp_reward / 500) + 1, 
-        NOW()
+    -- ========================================================================
+    -- 6. RECUPERO BADGE DEL MODULO
+    -- ========================================================================
+    --
+    -- Il badge deve avere:
+    --
+    --   badges.code = course_modules.module_code
+    --   badges.badge_type = 'module'
+    --
+    -- ========================================================================
+
+    SELECT
+        b.id,
+        b.code,
+        b.title,
+        COALESCE(b.xp_reward, 0)
+    INTO
+        v_badge_id,
+        v_badge_code,
+        v_badge_title,
+        v_xp_reward
+    FROM public.badges AS b
+    WHERE b.code = v_module_code
+      AND b.badge_type = 'module'
+    LIMIT 1;
+
+
+    -- ========================================================================
+    -- 7. BADGE NON CONFIGURATO
+    -- ========================================================================
+
+    IF NOT FOUND THEN
+
+        SELECT
+            COALESCE(ucs.course_xp, 0),
+            COALESCE(ucs.course_level, 1)
+        INTO
+            v_course_xp,
+            v_course_level
+        FROM public.user_course_stats AS ucs
+        WHERE ucs.profile_id = p_user_id
+          AND ucs.course_id = v_course_id;
+
+
+        SELECT
+            COALESCE(p.total_xp, 0),
+            COALESCE(p.current_level, 1)
+        INTO
+            v_global_total_xp,
+            v_global_level
+        FROM public.profiles AS p
+        WHERE p.id = p_user_id;
+
+
+        RETURN QUERY
+        SELECT
+            FALSE,
+            v_module_code,
+            NULL::varchar(100),
+            0,
+            COALESCE(v_course_xp, 0),
+            COALESCE(v_course_level, 1),
+            COALESCE(v_global_total_xp, 0),
+            COALESCE(v_global_level, 1);
+
+        RETURN;
+
+    END IF;
+
+
+    -- ========================================================================
+    -- 8. VERIFICA BADGE GIÀ ASSEGNATO
+    -- ========================================================================
+    --
+    -- Per un badge modulo:
+    --
+    --   profile_id = utente
+    --   badge_id   = badge modulo
+    --   course_id  = corso corrente
+    --   quiz_id    = NULL
+    --
+    -- ========================================================================
+
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.user_badges AS ub
+        WHERE ub.profile_id = p_user_id
+          AND ub.badge_id = v_badge_id
+          AND ub.course_id = v_course_id
+          AND ub.quiz_id IS NULL
     )
-    ON CONFLICT (profile_id, course_id) DO UPDATE 
-    SET 
-        course_xp = user_course_stats.course_xp + EXCLUDED.course_xp,
-        course_level = ((user_course_stats.course_xp + EXCLUDED.course_xp) / 500) + 1,
-        updated_at = NOW()
-    RETURNING user_course_stats.course_xp, user_course_stats.course_level 
-    INTO v_updated_course_xp, v_updated_course_level;
+    INTO v_badge_exists;
 
-    -- F. Aggiornamento XP e Livello GLOBALE della Piattaforma
-    UPDATE public.profiles p
-    SET 
-        total_xp = COALESCE(p.total_xp, 0) + v_xp_reward,
-        current_level = ((COALESCE(p.total_xp, 0) + v_xp_reward) / 500) + 1,
-        updated_at = NOW()
-    WHERE p.id = p_user_id
-    RETURNING p.total_xp, p.current_level INTO v_updated_global_xp, v_updated_global_level;
 
-    -- G. Restituzione dei dati per sia il corso che il totale globale
-    RETURN QUERY SELECT 
-        TRUE, 
-        v_module_code, 
-        v_badge_title, 
-        v_xp_reward, 
-        v_updated_course_xp, 
-        v_updated_course_level, 
-        v_updated_global_xp, 
-        v_updated_global_level;
+    -- ========================================================================
+    -- 9. BADGE GIÀ PRESENTE
+    -- ========================================================================
+
+    IF v_badge_exists THEN
+
+        SELECT
+            COALESCE(ucs.course_xp, 0),
+            COALESCE(ucs.course_level, 1)
+        INTO
+            v_course_xp,
+            v_course_level
+        FROM public.user_course_stats AS ucs
+        WHERE ucs.profile_id = p_user_id
+          AND ucs.course_id = v_course_id;
+
+
+        SELECT
+            COALESCE(p.total_xp, 0),
+            COALESCE(p.current_level, 1)
+        INTO
+            v_global_total_xp,
+            v_global_level
+        FROM public.profiles AS p
+        WHERE p.id = p_user_id;
+
+
+        RETURN QUERY
+        SELECT
+            FALSE,
+            v_badge_code,
+            v_badge_title,
+            0,
+            COALESCE(v_course_xp, 0),
+            COALESCE(v_course_level, 1),
+            COALESCE(v_global_total_xp, 0),
+            COALESCE(v_global_level, 1);
+
+        RETURN;
+
+    END IF;
+
+
+    -- ========================================================================
+    -- 10. INSERIMENTO BADGE
+    -- ========================================================================
+
+    INSERT INTO public.user_badges (
+        profile_id,
+        badge_id,
+        awarded_at,
+        course_id,
+        quiz_id
+    )
+    VALUES (
+        p_user_id,
+        v_badge_id,
+        NOW(),
+        v_course_id,
+        NULL
+    );
+
+
+    -- ========================================================================
+    -- 11. CENTRALIZZAZIONE XP
+    -- ========================================================================
+    --
+    -- IMPORTANTE:
+    --
+    -- award_module_badge() NON aggiorna direttamente:
+    --
+    --   profiles.total_xp
+    --   profiles.current_level
+    --   user_course_stats.course_xp
+    --   user_course_stats.course_level
+    --
+    -- Tutta la responsabilità viene delegata a award_xp().
+    --
+    -- award_xp() è l'unica routine responsabile dell'aggiornamento
+    -- contabile dell'XP.
+    --
+    -- Il SELECT INTO consente di recuperare direttamente il risultato
+    -- prodotto da award_xp().
+    -- ========================================================================
+
+    SELECT
+        axp.course_xp,
+        axp.course_level,
+        axp.global_total_xp,
+        axp.global_level
+    INTO
+        v_course_xp,
+        v_course_level,
+        v_global_total_xp,
+        v_global_level
+    FROM public.award_xp(
+        p_user_id,
+        v_xp_reward,
+        v_course_id
+    ) AS axp;
+
+
+    -- ========================================================================
+    -- 12. RISULTATO
+    -- ========================================================================
+
+    RETURN QUERY
+    SELECT
+        TRUE,
+        v_badge_code,
+        v_badge_title,
+        v_xp_reward,
+        v_course_xp,
+        v_course_level,
+        v_global_total_xp,
+        v_global_level;
+
 END;
+
 $$;
 
 
@@ -261,205 +522,867 @@ ALTER FUNCTION "public"."award_module_badge"("p_user_id" "uuid", "p_lesson_id" "
 
 CREATE OR REPLACE FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric DEFAULT 0, "p_max_score" numeric DEFAULT 10) RETURNS TABLE("already_unlocked" boolean, "badge_title" character varying, "badge_icon" character varying, "xp_gained" integer, "new_total_xp" integer, "new_level" integer)
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
+
 DECLARE
+
+    -- ------------------------------------------------------------------------
+    -- Quiz / corso
+    -- ------------------------------------------------------------------------
+
+    v_quiz_id uuid := NULL;
+    v_course_id uuid := NULL;
+
+    v_quiz_max_score numeric := 0;
+    v_quiz_passing_score numeric := 0;
+
+    -- ------------------------------------------------------------------------
+    -- Tentativo
+    -- ------------------------------------------------------------------------
+
+    v_attempt_id uuid := NULL;
+    v_final_score numeric := NULL;
+    v_attempt_status text := NULL;
+
+    v_quiz_passed boolean := FALSE;
+    v_perfect_score boolean := FALSE;
+
+    -- ------------------------------------------------------------------------
+    -- Badge
+    -- ------------------------------------------------------------------------
+
     v_badge public.badges%ROWTYPE;
-    v_profile public.profiles%ROWTYPE;
-    v_quiz_id UUID := NULL;
-    v_course_id UUID := NULL;
-    v_completed_count INT := 0;
-    v_target_badge_code TEXT := NULL;
+
+    v_target_badge_code text := NULL;
+
+    v_badge_exists boolean := FALSE;
+    v_inserted_count integer := 0;
+
+    -- ------------------------------------------------------------------------
+    -- Statistiche quiz
+    -- ------------------------------------------------------------------------
+
+    v_completed_count integer := 0;
+
+    -- ------------------------------------------------------------------------
+    -- XP
+    -- ------------------------------------------------------------------------
+
+    v_xp_result record;
+
+    v_xp_gained integer := 0;
+    v_new_total_xp integer := 0;
+    v_new_level integer := 1;
+
 BEGIN
 
-    ------------------------------------------------------------------
-    -- 1. Verifica Profilo Utente
-    ------------------------------------------------------------------
-    SELECT * INTO v_profile 
-    FROM public.profiles 
-    WHERE id = p_user_id;
+    -- ========================================================================
+    -- 1. VALIDAZIONE
+    -- ========================================================================
+
+    IF p_user_id IS NULL THEN
+
+        RAISE EXCEPTION
+            'award_quiz_badge(): user_id mancante';
+
+    END IF;
+
+
+    IF p_quiz_code IS NULL
+       OR BTRIM(p_quiz_code) = ''
+    THEN
+
+        RAISE EXCEPTION
+            'award_quiz_badge(): quiz_code mancante';
+
+    END IF;
+
+
+    -- ========================================================================
+    -- 2. VERIFICA PROFILO
+    -- ========================================================================
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.profiles AS p
+        WHERE p.id = p_user_id
+    )
+    THEN
+
+        RAISE EXCEPTION
+            'Profilo utente % inesistente',
+            p_user_id;
+
+    END IF;
+
+
+    -- ========================================================================
+    -- 3. IDENTIFICAZIONE QUIZ
+    -- ========================================================================
+    --
+    -- Compatibilità:
+    --
+    --   p_quiz_code può essere:
+    --
+    --   - UUID del quiz
+    --   - titolo del quiz
+    --
+    -- Il course_id viene ricavato direttamente dal quiz.
+    --
+    -- Il fallback su quiz_assignments viene mantenuto per compatibilità
+    -- con eventuali dati/strutture legacy.
+    -- ========================================================================
+
+    SELECT
+        q.id,
+
+        COALESCE(
+            q.course_id,
+            qa.course_id
+        ),
+
+        COALESCE(
+            q.max_score,
+            0
+        ),
+
+        COALESCE(
+            q.passing_score,
+            0
+        )
+
+    INTO
+        v_quiz_id,
+        v_course_id,
+        v_quiz_max_score,
+        v_quiz_passing_score
+
+    FROM public.quizzes AS q
+
+    LEFT JOIN public.quiz_assignments AS qa
+        ON qa.quiz_id = q.id
+
+    WHERE
+        q.id::text = p_quiz_code
+        OR q.title = p_quiz_code
+
+    LIMIT 1;
+
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Profilo non trovato per l''utente ID %', p_user_id;
+
+        RAISE EXCEPTION
+            'Quiz "%" non trovato',
+            p_quiz_code;
+
     END IF;
 
-    ------------------------------------------------------------------
-    -- 2. Identificazione Quiz e Relativo Corso (senza course_quizzes)
-    ------------------------------------------------------------------
-    SELECT 
-        q.id, 
-        COALESCE(q.course_id, qa.course_id)
-    INTO 
-        v_quiz_id, 
-        v_course_id
-    FROM public.quizzes q
-    LEFT JOIN public.quiz_assignments qa ON qa.quiz_id = q.id
-    WHERE q.id::text = p_quiz_code OR q.title = p_quiz_code
+
+    -- ========================================================================
+    -- 4. RECUPERO ULTIMO TENTATIVO GRADED
+    -- ========================================================================
+    --
+    -- È fondamentale non utilizzare i parametri p_score / p_max_score come
+    -- prova dell'effettivo completamento.
+    --
+    -- La fonte autorevole è quiz_attempts.
+    --
+    -- Viene considerato l'ultimo tentativo graded dell'utente per il quiz.
+    -- ========================================================================
+
+    SELECT
+        qa.id,
+        qa.status,
+        qa.final_score
+
+    INTO
+        v_attempt_id,
+        v_attempt_status,
+        v_final_score
+
+    FROM public.quiz_attempts AS qa
+
+    WHERE qa.quiz_id = v_quiz_id
+      AND qa.student_id = p_user_id
+      AND qa.status = 'graded'
+
+    ORDER BY qa.created_at DESC
+
     LIMIT 1;
 
-    ------------------------------------------------------------------
-    -- 3. Conteggio Quiz Completati dall'Utente
-    ------------------------------------------------------------------
-    SELECT COUNT(DISTINCT quiz_id) INTO v_completed_count
-    FROM public.quiz_attempts
-    WHERE student_id = p_user_id 
-      AND (status = 'graded' OR auto_score > 0 OR final_score > 0);
 
-    ------------------------------------------------------------------
-    -- 4. Logica Assegnazione Badge (Specifico o Milestone)
-    ------------------------------------------------------------------
-    SELECT code INTO v_target_badge_code
-    FROM public.badges
-    WHERE code = p_quiz_code
+    -- ========================================================================
+    -- 5. QUIZ NON ANCORA CORRETTO / COMPLETATO
+    -- ========================================================================
+
+    IF v_attempt_id IS NULL THEN
+
+        RETURN QUERY
+        SELECT
+            FALSE,
+            NULL::varchar,
+            NULL::varchar,
+            0,
+            COALESCE(
+                (
+                    SELECT p.total_xp
+                    FROM public.profiles AS p
+                    WHERE p.id = p_user_id
+                ),
+                0
+            ),
+            COALESCE(
+                (
+                    SELECT p.current_level
+                    FROM public.profiles AS p
+                    WHERE p.id = p_user_id
+                ),
+                1
+            );
+
+        RETURN;
+
+    END IF;
+
+
+    -- ========================================================================
+    -- 6. DETERMINAZIONE SUPERAMENTO
+    -- ========================================================================
+    --
+    -- passing_score nel database è espresso come percentuale.
+    --
+    -- Esempio:
+    --
+    --   max_score     = 10
+    --   passing_score = 60
+    --   final_score   = 7
+    --
+    -- 7 / 10 * 100 = 70%
+    --
+    -- quindi:
+    --
+    --   quiz superato = TRUE
+    --
+    -- ========================================================================
+
+    IF v_quiz_max_score > 0
+       AND v_final_score IS NOT NULL
+       AND (
+            (v_final_score / v_quiz_max_score) * 100
+       ) >= v_quiz_passing_score
+    THEN
+
+        v_quiz_passed := TRUE;
+
+    ELSE
+
+        v_quiz_passed := FALSE;
+
+    END IF;
+
+
+    -- ========================================================================
+    -- 7. PERFECT SCORE
+    -- ========================================================================
+    --
+    -- Il PERFECT_SCORE viene assegnato esclusivamente se il tentativo
+    -- effettivamente corretto ha raggiunto il punteggio massimo.
+    --
+    -- NON utilizziamo p_score come fonte autorevole.
+    -- ========================================================================
+
+    IF v_quiz_passed
+       AND v_quiz_max_score > 0
+       AND v_final_score >= v_quiz_max_score
+    THEN
+
+        v_perfect_score := TRUE;
+
+    END IF;
+
+
+    -- ========================================================================
+    -- 8. CONTEGGIO QUIZ SUPERATI
+    -- ========================================================================
+    --
+    -- Contiamo soltanto quiz con almeno un tentativo graded che soddisfa
+    -- la soglia di superamento.
+    --
+    -- Ogni quiz viene contato una sola volta.
+    -- ========================================================================
+
+    SELECT COUNT(*)
+
+    INTO v_completed_count
+
+    FROM (
+
+        SELECT
+            qa.quiz_id
+
+        FROM public.quiz_attempts AS qa
+
+        INNER JOIN public.quizzes AS q
+            ON q.id = qa.quiz_id
+
+        WHERE qa.student_id = p_user_id
+          AND qa.status = 'graded'
+          AND q.max_score > 0
+          AND (
+                (
+                    qa.final_score / q.max_score
+                ) * 100
+              ) >= q.passing_score
+
+        GROUP BY
+            qa.quiz_id
+
+    ) AS completed_quizzes;
+
+
+    -- ========================================================================
+    -- 9. BADGE SPECIFICO QUIZ
+    -- ========================================================================
+    --
+    -- Se esiste un badge il cui code coincide con p_quiz_code, viene
+    -- considerato il badge specifico del quiz.
+    --
+    -- Tuttavia viene assegnato soltanto dopo il reale superamento.
+    -- ========================================================================
+
+    SELECT b.code
+
+    INTO v_target_badge_code
+
+    FROM public.badges AS b
+
+    WHERE b.code = p_quiz_code
+      AND b.badge_type = 'quiz'
+
     LIMIT 1;
 
-    IF v_target_badge_code IS NULL THEN
-        IF p_score > 0 AND p_score >= p_max_score AND NOT EXISTS (
-            SELECT 1 FROM public.user_badges ub 
-            JOIN public.badges b ON b.id = ub.badge_id 
-            WHERE ub.profile_id = p_user_id AND b.code = 'PERFECT_SCORE'
-        ) THEN
+
+    -- ========================================================================
+    -- 10. NESSUN BADGE SPECIFICO -> BADGE MILESTONE
+    -- ========================================================================
+
+    IF v_target_badge_code IS NULL
+       AND v_quiz_passed
+    THEN
+
+        -- --------------------------------------------------------------------
+        -- PERFECT SCORE
+        -- --------------------------------------------------------------------
+
+        IF v_perfect_score
+           AND NOT EXISTS (
+                SELECT 1
+                FROM public.user_badges AS ub
+                INNER JOIN public.badges AS b
+                    ON b.id = ub.badge_id
+                WHERE ub.profile_id = p_user_id
+                  AND b.code = 'PERFECT_SCORE'
+           )
+        THEN
+
             v_target_badge_code := 'PERFECT_SCORE';
 
-        ELSIF v_completed_count >= 1 AND NOT EXISTS (
-            SELECT 1 FROM public.user_badges ub 
-            JOIN public.badges b ON b.id = ub.badge_id 
-            WHERE ub.profile_id = p_user_id AND b.code = 'FIRST_QUIZ'
-        ) THEN
+
+        -- --------------------------------------------------------------------
+        -- FIRST QUIZ
+        -- --------------------------------------------------------------------
+
+        ELSIF v_completed_count >= 1
+           AND NOT EXISTS (
+                SELECT 1
+                FROM public.user_badges AS ub
+                INNER JOIN public.badges AS b
+                    ON b.id = ub.badge_id
+                WHERE ub.profile_id = p_user_id
+                  AND b.code = 'FIRST_QUIZ'
+           )
+        THEN
+
             v_target_badge_code := 'FIRST_QUIZ';
 
-        ELSIF v_completed_count >= 10 AND NOT EXISTS (
-            SELECT 1 FROM public.user_badges ub 
-            JOIN public.badges b ON b.id = ub.badge_id 
-            WHERE ub.profile_id = p_user_id AND b.code = 'QUIZ_10'
-        ) THEN
+
+        -- --------------------------------------------------------------------
+        -- QUIZ 10
+        -- --------------------------------------------------------------------
+
+        ELSIF v_completed_count >= 10
+           AND NOT EXISTS (
+                SELECT 1
+                FROM public.user_badges AS ub
+                INNER JOIN public.badges AS b
+                    ON b.id = ub.badge_id
+                WHERE ub.profile_id = p_user_id
+                  AND b.code = 'QUIZ_10'
+           )
+        THEN
+
             v_target_badge_code := 'QUIZ_10';
 
-        ELSIF v_completed_count >= 25 AND NOT EXISTS (
-            SELECT 1 FROM public.user_badges ub 
-            JOIN public.badges b ON b.id = ub.badge_id 
-            WHERE ub.profile_id = p_user_id AND b.code = 'QUIZ_25'
-        ) THEN
+
+        -- --------------------------------------------------------------------
+        -- QUIZ 25
+        -- --------------------------------------------------------------------
+
+        ELSIF v_completed_count >= 25
+           AND NOT EXISTS (
+                SELECT 1
+                FROM public.user_badges AS ub
+                INNER JOIN public.badges AS b
+                    ON b.id = ub.badge_id
+                WHERE ub.profile_id = p_user_id
+                  AND b.code = 'QUIZ_25'
+           )
+        THEN
+
             v_target_badge_code := 'QUIZ_25';
 
-        ELSIF v_completed_count >= 50 AND NOT EXISTS (
-            SELECT 1 FROM public.user_badges ub 
-            JOIN public.badges b ON b.id = ub.badge_id 
-            WHERE ub.profile_id = p_user_id AND b.code = 'QUIZ_50'
-        ) THEN
+
+        -- --------------------------------------------------------------------
+        -- QUIZ 50
+        -- --------------------------------------------------------------------
+
+        ELSIF v_completed_count >= 50
+           AND NOT EXISTS (
+                SELECT 1
+                FROM public.user_badges AS ub
+                INNER JOIN public.badges AS b
+                    ON b.id = ub.badge_id
+                WHERE ub.profile_id = p_user_id
+                  AND b.code = 'QUIZ_50'
+           )
+        THEN
+
             v_target_badge_code := 'QUIZ_50';
+
+
+        -- --------------------------------------------------------------------
+        -- QUIZ MASTER
+        -- --------------------------------------------------------------------
+
+        ELSIF v_completed_count >= 100
+           AND NOT EXISTS (
+                SELECT 1
+                FROM public.user_badges AS ub
+                INNER JOIN public.badges AS b
+                    ON b.id = ub.badge_id
+                WHERE ub.profile_id = p_user_id
+                  AND b.code = 'QUIZ_MASTER'
+           )
+        THEN
+
+            v_target_badge_code := 'QUIZ_MASTER';
+
         END IF;
+
     END IF;
 
-    ------------------------------------------------------------------
-    -- 5. Nessun Badge da Assegnare
-    ------------------------------------------------------------------
+
+    -- ========================================================================
+    -- 11. QUIZ NON SUPERATO / NESSUN BADGE DA ASSEGNARE
+    -- ========================================================================
+
     IF v_target_badge_code IS NULL THEN
-        RETURN QUERY SELECT 
-            false, 
-            NULL::VARCHAR, 
-            NULL::VARCHAR, 
-            0, 
-            COALESCE(v_profile.total_xp, 0), 
-            COALESCE(v_profile.current_level, 1);
+
+        SELECT
+            COALESCE(p.total_xp, 0),
+            COALESCE(p.current_level, 1)
+
+        INTO
+            v_new_total_xp,
+            v_new_level
+
+        FROM public.profiles AS p
+
+        WHERE p.id = p_user_id;
+
+
+        RETURN QUERY
+        SELECT
+            FALSE,
+            NULL::varchar,
+            NULL::varchar,
+            0,
+            v_new_total_xp,
+            v_new_level;
+
         RETURN;
+
     END IF;
 
-    ------------------------------------------------------------------
-    -- 6. Caricamento Dati Badge
-    ------------------------------------------------------------------
-    SELECT * INTO v_badge FROM public.badges WHERE code = v_target_badge_code LIMIT 1;
 
-    ------------------------------------------------------------------
-    -- 7. Controllo Duplicati (user_badges)
-    ------------------------------------------------------------------
-    IF EXISTS (
-        SELECT 1 FROM public.user_badges
-        WHERE profile_id = p_user_id AND badge_id = v_badge.id
-    ) THEN
-        RETURN QUERY SELECT 
-            true, 
-            v_badge.title, 
-            v_badge.icon, 
-            0, 
-            COALESCE(v_profile.total_xp, 0), 
-            COALESCE(v_profile.current_level, 1);
-        RETURN;
+    -- ========================================================================
+    -- 12. CARICAMENTO BADGE
+    -- ========================================================================
+
+    SELECT *
+
+    INTO v_badge
+
+    FROM public.badges AS b
+
+    WHERE b.code = v_target_badge_code
+      AND b.badge_type = 'quiz'
+
+    LIMIT 1;
+
+
+    IF NOT FOUND THEN
+
+        RAISE EXCEPTION
+            'Badge quiz "%" non configurato',
+            v_target_badge_code;
+
     END IF;
 
-    ------------------------------------------------------------------
-    -- 8. Inserimento in user_badges
-    ------------------------------------------------------------------
-    INSERT INTO public.user_badges (
+
+    -- ========================================================================
+    -- 13. VERIFICA DUPLICATO
+    -- ========================================================================
+
+    SELECT EXISTS (
+
+        SELECT 1
+
+        FROM public.user_badges AS ub
+
+        WHERE ub.profile_id = p_user_id
+          AND ub.badge_id = v_badge.id
+
+    )
+
+    INTO v_badge_exists;
+
+
+    IF v_badge_exists THEN
+
+        SELECT
+            COALESCE(p.total_xp, 0),
+            COALESCE(p.current_level, 1)
+
+        INTO
+            v_new_total_xp,
+            v_new_level
+
+        FROM public.profiles AS p
+
+        WHERE p.id = p_user_id;
+
+
+        RETURN QUERY
+        SELECT
+            TRUE,
+            v_badge.title,
+            v_badge.icon,
+            0,
+            v_new_total_xp,
+            v_new_level;
+
+        RETURN;
+
+    END IF;
+
+
+    -- ========================================================================
+    -- 14. INSERIMENTO BADGE
+    -- ========================================================================
+    --
+    -- Il badge viene inserito prima dell'assegnazione XP.
+    --
+    -- In questo modo l'XP viene assegnato soltanto quando il badge è realmente
+    -- nuovo.
+    -- ========================================================================
+
+    INSERT INTO public.user_badges
+    (
         profile_id,
         badge_id,
         course_id,
+        quiz_id,
         awarded_at
-    ) VALUES (
+    )
+    VALUES
+    (
         p_user_id,
         v_badge.id,
         v_course_id,
+        v_quiz_id,
         NOW()
     )
     ON CONFLICT DO NOTHING;
 
-    ------------------------------------------------------------------
-    -- 9. Aggiornamento Gamification per Corso
-    ------------------------------------------------------------------
-    IF v_course_id IS NOT NULL THEN
-        INSERT INTO public.user_course_stats (
-            profile_id, 
-            course_id, 
-            course_xp, 
-            course_level, 
-            updated_at
-        )
-        VALUES (
-            p_user_id, 
-            v_course_id, 
-            v_badge.xp_reward, 
-            (v_badge.xp_reward / 500) + 1, 
-            NOW()
-        )
-        ON CONFLICT (profile_id, course_id) DO UPDATE 
-        SET 
-            course_xp = user_course_stats.course_xp + EXCLUDED.course_xp,
-            course_level = ((user_course_stats.course_xp + EXCLUDED.course_xp) / 500) + 1,
-            updated_at = NOW();
+
+    GET DIAGNOSTICS
+        v_inserted_count = ROW_COUNT;
+
+
+    -- ========================================================================
+    -- 15. RACE CONDITION
+    -- ========================================================================
+
+    IF v_inserted_count = 0 THEN
+
+        SELECT
+            COALESCE(p.total_xp, 0),
+            COALESCE(p.current_level, 1)
+
+        INTO
+            v_new_total_xp,
+            v_new_level
+
+        FROM public.profiles AS p
+
+        WHERE p.id = p_user_id;
+
+
+        RETURN QUERY
+        SELECT
+            TRUE,
+            v_badge.title,
+            v_badge.icon,
+            0,
+            v_new_total_xp,
+            v_new_level;
+
+        RETURN;
+
     END IF;
 
-    ------------------------------------------------------------------
-    -- 10. Aggiornamento XP e Livello Globale
-    ------------------------------------------------------------------
-    UPDATE public.profiles p
-    SET
-        total_xp = COALESCE(p.total_xp, 0) + v_badge.xp_reward,
-        current_level = ((COALESCE(p.total_xp, 0) + v_badge.xp_reward) / 500) + 1,
-        updated_at = NOW()
-    WHERE p.id = p_user_id
-    RETURNING * INTO v_profile;
 
-    ------------------------------------------------------------------
-    -- 11. Output Finale
-    ------------------------------------------------------------------
-    RETURN QUERY SELECT 
-        false, 
-        v_badge.title, 
-        v_badge.icon, 
-        v_badge.xp_reward, 
-        v_profile.total_xp, 
-        v_profile.current_level;
+    -- ========================================================================
+    -- 16. XP CENTRALIZZATA
+    -- ========================================================================
+    --
+    -- award_xp() è l'unica funzione responsabile dell'aggiornamento:
+    --
+    --   profiles.total_xp
+    --   profiles.current_level
+    --   user_course_stats.course_xp
+    --   user_course_stats.course_level
+    --
+    -- award_quiz_badge() non modifica direttamente nessuna di queste
+    -- strutture.
+    -- ========================================================================
+
+    SELECT *
+
+    INTO v_xp_result
+
+    FROM public.award_xp(
+        p_user_id,
+        v_badge.xp_reward,
+        v_course_id
+    );
+
+
+    v_xp_gained :=
+        COALESCE(
+            v_xp_result.xp_gained,
+            0
+        );
+
+    v_new_total_xp :=
+        COALESCE(
+            v_xp_result.global_total_xp,
+            0
+        );
+
+    v_new_level :=
+        COALESCE(
+            v_xp_result.global_level,
+            1
+        );
+
+
+    -- ========================================================================
+    -- 17. OUTPUT
+    -- ========================================================================
+
+    RETURN QUERY
+    SELECT
+        FALSE,
+        v_badge.title,
+        v_badge.icon,
+        v_xp_gained,
+        v_new_total_xp,
+        v_new_level;
 
 END;
+
 $$;
 
 
 ALTER FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric, "p_max_score" numeric) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."award_xp"("p_user_id" "uuid", "p_xp" integer, "p_course_id" "uuid" DEFAULT NULL::"uuid") RETURNS TABLE("xp_gained" integer, "course_xp" integer, "course_level" integer, "global_total_xp" integer, "global_level" integer)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+    v_course_xp integer := 0;
+    v_course_level integer := 1;
+    v_global_total_xp integer := 0;
+    v_global_level integer := 1;
+BEGIN
+
+    --------------------------------------------------------------------------
+    -- 1. VALIDAZIONE
+    --------------------------------------------------------------------------
+
+    IF p_user_id IS NULL THEN
+        RAISE EXCEPTION 'award_xp(): user_id mancante';
+    END IF;
+
+    IF p_xp IS NULL OR p_xp < 0 THEN
+        RAISE EXCEPTION 'award_xp(): xp deve essere >= 0';
+    END IF;
+
+    IF p_xp = 0 THEN
+
+        SELECT
+            COALESCE(p.total_xp, 0),
+            COALESCE(p.current_level, 1)
+        INTO
+            v_global_total_xp,
+            v_global_level
+        FROM public.profiles p
+        WHERE p.id = p_user_id;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'Profilo utente % inesistente', p_user_id;
+        END IF;
+
+        IF p_course_id IS NOT NULL THEN
+
+            SELECT
+                COALESCE(ucs.course_xp, 0),
+                COALESCE(ucs.course_level, 1)
+            INTO
+                v_course_xp,
+                v_course_level
+            FROM public.user_course_stats AS ucs
+            WHERE ucs.profile_id = p_user_id
+              AND ucs.course_id = p_course_id;
+
+        END IF;
+
+        RETURN QUERY
+        SELECT
+            0,
+            v_course_xp,
+            v_course_level,
+            v_global_total_xp,
+            v_global_level;
+
+        RETURN;
+    END IF;
+
+    --------------------------------------------------------------------------
+    -- 2. XP GLOBALE
+    --
+    -- L'UPDATE atomico evita di perdere XP in caso di richieste concorrenti.
+    --------------------------------------------------------------------------
+
+    UPDATE public.profiles AS p
+    SET
+        total_xp = COALESCE(p.total_xp, 0) + p_xp,
+        current_level = public.calculate_level(
+            COALESCE(p.total_xp, 0) + p_xp
+        ),
+        updated_at = NOW()
+    WHERE p.id = p_user_id
+    RETURNING
+        p.total_xp,
+        p.current_level
+    INTO
+        v_global_total_xp,
+        v_global_level;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Profilo utente % inesistente', p_user_id;
+    END IF;
+
+    --------------------------------------------------------------------------
+    -- 3. XP DEL CORSO
+    --
+    -- Viene aggiornato soltanto quando il contesto corso è disponibile.
+    --------------------------------------------------------------------------
+
+    IF p_course_id IS NOT NULL THEN
+
+        INSERT INTO public.user_course_stats (
+            profile_id,
+            course_id,
+            course_xp,
+            course_level,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            p_user_id,
+            p_course_id,
+            p_xp,
+            public.calculate_level(p_xp),
+            NOW(),
+            NOW()
+        )
+        ON CONFLICT (profile_id, course_id)
+        DO UPDATE
+        SET
+            course_xp =
+                user_course_stats.course_xp + EXCLUDED.course_xp,
+
+            course_level =
+                public.calculate_level(
+                    user_course_stats.course_xp + EXCLUDED.course_xp
+                ),
+
+            updated_at = NOW()
+
+        RETURNING
+            user_course_stats.course_xp,
+            user_course_stats.course_level
+        INTO
+            v_course_xp,
+            v_course_level;
+
+    END IF;
+
+    --------------------------------------------------------------------------
+    -- 4. OUTPUT
+    --------------------------------------------------------------------------
+
+    RETURN QUERY
+    SELECT
+        p_xp,
+        v_course_xp,
+        v_course_level,
+        v_global_total_xp,
+        v_global_level;
+
+END;
+$$;
+
+
+ALTER FUNCTION "public"."award_xp"("p_user_id" "uuid", "p_xp" integer, "p_course_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."calculate_level"("p_xp" integer) RETURNS integer
     LANGUAGE "sql" IMMUTABLE PARALLEL SAFE
     AS $$
-    SELECT LEAST(100, GREATEST(1, 1 + (COALESCE(p_xp, 0) / 500)));
+    SELECT LEAST(
+        100,
+        GREATEST(
+            1,
+            1 + (COALESCE(p_xp, 0) / 500)
+        )
+    );
 $$;
 
 
@@ -812,118 +1735,218 @@ CREATE OR REPLACE FUNCTION "public"."track_lesson_activity"("p_user_id" "uuid", 
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
+
 DECLARE
-    v_minutes_to_add INTEGER;
-    v_new_minutes INTEGER;
-    v_is_completed BOOLEAN;
-    v_total_minutes INTEGER;
-    v_last_accessed TIMESTAMPTZ;
-    v_updated TIMESTAMPTZ;
-    
-    v_dynamic_threshold INTEGER;
-    v_max_batch INTEGER;
-    v_xp_per_lesson INTEGER;
-    v_was_completed_before BOOLEAN := FALSE;
-    v_xp_to_add INTEGER := 0;
+    -- ------------------------------------------------------------------------
+    -- Tracking
+    -- ------------------------------------------------------------------------
+    v_minutes_to_add integer;
+    v_new_minutes integer;
+    v_is_completed boolean;
+
+    v_total_minutes integer;
+    v_last_accessed timestamptz;
+    v_updated timestamptz;
+
+    -- ------------------------------------------------------------------------
+    -- Configurazione
+    -- ------------------------------------------------------------------------
+    v_dynamic_threshold integer;
+    v_max_batch integer;
+    v_xp_per_lesson integer;
+
+    -- ------------------------------------------------------------------------
+    -- Stato precedente
+    -- ------------------------------------------------------------------------
+    v_was_completed_before boolean := false;
+
+    -- ------------------------------------------------------------------------
+    -- XP
+    -- ------------------------------------------------------------------------
+    v_xp_to_add integer := 0;
+
 BEGIN
 
-    -------------------------------------------------------------------------
-    -- 1. VALIDAZIONE PARAMETRI
-    -------------------------------------------------------------------------
+    -- ========================================================================
+    -- 1. VALIDAZIONE
+    -- ========================================================================
 
     IF p_user_id IS NULL THEN
-        RAISE EXCEPTION 'track_lesson_activity(): user_id mancante';
+        RAISE EXCEPTION
+            'track_lesson_activity(): user_id mancante';
     END IF;
 
     IF p_course_id IS NULL THEN
-        RAISE EXCEPTION 'track_lesson_activity(): course_id mancante';
+        RAISE EXCEPTION
+            'track_lesson_activity(): course_id mancante';
     END IF;
 
     IF p_lesson_id IS NULL THEN
-        RAISE EXCEPTION 'track_lesson_activity(): lesson_id mancante';
+        RAISE EXCEPTION
+            'track_lesson_activity(): lesson_id mancante';
     END IF;
 
-    IF p_minutes_to_add IS NULL OR p_minutes_to_add < 0 THEN
-        RAISE EXCEPTION 'track_lesson_activity(): minutes_to_add deve essere >= 0';
+    IF p_minutes_to_add IS NULL
+       OR p_minutes_to_add < 0
+    THEN
+        RAISE EXCEPTION
+            'track_lesson_activity(): minutes_to_add deve essere >= 0';
     END IF;
 
-    -------------------------------------------------------------------------
-    -- 2. VERIFICA AUTORIZZAZIONE
-    -------------------------------------------------------------------------
 
-    IF auth.uid() IS NOT NULL 
-       AND auth.uid() <> p_user_id 
-       AND (auth.jwt() ->> 'role') IS DISTINCT FROM 'service_role' THEN
-        RAISE EXCEPTION 'Non sei autorizzato a modificare i progressi di un altro utente';
+    -- ========================================================================
+    -- 2. AUTORIZZAZIONE
+    -- ========================================================================
+
+    IF auth.uid() IS NOT NULL
+       AND auth.uid() <> p_user_id
+       AND (auth.jwt() ->> 'role') IS DISTINCT FROM 'service_role'
+    THEN
+        RAISE EXCEPTION
+            'Non sei autorizzato a modificare i progressi di un altro utente';
     END IF;
 
-    -------------------------------------------------------------------------
-    -- 3. LETTURA CONFIGURAZIONI DINAMICHE DA SYSTEM_SETTINGS
-    -------------------------------------------------------------------------
+
+    -- ========================================================================
+    -- 3. CONFIGURAZIONE
+    -- ========================================================================
+
+    -- ------------------------------------------------------------------------
+    -- Soglia completamento lezione
+    -- ------------------------------------------------------------------------
 
     IF p_completion_threshold IS NOT NULL THEN
-        v_dynamic_threshold := p_completion_threshold;
+
+        v_dynamic_threshold :=
+            GREATEST(p_completion_threshold, 1);
+
     ELSE
-        SELECT COALESCE(NULLIF(s.value, '')::INTEGER, 30)
+
+        SELECT
+            COALESCE(
+                NULLIF(s.value, '')::integer,
+                1
+            )
         INTO v_dynamic_threshold
-        FROM public.system_settings s
+        FROM public.system_settings AS s
         WHERE s.key = 'LESSON_COMPLETION_MINUTES';
 
-        IF v_dynamic_threshold IS NULL THEN
-            v_dynamic_threshold := 30;
+        IF v_dynamic_threshold IS NULL
+           OR v_dynamic_threshold < 1
+        THEN
+            v_dynamic_threshold := 1;
         END IF;
+
     END IF;
 
-    SELECT COALESCE(NULLIF(s.value, '')::INTEGER, 30)
+
+    -- ------------------------------------------------------------------------
+    -- Massimo batch
+    -- ------------------------------------------------------------------------
+
+    SELECT
+        COALESCE(
+            NULLIF(s.value, '')::integer,
+            30
+        )
     INTO v_max_batch
-    FROM public.system_settings s
+    FROM public.system_settings AS s
     WHERE s.key = 'TRACKING_MAX_BATCH';
 
-    IF v_max_batch IS NULL THEN
+    IF v_max_batch IS NULL
+       OR v_max_batch < 1
+    THEN
         v_max_batch := 30;
     END IF;
 
-    SELECT COALESCE(NULLIF(s.value, '')::INTEGER, 10)
+
+    -- ------------------------------------------------------------------------
+    -- XP completamento lezione
+    -- ------------------------------------------------------------------------
+
+    SELECT
+        COALESCE(
+            NULLIF(s.value, '')::integer,
+            10
+        )
     INTO v_xp_per_lesson
-    FROM public.system_settings s
+    FROM public.system_settings AS s
     WHERE s.key = 'LESSON_COMPLETION_XP';
 
-    IF v_xp_per_lesson IS NULL THEN
+    IF v_xp_per_lesson IS NULL
+       OR v_xp_per_lesson < 0
+    THEN
         v_xp_per_lesson := 10;
     END IF;
 
-    -------------------------------------------------------------------------
-    -- 4. SANITIZZAZIONE MINUTI E STATO PRECEDENTE
-    -------------------------------------------------------------------------
 
-    v_minutes_to_add := LEAST(GREATEST(p_minutes_to_add, 0), v_max_batch);
+    -- ========================================================================
+    -- 4. SANITIZZAZIONE BATCH
+    -- ========================================================================
 
-    SELECT COALESCE(plp.is_completed, FALSE)
+    v_minutes_to_add :=
+        LEAST(
+            GREATEST(p_minutes_to_add, 0),
+            v_max_batch
+        );
+
+
+    -- ========================================================================
+    -- 5. STATO PRECEDENTE DELLA LEZIONE
+    -- ========================================================================
+
+    SELECT
+        COALESCE(plp.is_completed, FALSE)
     INTO v_was_completed_before
-    FROM public.profile_lessons_progress plp
-    WHERE plp.profile_id = p_user_id AND plp.lesson_id = p_lesson_id;
+    FROM public.profile_lessons_progress AS plp
+    WHERE plp.profile_id = p_user_id
+      AND plp.lesson_id = p_lesson_id;
 
-    -------------------------------------------------------------------------
-    -- 5. INCREMENTO MINUTI PROFILO
-    -------------------------------------------------------------------------
 
-    UPDATE public.profiles AS p
-    SET
-        total_minutes_active = COALESCE(p.total_minutes_active, 0) + v_minutes_to_add,
-        updated_at = NOW()
-    WHERE p.id = p_user_id
-    RETURNING p.total_minutes_active
-    INTO v_total_minutes;
+    -- ========================================================================
+    -- 6. AGGIORNAMENTO MINUTI PROFILO
+    -- ========================================================================
 
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Profilo utente % inesistente', p_user_id;
+    IF v_minutes_to_add > 0 THEN
+
+        UPDATE public.profiles AS p
+        SET
+            total_minutes_active =
+                COALESCE(p.total_minutes_active, 0)
+                + v_minutes_to_add,
+
+            updated_at = NOW()
+
+        WHERE p.id = p_user_id
+
+        RETURNING
+            p.total_minutes_active
+        INTO
+            v_total_minutes;
+
+    ELSE
+
+        SELECT
+            COALESCE(p.total_minutes_active, 0)
+        INTO v_total_minutes
+        FROM public.profiles AS p
+        WHERE p.id = p_user_id;
+
     END IF;
 
-    -------------------------------------------------------------------------
-    -- 6. UPSERT ATOMICO PROGRESSO LEZIONE
-    -------------------------------------------------------------------------
 
-    INSERT INTO public.profile_lessons_progress AS plp
+    IF v_total_minutes IS NULL THEN
+        RAISE EXCEPTION
+            'Profilo utente % inesistente',
+            p_user_id;
+    END IF;
+
+
+    -- ========================================================================
+    -- 7. UPSERT PROGRESSO LEZIONE
+    -- ========================================================================
+
+    INSERT INTO public.profile_lessons_progress
     (
         profile_id,
         course_id,
@@ -931,86 +1954,154 @@ BEGIN
         minutes_watched,
         is_completed,
         last_accessed_at,
-        updated_at
+        updated_at,
+        completed_at
     )
     VALUES
     (
         p_user_id,
         p_course_id,
         p_lesson_id,
+
         v_minutes_to_add,
-        (v_minutes_to_add >= v_dynamic_threshold),
+
+        (
+            v_minutes_to_add >= v_dynamic_threshold
+        ),
+
         NOW(),
-        NOW()
+        NOW(),
+
+        CASE
+            WHEN v_minutes_to_add >= v_dynamic_threshold
+            THEN NOW()
+            ELSE NULL
+        END
     )
-    ON CONFLICT (profile_id, lesson_id)
+
+    ON CONFLICT (
+        profile_id,
+        lesson_id
+    )
+
     DO UPDATE
     SET
-        course_id = EXCLUDED.course_id,
-        minutes_watched = plp.minutes_watched + EXCLUDED.minutes_watched,
+        course_id =
+            EXCLUDED.course_id,
+
+        minutes_watched =
+            profile_lessons_progress.minutes_watched
+            + EXCLUDED.minutes_watched,
+
         is_completed =
             CASE
-                WHEN plp.is_completed THEN TRUE
-                WHEN (plp.minutes_watched + EXCLUDED.minutes_watched) >= v_dynamic_threshold THEN TRUE
+
+                WHEN profile_lessons_progress.is_completed
+                THEN TRUE
+
+                WHEN (
+                    profile_lessons_progress.minutes_watched
+                    + EXCLUDED.minutes_watched
+                ) >= v_dynamic_threshold
+                THEN TRUE
+
                 ELSE FALSE
+
             END,
-        last_accessed_at = NOW(),
-        updated_at = NOW()
+
+        last_accessed_at =
+            NOW(),
+
+        updated_at =
+            NOW(),
+
+        completed_at =
+            CASE
+
+                WHEN profile_lessons_progress.is_completed
+                THEN profile_lessons_progress.completed_at
+
+                WHEN (
+                    profile_lessons_progress.minutes_watched
+                    + EXCLUDED.minutes_watched
+                ) >= v_dynamic_threshold
+                THEN COALESCE(
+                    profile_lessons_progress.completed_at,
+                    NOW()
+                )
+
+                ELSE NULL
+
+            END
+
     RETURNING
-        plp.minutes_watched,
-        plp.is_completed,
-        plp.last_accessed_at,
-        plp.updated_at
+        profile_lessons_progress.minutes_watched,
+        profile_lessons_progress.is_completed,
+        profile_lessons_progress.last_accessed_at,
+        profile_lessons_progress.updated_at
+
     INTO
         v_new_minutes,
         v_is_completed,
         v_last_accessed,
         v_updated;
 
-    -------------------------------------------------------------------------
-    -- 7. SINCRONIZZAZIONE STATISTICHE CORSO ED XP GLOBALI
-    -------------------------------------------------------------------------
 
-    IF v_is_completed AND NOT v_was_completed_before THEN
+    -- ========================================================================
+    -- 8. DETERMINAZIONE XP LEZIONE
+    -- ========================================================================
+    --
+    -- L'XP viene generato esclusivamente sulla transizione:
+    --
+    --       FALSE  --->  TRUE
+    --
+    -- Se la lezione era già completata:
+    --
+    --       TRUE   --->  TRUE
+    --
+    -- non viene generato alcun XP.
+    --
+    -- IMPORTANTE:
+    -- qui NON viene modificato né profiles né user_course_stats.
+    -- ========================================================================
+
+    IF v_is_completed
+       AND NOT v_was_completed_before
+    THEN
         v_xp_to_add := v_xp_per_lesson;
     END IF;
 
-    -- Update/Insert Stats per singolo corso
-    INSERT INTO public.user_course_stats (
-        profile_id,
-        course_id,
-        course_xp,
-        course_level,
-        created_at,
-        updated_at
-    )
-    VALUES (
-        p_user_id,
-        p_course_id,
-        v_xp_to_add,
-        1 + (v_xp_to_add / 100),
-        NOW(),
-        NOW()
-    )
-    ON CONFLICT (profile_id, course_id)
-    DO UPDATE SET
-        course_xp = user_course_stats.course_xp + EXCLUDED.course_xp,
-        course_level = 1 + ((user_course_stats.course_xp + EXCLUDED.course_xp) / 100),
-        updated_at = NOW();
 
-    -- Update XP e Livello Globale su profiles (solo se sono stati guadagnati XP)
+    -- ========================================================================
+    -- 9. CENTRALIZZAZIONE XP
+    -- ========================================================================
+    --
+    -- Tutta la responsabilità dell'aggiornamento XP è delegata a award_xp().
+    --
+    -- award_xp() aggiorna:
+    --
+    --   profiles.total_xp
+    --   profiles.current_level
+    --   user_course_stats.course_xp
+    --   user_course_stats.course_level
+    --
+    -- track_lesson_activity() non aggiorna più direttamente tali strutture.
+    -- ========================================================================
+
     IF v_xp_to_add > 0 THEN
-        UPDATE public.profiles
-        SET
-            total_xp = COALESCE(total_xp, 0) + v_xp_to_add,
-            current_level = 1 + ((COALESCE(total_xp, 0) + v_xp_to_add) / 100),
-            updated_at = NOW()
-        WHERE id = p_user_id;
+
+        PERFORM public.award_xp(
+            p_user_id,
+            v_xp_to_add,
+            p_course_id
+        );
+
     END IF;
 
-    -------------------------------------------------------------------------
-    -- 8. OUTPUT DATI AGGIORNATI
-    -------------------------------------------------------------------------
+
+    -- ========================================================================
+    -- 10. OUTPUT
+    -- ========================================================================
 
     RETURN QUERY
     SELECT
@@ -1123,14 +2214,14 @@ ALTER TABLE "public"."ai_settings" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."badges" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "code" character varying(20) NOT NULL,
+    "code" "text" NOT NULL,
     "title" character varying(100) NOT NULL,
     "description" "text",
     "icon" character varying(10) NOT NULL,
     "xp_reward" integer NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "badge_type" character varying(20) DEFAULT 'module'::character varying NOT NULL,
-    CONSTRAINT "badges_badge_type_check" CHECK ((("badge_type")::"text" = ANY ((ARRAY['module'::character varying, 'quiz'::character varying])::"text"[]))),
+    CONSTRAINT "badges_badge_type_check" CHECK ((("badge_type")::"text" = ANY (ARRAY[('module'::character varying)::"text", ('quiz'::character varying)::"text"]))),
     CONSTRAINT "badges_xp_reward_check" CHECK (("xp_reward" >= 0))
 );
 
@@ -1145,7 +2236,7 @@ CREATE TABLE IF NOT EXISTS "public"."certificate_events" (
     "ip_address" "text",
     "user_agent" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "certificate_event_check" CHECK ((("event_type")::"text" = ANY ((ARRAY['GENERATED'::character varying, 'DOWNLOADED'::character varying, 'EMAILED'::character varying, 'VERIFIED'::character varying, 'REVOKED'::character varying, 'REGENERATED'::character varying])::"text"[])))
+    CONSTRAINT "certificate_event_check" CHECK ((("event_type")::"text" = ANY (ARRAY[('GENERATED'::character varying)::"text", ('DOWNLOADED'::character varying)::"text", ('EMAILED'::character varying)::"text", ('VERIFIED'::character varying)::"text", ('REVOKED'::character varying)::"text", ('REGENERATED'::character varying)::"text"])))
 );
 
 
@@ -1228,7 +2319,7 @@ CREATE TABLE IF NOT EXISTS "public"."certificates" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "lesson_id" "uuid",
-    CONSTRAINT "certificate_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['ACTIVE'::character varying, 'REVOKED'::character varying, 'EXPIRED'::character varying])::"text"[])))
+    CONSTRAINT "certificate_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('ACTIVE'::character varying)::"text", ('REVOKED'::character varying)::"text", ('EXPIRED'::character varying)::"text"])))
 );
 
 
@@ -1314,7 +2405,7 @@ CREATE TABLE IF NOT EXISTS "public"."course_lessons" (
     "content_type" character varying(50) DEFAULT 'video'::character varying,
     "duration" integer DEFAULT 15,
     "external_url" "text",
-    CONSTRAINT "course_lessons_content_type_check" CHECK ((("content_type")::"text" = ANY ((ARRAY['video'::character varying, 'document'::character varying, 'colab'::character varying, 'markdown'::character varying, 'sandbox'::character varying, 'text'::character varying, 'file'::character varying, 'link'::character varying])::"text"[])))
+    CONSTRAINT "course_lessons_content_type_check" CHECK ((("content_type")::"text" = ANY (ARRAY[('video'::character varying)::"text", ('document'::character varying)::"text", ('colab'::character varying)::"text", ('markdown'::character varying)::"text", ('sandbox'::character varying)::"text", ('text'::character varying)::"text", ('file'::character varying)::"text", ('link'::character varying)::"text"])))
 );
 
 
@@ -1738,9 +2829,9 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "school_section" "text",
     "total_xp" integer DEFAULT 0,
     "current_level" integer DEFAULT 1,
-    CONSTRAINT "check_role" CHECK ((("role")::"text" = ANY ((ARRAY['admin'::character varying, 'student'::character varying])::"text"[]))),
-    CONSTRAINT "check_status" CHECK ((("status")::"text" = ANY ((ARRAY['pending'::character varying, 'active'::character varying, 'blocked'::character varying])::"text"[]))),
-    CONSTRAINT "check_user_type" CHECK ((("user_type")::"text" = ANY ((ARRAY['SCHOOL_STUDENT'::character varying, 'EXTERNAL_STUDENT'::character varying, 'TEACHER'::character varying, 'ADMIN'::character varying])::"text"[]))),
+    CONSTRAINT "check_role" CHECK ((("role")::"text" = ANY (ARRAY[('admin'::character varying)::"text", ('student'::character varying)::"text"]))),
+    CONSTRAINT "check_status" CHECK ((("status")::"text" = ANY (ARRAY[('pending'::character varying)::"text", ('active'::character varying)::"text", ('blocked'::character varying)::"text"]))),
+    CONSTRAINT "check_user_type" CHECK ((("user_type")::"text" = ANY (ARRAY[('SCHOOL_STUDENT'::character varying)::"text", ('EXTERNAL_STUDENT'::character varying)::"text", ('TEACHER'::character varying)::"text", ('ADMIN'::character varying)::"text"]))),
     CONSTRAINT "profiles_current_level_check" CHECK (("current_level" >= 1)),
     CONSTRAINT "profiles_total_xp_check" CHECK (("total_xp" >= 0))
 );
@@ -3358,10 +4449,11 @@ ALTER TABLE "public"."user_sessions" ENABLE ROW LEVEL SECURITY;
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
 
-GRANT USAGE ON SCHEMA "public" TO "postgres";
-GRANT USAGE ON SCHEMA "public" TO "anon";
-GRANT USAGE ON SCHEMA "public" TO "authenticated";
-GRANT USAGE ON SCHEMA "public" TO "service_role";
+REVOKE USAGE ON SCHEMA "public" FROM PUBLIC;
+GRANT ALL ON SCHEMA "public" TO PUBLIC;
+GRANT ALL ON SCHEMA "public" TO "anon";
+GRANT ALL ON SCHEMA "public" TO "authenticated";
+GRANT ALL ON SCHEMA "public" TO "service_role";
 
 
 
@@ -3521,6 +4613,12 @@ GRANT ALL ON FUNCTION "public"."award_module_badge"("p_user_id" "uuid", "p_lesso
 GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric, "p_max_score" numeric) TO "anon";
 GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric, "p_max_score" numeric) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric, "p_max_score" numeric) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."award_xp"("p_user_id" "uuid", "p_xp" integer, "p_course_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."award_xp"("p_user_id" "uuid", "p_xp" integer, "p_course_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."award_xp"("p_user_id" "uuid", "p_xp" integer, "p_course_id" "uuid") TO "service_role";
 
 
 
@@ -3960,9 +5058,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQ
 
 
 
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
@@ -3970,16 +5065,10 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUN
 
 
 
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
 
 
 

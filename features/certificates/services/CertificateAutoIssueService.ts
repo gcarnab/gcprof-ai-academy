@@ -26,6 +26,17 @@ export class CertificateAutoIssueService {
 
   async processAndIssue(params: AutoIssueParams) {
     try {
+      // Guardrail: Blocco immediato se courseId o moduleId non sono definiti
+      if (!params.courseId || !params.moduleId) {
+        logger.error(
+          "❌ [CertificateAutoIssueService] courseId o moduleId mancanti:",
+          params,
+        );
+        throw new Error(
+          "Impossibile procedere: il quiz/lezione non è associato ad alcun corso o modulo valido.",
+        );
+      }
+
       // 1. Recupera il profilo dello studente per ricavare nome ed email
       const { data: studentProfile } = await getSupabaseAdmin()
         .from("profiles")
@@ -41,8 +52,12 @@ export class CertificateAutoIssueService {
 
       const studentEmail = params.studentEmail || studentProfile?.email || "";
 
-      const safeScore = typeof params.score === "number" ? params.score : undefined;
-      const safePercentage = typeof params.completionPercentage === "number" ? params.completionPercentage : 100;
+      const safeScore =
+        typeof params.score === "number" ? params.score : undefined;
+      const safePercentage =
+        typeof params.completionPercentage === "number"
+          ? params.completionPercentage
+          : 100;
 
       // 2. Segna il modulo come completato
       await this.certificateService.markModuleCompleted(
@@ -50,7 +65,7 @@ export class CertificateAutoIssueService {
         params.courseId,
         params.moduleId,
         safePercentage,
-        safeScore
+        safeScore,
       );
 
       // 3. Genera il certificato
@@ -71,12 +86,15 @@ export class CertificateAutoIssueService {
       await this.certificateService.processAutomations(
         certificate,
         studentName,
-        studentEmail
+        studentEmail,
       );
 
       return { success: true, certificate };
     } catch (error: any) {
-      logger.error("❌ Errore durante l'emissione automatica del certificato:", error);
+      logger.error(
+        "❌ Errore durante l'emissione automatica del certificato:",
+        error,
+      );
       throw error;
     }
   }

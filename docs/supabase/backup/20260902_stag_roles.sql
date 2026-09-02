@@ -10,4 +10,6 @@ ALTER ROLE "authenticated" SET "statement_timeout" TO '8s';
 
 ALTER ROLE "authenticator" SET "statement_timeout" TO '8s';
 
+GRANT SET ON PARAMETER "log_min_messages" TO "supabase_realtime_admin";
+
 RESET ALL;

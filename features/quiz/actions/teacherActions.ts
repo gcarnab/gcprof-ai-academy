@@ -70,22 +70,27 @@ async function processGamificationAndCertificates(
     // Se l'utente non ha superato il quiz, non vengono assegnati XP, badge né certificati
     if (!isPassed) {
       logger.info(
-        `ℹ️ Quiz non superato per l'utente ${userId} (Punteggio: ${finalScore}/${maxScore}, ${scorePercentage.toFixed(1)}% vs soglia ${passingPercentage}%). Badge e certificato non emessi.`
+        `ℹ️ Quiz non superato per l'utente ${userId} (Punteggio: ${finalScore}/${maxScore}, ${scorePercentage.toFixed(1)}% vs soglia ${passingPercentage}%). Badge e certificato non emessi.`,
       );
       return { success: true, isPassed: false, certificate: null };
     }
 
     await onQuizCompletedAction({ userId, quizId, finalScore });
 
-    const quizCode = quiz?.code || quiz?.slug || quizId;
-    await unlockQuizBadge(userId, quizCode);
-
-    const courseId = quiz?.courseId || quiz?.course_id;
-    const moduleId = quiz?.moduleId || quiz?.module_id;
+    let courseId = quiz?.courseId || quiz?.course_id;
+    let moduleId = quiz?.moduleId || quiz?.module_id;
     const lessonId = quiz?.lessonId || quiz?.lesson_id;
 
+    // Sblocco del badge passando direttamente quizId e courseId
+    await unlockQuizBadge(userId, quizId, courseId);
+
+    // Fallback difensivo centralizzato se moduleId manca nel record del quiz
+    if (!moduleId && courseId) {
+      moduleId = (await quizRepository.resolveMainCourseModule(courseId)) ?? undefined;
+    }
+
     if (!courseId || !moduleId) {
-      logger.warn("⚠️ Impossibile emettere certificato: dati corso/modulo mancanti", { quizId });
+      logger.warn("⚠️ Impossibile emettere certificato: dati corso/modulo mancanti", { quizId, courseId, moduleId });
       return { success: false, isPassed: true, error: "Dati corso/modulo mancanti." };
     }
 

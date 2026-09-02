@@ -103,6 +103,11 @@ export class CertificateService {
     completionPercentage: number = 100,
     quizScore?: number,
   ): Promise<ModuleCompletion> {
+    if (!moduleId) {
+      throw new Error(
+        "❌ [CertificateService] markModuleCompleted invocato senza moduleId.",
+      );
+    }
     const safePercentage =
       typeof completionPercentage === "number" ? completionPercentage : 100;
     const safeScore = typeof quizScore === "number" ? quizScore : undefined;
@@ -166,6 +171,11 @@ export class CertificateService {
     completionPercentage?: number;
     score?: number | string;
   }): Promise<Certificate> {
+    if (!data.moduleId) {
+      throw new Error(
+        "❌ [CertificateService] generateCertificate invocato senza moduleId.",
+      );
+    }
     // 1. Lettura diretta da module_completions per dare priorità a quiz_score dal DB
     const completion = await this.repository.getModuleCompletion(
       data.userId,
@@ -200,7 +210,8 @@ export class CertificateService {
 
     // Recupero preventivo delle impostazioni di sistema per risolvere il template_id predefinito prima dell'inserimento
     const settings = await this.repository.getSettings();
-    const effectiveTemplateId = data.templateId || settings?.defaultTemplateId || null;
+    const effectiveTemplateId =
+      data.templateId || settings?.defaultTemplateId || null;
 
     const userCertificates = await this.repository.getUserCertificates(
       data.userId,
@@ -225,11 +236,19 @@ export class CertificateService {
       const titleChanged =
         data.title !== undefined && data.title !== existingCertificate.title;
       const templateChanged =
-        effectiveTemplateId !== null && existingCertificate.templateId !== effectiveTemplateId;
+        effectiveTemplateId !== null &&
+        existingCertificate.templateId !== effectiveTemplateId;
       const issuedByChanged =
-        data.issuedBy !== undefined && data.issuedBy !== existingCertificate.issuedBy;
+        data.issuedBy !== undefined &&
+        data.issuedBy !== existingCertificate.issuedBy;
 
-      if (scoreChanged || subtitleChanged || titleChanged || templateChanged || issuedByChanged) {
+      if (
+        scoreChanged ||
+        subtitleChanged ||
+        titleChanged ||
+        templateChanged ||
+        issuedByChanged
+      ) {
         logger.info(
           `🔄 [CertificateService] Aggiornamento certificato ${existingCertificate.id} con nuovi dati...`,
         );
@@ -393,7 +412,9 @@ export class CertificateService {
               logger.error("❌ Errore durante la generazione del PDF:", pdfErr);
             }
           } else {
-            logger.warn(`⚠️ Template con ID ${templateId} non trovato per il certificato ${certificate.id}`);
+            logger.warn(
+              `⚠️ Template con ID ${templateId} non trovato per il certificato ${certificate.id}`,
+            );
           }
         }
       }
@@ -405,9 +426,8 @@ export class CertificateService {
         pdfUrl
       ) {
         try {
-          const { data: fileData, error: downloadError } = await supabase.storage
-            .from("certificates")
-            .download(filePath);
+          const { data: fileData, error: downloadError } =
+            await supabase.storage.from("certificates").download(filePath);
 
           if (!downloadError && fileData) {
             const arrayBuffer = await fileData.arrayBuffer();

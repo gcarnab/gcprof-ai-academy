@@ -37,9 +37,14 @@ export interface IQuizRepository {
   updateStatus(id: string, status: QuizStatus): Promise<void>;
 
   /**
-   * Associa un quiz specifico a un determinato corso .
+   * Associa un quiz specifico a un determinato corso ed eventualmente ad un modulo.
    */
-  assignToCourse(quizId: string, courseId: string): Promise<void>;
+  assignToCourse(quizId: string, courseId: string, moduleId?: string): Promise<void>;
+
+  /**
+   * Recupera il modulo principale per l'emissione del certificato associato a un corso.
+   */
+  resolveMainCourseModule(courseId: string): Promise<string | null>;
 
   /**
    * Rimuove l'associazione tra un quiz e un determinato corso.

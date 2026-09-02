@@ -27,15 +27,18 @@ export interface UserBadgeItem {
 
 /**
  * Conferisce il badge di completamento modulo tramite RPC SQL.
+ *
+ * La RPC award_module_badge() identifica autonomamente
+ * modulo e corso partendo dal lessonId.
  */
 export async function unlockModuleBadge(
   userId: string,
-  moduleCode: string,
+  lessonId: string,
 ): Promise<BadgeUnlockResult> {
-  if (!userId || !moduleCode) {
+  if (!userId || !lessonId) {
     return {
       success: false,
-      error: "Parametri mancanti (userId o moduleCode)",
+      error: "Parametri mancanti (userId o lessonId)",
     };
   }
 
@@ -44,13 +47,13 @@ export async function unlockModuleBadge(
   try {
     const { data, error } = await supabase.rpc("award_module_badge", {
       p_user_id: userId,
-      p_module_code: moduleCode,
+      p_lesson_id: lessonId,
     });
 
     if (error) {
       logger.error("unlockModuleBadge: errore RPC", {
         userId,
-        moduleCode,
+        lessonId,
         error: error.message,
       });
 
@@ -71,19 +74,18 @@ export async function unlockModuleBadge(
 
     logger.info("unlockModuleBadge: badge elaborato", {
       userId,
-      moduleCode,
-      alreadyUnlocked: result.already_unlocked,
+      lessonId,
+      awarded: result.awarded,
       xpGained: result.xp_gained,
     });
 
     return {
       success: true,
-      alreadyUnlocked: result.already_unlocked,
+      alreadyUnlocked: !result.awarded,
       badgeTitle: result.badge_title,
-      badgeIcon: result.badge_icon,
       xpGained: result.xp_gained,
-      newTotalXp: result.new_total_xp,
-      newLevel: result.new_level,
+      newTotalXp: result.global_total_xp,
+      newLevel: result.global_level,
     };
   } catch (error: unknown) {
     const message =
@@ -91,7 +93,7 @@ export async function unlockModuleBadge(
 
     logger.error("unlockModuleBadge: eccezione", {
       userId,
-      moduleCode,
+      lessonId,
       error: message,
     });
 
@@ -105,10 +107,12 @@ export async function unlockModuleBadge(
 /**
  * Conferisce il badge del quiz tramite RPC SQL.
  * Mappato su p_quiz_code per supportare sia l'ID che il codice del quiz.
+ * Integra un aggiornamento difensivo per garantire l'inserimento di quiz_id e course_id in user_badges.
  */
 export async function unlockQuizBadge(
   userId: string,
   quizId: string,
+  courseId?: string,
 ): Promise<BadgeUnlockResult> {
   if (!userId || !quizId) {
     return {
@@ -146,6 +150,31 @@ export async function unlockQuizBadge(
     }
 
     const result = data[0];
+
+    // Allineamento difensivo: assicura la valorizzazione di quiz_id e course_id se rimasti null in user_badges
+    if (result) {
+      try {
+        const { data: badgeData } = await supabase
+          .from("badges")
+          .select("id")
+          .or(`quiz_id.eq.${quizId},code.eq.${quizId}`)
+          .maybeSingle();
+
+        if (badgeData?.id) {
+          const updatePayload: Record<string, any> = { quiz_id: quizId };
+          if (courseId) updatePayload.course_id = courseId;
+
+          await supabase
+            .from("user_badges")
+            .update(updatePayload)
+            .eq("profile_id", userId)
+            .eq("badge_id", badgeData.id)
+            .is("quiz_id", null);
+        }
+      } catch (patchErr) {
+        logger.warn("unlockQuizBadge: impossibile aggiornare quiz_id su user_badges", { patchErr });
+      }
+    }
 
     logger.info("unlockQuizBadge: badge elaborato", {
       userId,

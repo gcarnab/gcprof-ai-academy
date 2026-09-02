@@ -6,6 +6,7 @@ import { QuizAnswer } from "../domain/QuizAnswer";
 import { QuizReview } from "../domain/QuizReview";
 import { ParsedQuiz } from "../validators/quizValidators";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 
 /**
  * Client Supabase centralizzato.
@@ -16,23 +17,61 @@ const supabase = getSupabaseAdmin();
 
 export class SupabaseQuizRepository implements IQuizRepository {
   // ======================================================
-  // QUIZ CRUD & MANAGEMENT
+  // HELPER AUTOMATICO RISOLUZIONE MODULO
   // ======================================================
 
   /**
-   * TODO
-   *
-   * Questa implementazione utilizza più INSERT consecutive.
-   *
-   * Nella fase successiva della roadmap verrà sostituita da una
-   * RPC PostgreSQL che eseguirà l'intero inserimento
-   * (quiz + domande + opzioni)
-   * in una singola transazione SQL.
+   * Risolve automaticamente il module_id del modulo principale del corso.
+   * Criterio 1: Cerca il modulo con order_index = 2 ("<NOME_CORSO> Course").
+   * Criterio 2: Esclude i moduli contenenti "preview" o "resources" nel titolo.
    */
+  async resolveMainCourseModule(courseId: string): Promise<string | null> {
+    const { data: mainModule } = await supabase
+      .from("course_modules")
+      .select("id, title")
+      .eq("course_id", courseId)
+      .eq("order_index", 2)
+      .maybeSingle();
+
+    if (mainModule?.id) {
+      return mainModule.id;
+    }
+
+    const { data: modules } = await supabase
+      .from("course_modules")
+      .select("id, title")
+      .eq("course_id", courseId)
+      .order("order_index", { ascending: true });
+
+    if (modules && modules.length > 0) {
+      const mainByTitle = modules.find(
+        (m: any) =>
+          !m.title.toLowerCase().includes("preview") &&
+          !m.title.toLowerCase().includes("resources")
+      );
+
+      return mainByTitle?.id || modules[0].id;
+    }
+
+    return null;
+  }
+
+  // ======================================================
+  // QUIZ CRUD & MANAGEMENT
+  // ======================================================
+
   async createFromParsed(
     parsedQuiz: ParsedQuiz,
     adminId: string,
   ): Promise<Quiz> {
+    const courseId = parsedQuiz.metadata.courseId || null;
+    let moduleId = parsedQuiz.metadata.moduleId || null;
+
+    // Risoluzione automatica del module_id se il corso è presente ma il modulo manca
+    if (courseId && !moduleId) {
+      moduleId = await this.resolveMainCourseModule(courseId);
+    }
+
     const { data: quizData, error: quizError } = await supabase
       .from("quizzes")
       .insert({
@@ -42,8 +81,8 @@ export class SupabaseQuizRepository implements IQuizRepository {
         penalty_enabled: parsedQuiz.metadata.penalty_enabled,
         negative_mark: parsedQuiz.metadata.negative_mark,
         created_by: adminId,
-        course_id: parsedQuiz.metadata.courseId || null,
-        module_id: parsedQuiz.metadata.moduleId || null,
+        course_id: courseId,
+        module_id: moduleId,
       })
       .select("*")
       .single();
@@ -161,27 +200,33 @@ export class SupabaseQuizRepository implements IQuizRepository {
     courseId: string,
     moduleId?: string,
   ): Promise<void> {
-    // FIX: Costruiamo il payload in modo condizionale per non sovrascrivere module_id a null
-    // se non viene passato.
-    const payload: any = {
-      course_id: courseId,
-      updated_at: new Date().toISOString(),
-    };
+    let resolvedModuleId = moduleId;
 
-    if (moduleId !== undefined) {
-      payload.module_id = moduleId ?? null;
+    // Se moduleId non viene fornito, risolvi automaticamente il modulo principale del corso
+    if (!resolvedModuleId) {
+      resolvedModuleId =
+        (await this.resolveMainCourseModule(courseId)) ?? undefined;
     }
 
-    const { error } = await supabase
+    const { error } = await getSupabaseAdmin()
       .from("quizzes")
-      .update(payload)
+      .update({
+        course_id: courseId,
+        module_id: resolvedModuleId ?? null,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", quizId);
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      logger.error(
+        `Errore durante l'assegnazione del quiz ${quizId} al corso ${courseId}:`,
+        error,
+      );
+      throw new Error(`Impossibile associare il quiz: ${error.message}`);
+    }
   }
 
   async removeFromCourse(quizId: string, courseId: string): Promise<void> {
-    // FIX: Allineato alla struttura diretta per rimuovere l'associazione dal quiz stesso
     const { error: updateError } = await supabase
       .from("quizzes")
       .update({
@@ -195,8 +240,6 @@ export class SupabaseQuizRepository implements IQuizRepository {
   }
 
   async findActiveQuizzesByCourse(courseId: string): Promise<Quiz[]> {
-    // FIX: Ora la query viene effettuata direttamente sulla tabella quizzes.
-    // Questo risolve l'omissione di course_id e module_id nella SELECT precedente.
     const { data, error } = await supabase
       .from("quizzes")
       .select("*")
@@ -501,12 +544,6 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .select("*", { count: "exact", head: true })
       .eq("status", "submitted");
 
-    /**
-     * TODO
-     *
-     * La funzione SQL get_average_quiz_score verrà introdotta
-     * durante lo sviluppo del modulo STATS.
-     */
     const { data: avgData } = await supabase.rpc("get_average_quiz_score");
 
     return {
