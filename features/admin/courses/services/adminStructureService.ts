@@ -24,12 +24,13 @@ export async function getFullCourseStructure(courseId: string) {
 
   if (error) throw new Error(error.message);
 
-  // Ordiniamo moduli e lezioni per order_index
   const sortedModules = (data.course_modules || []).sort(
     (a: any, b: any) => a.order_index - b.order_index,
   );
   sortedModules.forEach((mod: any) => {
-    mod.course_lessons.sort((a: any, b: any) => a.order_index - b.order_index);
+    if (Array.isArray(mod.course_lessons)) {
+      mod.course_lessons.sort((a: any, b: any) => a.order_index - b.order_index);
+    }
   });
 
   return { ...data, course_modules: sortedModules };

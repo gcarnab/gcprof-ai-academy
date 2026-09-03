@@ -56,13 +56,13 @@ export async function parseQuizMarkdown(rawMarkdown: string): Promise<ParsedQuiz
         const paragraphNode = listItem.children.find((c: any) => c.type === "paragraph");
         let optionText = paragraphNode ? extractTextFromNode(paragraphNode).trim() : "";
 
-        // 🎯 FALLBACK STRINGA: Se remark non espone listItem.checked, leggiamo il testo grezzo
+        // FALLBACK STRINGA: Se remark non espone listItem.checked, leggiamo il testo grezzo
         let isChecked = !!listItem.checked;
         if (!isChecked && /^\[x\]/i.test(optionText)) {
           isChecked = true;
         }
 
-        // Pulizia dei residui di formattazione in ordine: prima il tag [ ] o [x], poi la lettera A) B) C) D)
+        // Pulizia dei residui di formattazione: tag [ ] o [x] e lettere A) B) C) D)
         optionText = optionText
           .replace(/^\[[ xX]\]\s*/, "")
           .replace(/^([A-Za-z]\)\s*)/, "")
@@ -78,13 +78,24 @@ export async function parseQuizMarkdown(rawMarkdown: string): Promise<ParsedQuiz
     }
   });
 
-  // 4. Assemblaggio del payload DTO grezzo
+  // 4. Normalizzazione metadati YAML (supporto camelCase e snake_case con fallback undefined per Zod)
+  const normalizedMetadata = {
+    title: data.title ?? "",
+    description: data.description ?? "",
+    status: data.status ?? "draft",
+    penalty_enabled: data.penalty_enabled ?? data.penaltyEnabled ?? false,
+    negative_mark: Number(data.negative_mark ?? data.negativeMark ?? 0.25),
+    courseId: data.courseId ?? data.course_id ?? undefined,
+    moduleId: data.moduleId ?? data.module_id ?? undefined,
+    lessonId: data.lessonId ?? data.lesson_id ?? undefined,
+  };
+
   const rawQuizPayload = {
-    metadata: data,
+    metadata: normalizedMetadata,
     questions: rawQuestions,
   };
 
-  // 5. Validazione atomica e globale tramite Zod
+  // 5. Validazione atomica tramite Zod
   const validatedQuiz: ParsedQuiz = ParsedQuizSchema.parse(rawQuizPayload);
 
   return validatedQuiz;

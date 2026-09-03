@@ -68,9 +68,9 @@ export default function LessonPage() {
       });
 
       try {
-        const liveCourses = await getLiveCourses(
-          user?.role === "admin" ? "admin" : "student",
-        );
+        //const liveCourses = await getLiveCourses(user?.role === "admin" ? "admin" : "student",);
+        const liveCourses = await getLiveCourses("admin");
+
         // 🔴 CHECKPOINT 3: I corsi live sono arrivati?
         logger.debug(
           "=== [CHECKPOINT 3] Corsi scaricati dal service. Totale corsi:",
@@ -297,8 +297,45 @@ export default function LessonPage() {
       <Navbar />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+        {/* BREADCRUMB INTERATTIVA 
+        <nav className="text-sm text-muted-foreground flex flex-wrap items-center gap-2 select-none">
+          <Link
+            href="/courses"
+            className="hover:text-blue-600 hover:underline transition-colors"
+          >
+            Corsi
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <Link
+            href={`/courses/${slug}`}
+            className="hover:text-blue-600 hover:underline transition-colors max-w-[200px] truncate"
+            title={course.title}
+          >
+            {course.title}
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <span
+            className="text-muted-foreground font-medium max-w-[250px] truncate"
+            title={module.title}
+          >
+            {module.title}
+          </span>
+        </nav>
+*/}
+
         {/* BREADCRUMB INTERATTIVA */}
         <nav className="text-sm text-muted-foreground flex flex-wrap items-center gap-2 select-none">
+          {user && (
+            <>
+              <Link
+                href="/dashboard"
+                className="hover:text-blue-600 hover:underline transition-colors"
+              >
+                Dashboard
+              </Link>
+              <span className="text-muted-foreground">/</span>
+            </>
+          )}
           <Link
             href="/courses"
             className="hover:text-blue-600 hover:underline transition-colors"

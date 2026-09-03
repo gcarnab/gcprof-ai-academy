@@ -108,14 +108,19 @@ async function processGamificationAndCertificates(
 // ADMIN ACTIONS
 // ======================================================
 
-export async function importQuizFromMarkdownAction(rawMarkdown: string) {
+export async function importQuizFromMarkdownAction(
+  rawMarkdown: string,
+  context?: { courseId?: string; moduleId?: string; lessonId?: string }
+) {
   try {
     const adminSession = await getAuthenticatedSession("admin");
     const parsedQuiz = await parseQuizMarkdown(rawMarkdown);
 
+    // Trasmette il contesto esterno per disaccoppiare gli ID dal file .md
     const newQuiz = await quizRepository.createFromParsed(
       parsedQuiz,
       adminSession.id,
+      context
     );
 
     revalidatePath("/admin/quiz", "layout");
@@ -152,10 +157,11 @@ export async function assignQuizToCourseAction(
   quizId: string,
   courseId: string,
   moduleId?: string,
+  lessonId?: string,
 ) {
   try {
     await getAuthenticatedSession("admin");
-    await quizRepository.assignToCourse(quizId, courseId, moduleId);
+    await quizRepository.assignToCourse(quizId, courseId, moduleId, lessonId);
 
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");

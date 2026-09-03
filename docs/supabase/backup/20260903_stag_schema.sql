@@ -520,704 +520,259 @@ $$;
 ALTER FUNCTION "public"."award_module_badge"("p_user_id" "uuid", "p_lesson_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric DEFAULT 0, "p_max_score" numeric DEFAULT 10) RETURNS TABLE("already_unlocked" boolean, "badge_title" character varying, "badge_icon" character varying, "xp_gained" integer, "new_total_xp" integer, "new_level" integer)
+CREATE OR REPLACE FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text") RETURNS TABLE("already_unlocked" boolean, "badge_title" character varying, "badge_icon" character varying, "xp_gained" integer, "new_total_xp" integer, "new_level" integer)
     LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
     AS $$
-
 DECLARE
-
-    -- ------------------------------------------------------------------------
     -- Quiz / corso
-    -- ------------------------------------------------------------------------
-
     v_quiz_id uuid := NULL;
     v_course_id uuid := NULL;
-
     v_quiz_max_score numeric := 0;
     v_quiz_passing_score numeric := 0;
 
-    -- ------------------------------------------------------------------------
     -- Tentativo
-    -- ------------------------------------------------------------------------
-
     v_attempt_id uuid := NULL;
     v_final_score numeric := NULL;
     v_attempt_status text := NULL;
-
     v_quiz_passed boolean := FALSE;
     v_perfect_score boolean := FALSE;
 
-    -- ------------------------------------------------------------------------
     -- Badge
-    -- ------------------------------------------------------------------------
-
     v_badge public.badges%ROWTYPE;
-
     v_target_badge_code text := NULL;
-
     v_badge_exists boolean := FALSE;
     v_inserted_count integer := 0;
 
-    -- ------------------------------------------------------------------------
     -- Statistiche quiz
-    -- ------------------------------------------------------------------------
-
     v_completed_count integer := 0;
 
-    -- ------------------------------------------------------------------------
     -- XP
-    -- ------------------------------------------------------------------------
-
     v_xp_result record;
-
     v_xp_gained integer := 0;
     v_new_total_xp integer := 0;
     v_new_level integer := 1;
 
 BEGIN
-
-    -- ========================================================================
     -- 1. VALIDAZIONE
-    -- ========================================================================
-
     IF p_user_id IS NULL THEN
-
-        RAISE EXCEPTION
-            'award_quiz_badge(): user_id mancante';
-
+        RAISE EXCEPTION 'award_quiz_badge(): user_id mancante';
     END IF;
 
-
-    IF p_quiz_code IS NULL
-       OR BTRIM(p_quiz_code) = ''
-    THEN
-
-        RAISE EXCEPTION
-            'award_quiz_badge(): quiz_code mancante';
-
+    IF p_quiz_code IS NULL OR BTRIM(p_quiz_code) = '' THEN
+        RAISE EXCEPTION 'award_quiz_badge(): quiz_code mancante';
     END IF;
 
-
-    -- ========================================================================
     -- 2. VERIFICA PROFILO
-    -- ========================================================================
-
     IF NOT EXISTS (
-        SELECT 1
-        FROM public.profiles AS p
-        WHERE p.id = p_user_id
-    )
-    THEN
-
-        RAISE EXCEPTION
-            'Profilo utente % inesistente',
-            p_user_id;
-
+        SELECT 1 FROM public.profiles AS p WHERE p.id = p_user_id
+    ) THEN
+        RAISE EXCEPTION 'Profilo utente % inesistente', p_user_id;
     END IF;
 
-
-    -- ========================================================================
     -- 3. IDENTIFICAZIONE QUIZ
-    -- ========================================================================
-    --
-    -- Compatibilità:
-    --
-    --   p_quiz_code può essere:
-    --
-    --   - UUID del quiz
-    --   - titolo del quiz
-    --
-    -- Il course_id viene ricavato direttamente dal quiz.
-    --
-    -- Il fallback su quiz_assignments viene mantenuto per compatibilità
-    -- con eventuali dati/strutture legacy.
-    -- ========================================================================
-
     SELECT
         q.id,
-
-        COALESCE(
-            q.course_id,
-            qa.course_id
-        ),
-
-        COALESCE(
-            q.max_score,
-            0
-        ),
-
-        COALESCE(
-            q.passing_score,
-            0
-        )
-
+        COALESCE(q.course_id, qa.course_id),
+        COALESCE(q.max_score, 0),
+        COALESCE(q.passing_score, 0)
     INTO
         v_quiz_id,
         v_course_id,
         v_quiz_max_score,
         v_quiz_passing_score
-
     FROM public.quizzes AS q
-
-    LEFT JOIN public.quiz_assignments AS qa
-        ON qa.quiz_id = q.id
-
-    WHERE
-        q.id::text = p_quiz_code
-        OR q.title = p_quiz_code
-
+    LEFT JOIN public.quiz_assignments AS qa ON qa.quiz_id = q.id
+    WHERE q.id::text = p_quiz_code OR q.title = p_quiz_code
     LIMIT 1;
 
-
     IF NOT FOUND THEN
-
-        RAISE EXCEPTION
-            'Quiz "%" non trovato',
-            p_quiz_code;
-
+        RAISE EXCEPTION 'Quiz "%" non trovato', p_quiz_code;
     END IF;
 
-
-    -- ========================================================================
     -- 4. RECUPERO ULTIMO TENTATIVO GRADED
-    -- ========================================================================
-    --
-    -- È fondamentale non utilizzare i parametri p_score / p_max_score come
-    -- prova dell'effettivo completamento.
-    --
-    -- La fonte autorevole è quiz_attempts.
-    --
-    -- Viene considerato l'ultimo tentativo graded dell'utente per il quiz.
-    -- ========================================================================
-
     SELECT
         qa.id,
         qa.status,
         qa.final_score
-
     INTO
         v_attempt_id,
         v_attempt_status,
         v_final_score
-
     FROM public.quiz_attempts AS qa
-
     WHERE qa.quiz_id = v_quiz_id
       AND qa.student_id = p_user_id
       AND qa.status = 'graded'
-
     ORDER BY qa.created_at DESC
-
     LIMIT 1;
 
-
-    -- ========================================================================
     -- 5. QUIZ NON ANCORA CORRETTO / COMPLETATO
-    -- ========================================================================
-
     IF v_attempt_id IS NULL THEN
-
         RETURN QUERY
         SELECT
             FALSE,
             NULL::varchar,
             NULL::varchar,
             0,
-            COALESCE(
-                (
-                    SELECT p.total_xp
-                    FROM public.profiles AS p
-                    WHERE p.id = p_user_id
-                ),
-                0
-            ),
-            COALESCE(
-                (
-                    SELECT p.current_level
-                    FROM public.profiles AS p
-                    WHERE p.id = p_user_id
-                ),
-                1
-            );
-
+            COALESCE((SELECT p.total_xp FROM public.profiles AS p WHERE p.id = p_user_id), 0),
+            COALESCE((SELECT p.current_level FROM public.profiles AS p WHERE p.id = p_user_id), 1);
         RETURN;
-
     END IF;
 
-
-    -- ========================================================================
     -- 6. DETERMINAZIONE SUPERAMENTO
-    -- ========================================================================
-    --
-    -- passing_score nel database è espresso come percentuale.
-    --
-    -- Esempio:
-    --
-    --   max_score     = 10
-    --   passing_score = 60
-    --   final_score   = 7
-    --
-    -- 7 / 10 * 100 = 70%
-    --
-    -- quindi:
-    --
-    --   quiz superato = TRUE
-    --
-    -- ========================================================================
-
-    IF v_quiz_max_score > 0
-       AND v_final_score IS NOT NULL
-       AND (
-            (v_final_score / v_quiz_max_score) * 100
-       ) >= v_quiz_passing_score
-    THEN
-
+    IF v_quiz_max_score > 0 AND v_final_score IS NOT NULL AND ((v_final_score / v_quiz_max_score) * 100) >= v_quiz_passing_score THEN
         v_quiz_passed := TRUE;
-
     ELSE
-
         v_quiz_passed := FALSE;
-
     END IF;
 
-
-    -- ========================================================================
     -- 7. PERFECT SCORE
-    -- ========================================================================
-    --
-    -- Il PERFECT_SCORE viene assegnato esclusivamente se il tentativo
-    -- effettivamente corretto ha raggiunto il punteggio massimo.
-    --
-    -- NON utilizziamo p_score come fonte autorevole.
-    -- ========================================================================
-
-    IF v_quiz_passed
-       AND v_quiz_max_score > 0
-       AND v_final_score >= v_quiz_max_score
-    THEN
-
+    IF v_quiz_passed AND v_quiz_max_score > 0 AND v_final_score >= v_quiz_max_score THEN
         v_perfect_score := TRUE;
-
     END IF;
 
-
-    -- ========================================================================
     -- 8. CONTEGGIO QUIZ SUPERATI
-    -- ========================================================================
-    --
-    -- Contiamo soltanto quiz con almeno un tentativo graded che soddisfa
-    -- la soglia di superamento.
-    --
-    -- Ogni quiz viene contato una sola volta.
-    -- ========================================================================
-
     SELECT COUNT(*)
-
     INTO v_completed_count
-
     FROM (
-
-        SELECT
-            qa.quiz_id
-
+        SELECT qa.quiz_id
         FROM public.quiz_attempts AS qa
-
-        INNER JOIN public.quizzes AS q
-            ON q.id = qa.quiz_id
-
+        INNER JOIN public.quizzes AS q ON q.id = qa.quiz_id
         WHERE qa.student_id = p_user_id
           AND qa.status = 'graded'
           AND q.max_score > 0
-          AND (
-                (
-                    qa.final_score / q.max_score
-                ) * 100
-              ) >= q.passing_score
-
-        GROUP BY
-            qa.quiz_id
-
+          AND ((qa.final_score / q.max_score) * 100) >= q.passing_score
+        GROUP BY qa.quiz_id
     ) AS completed_quizzes;
 
-
-    -- ========================================================================
     -- 9. BADGE SPECIFICO QUIZ
-    -- ========================================================================
-    --
-    -- Se esiste un badge il cui code coincide con p_quiz_code, viene
-    -- considerato il badge specifico del quiz.
-    --
-    -- Tuttavia viene assegnato soltanto dopo il reale superamento.
-    -- ========================================================================
-
     SELECT b.code
-
     INTO v_target_badge_code
-
     FROM public.badges AS b
-
-    WHERE b.code = p_quiz_code
+    WHERE (b.code = p_quiz_code OR b.code = v_quiz_id::text)
       AND b.badge_type = 'quiz'
-
     LIMIT 1;
 
-
-    -- ========================================================================
     -- 10. NESSUN BADGE SPECIFICO -> BADGE MILESTONE
-    -- ========================================================================
-
-    IF v_target_badge_code IS NULL
-       AND v_quiz_passed
-    THEN
-
-        -- --------------------------------------------------------------------
-        -- PERFECT SCORE
-        -- --------------------------------------------------------------------
-
-        IF v_perfect_score
-           AND NOT EXISTS (
-                SELECT 1
-                FROM public.user_badges AS ub
-                INNER JOIN public.badges AS b
-                    ON b.id = ub.badge_id
-                WHERE ub.profile_id = p_user_id
-                  AND b.code = 'PERFECT_SCORE'
-           )
-        THEN
-
+    IF v_target_badge_code IS NULL AND v_quiz_passed THEN
+        IF v_perfect_score AND NOT EXISTS (
+            SELECT 1 FROM public.user_badges AS ub
+            INNER JOIN public.badges AS b ON b.id = ub.badge_id
+            WHERE ub.profile_id = p_user_id AND b.code = 'PERFECT_SCORE'
+        ) THEN
             v_target_badge_code := 'PERFECT_SCORE';
 
-
-        -- --------------------------------------------------------------------
-        -- FIRST QUIZ
-        -- --------------------------------------------------------------------
-
-        ELSIF v_completed_count >= 1
-           AND NOT EXISTS (
-                SELECT 1
-                FROM public.user_badges AS ub
-                INNER JOIN public.badges AS b
-                    ON b.id = ub.badge_id
-                WHERE ub.profile_id = p_user_id
-                  AND b.code = 'FIRST_QUIZ'
-           )
-        THEN
-
+        ELSIF v_completed_count >= 1 AND NOT EXISTS (
+            SELECT 1 FROM public.user_badges AS ub
+            INNER JOIN public.badges AS b ON b.id = ub.badge_id
+            WHERE ub.profile_id = p_user_id AND b.code = 'FIRST_QUIZ'
+        ) THEN
             v_target_badge_code := 'FIRST_QUIZ';
 
-
-        -- --------------------------------------------------------------------
-        -- QUIZ 10
-        -- --------------------------------------------------------------------
-
-        ELSIF v_completed_count >= 10
-           AND NOT EXISTS (
-                SELECT 1
-                FROM public.user_badges AS ub
-                INNER JOIN public.badges AS b
-                    ON b.id = ub.badge_id
-                WHERE ub.profile_id = p_user_id
-                  AND b.code = 'QUIZ_10'
-           )
-        THEN
-
+        ELSIF v_completed_count >= 10 AND NOT EXISTS (
+            SELECT 1 FROM public.user_badges AS ub
+            INNER JOIN public.badges AS b ON b.id = ub.badge_id
+            WHERE ub.profile_id = p_user_id AND b.code = 'QUIZ_10'
+        ) THEN
             v_target_badge_code := 'QUIZ_10';
 
-
-        -- --------------------------------------------------------------------
-        -- QUIZ 25
-        -- --------------------------------------------------------------------
-
-        ELSIF v_completed_count >= 25
-           AND NOT EXISTS (
-                SELECT 1
-                FROM public.user_badges AS ub
-                INNER JOIN public.badges AS b
-                    ON b.id = ub.badge_id
-                WHERE ub.profile_id = p_user_id
-                  AND b.code = 'QUIZ_25'
-           )
-        THEN
-
+        ELSIF v_completed_count >= 25 AND NOT EXISTS (
+            SELECT 1 FROM public.user_badges AS ub
+            INNER JOIN public.badges AS b ON b.id = ub.badge_id
+            WHERE ub.profile_id = p_user_id AND b.code = 'QUIZ_25'
+        ) THEN
             v_target_badge_code := 'QUIZ_25';
 
-
-        -- --------------------------------------------------------------------
-        -- QUIZ 50
-        -- --------------------------------------------------------------------
-
-        ELSIF v_completed_count >= 50
-           AND NOT EXISTS (
-                SELECT 1
-                FROM public.user_badges AS ub
-                INNER JOIN public.badges AS b
-                    ON b.id = ub.badge_id
-                WHERE ub.profile_id = p_user_id
-                  AND b.code = 'QUIZ_50'
-           )
-        THEN
-
+        ELSIF v_completed_count >= 50 AND NOT EXISTS (
+            SELECT 1 FROM public.user_badges AS ub
+            INNER JOIN public.badges AS b ON b.id = ub.badge_id
+            WHERE ub.profile_id = p_user_id AND b.code = 'QUIZ_50'
+        ) THEN
             v_target_badge_code := 'QUIZ_50';
 
-
-        -- --------------------------------------------------------------------
-        -- QUIZ MASTER
-        -- --------------------------------------------------------------------
-
-        ELSIF v_completed_count >= 100
-           AND NOT EXISTS (
-                SELECT 1
-                FROM public.user_badges AS ub
-                INNER JOIN public.badges AS b
-                    ON b.id = ub.badge_id
-                WHERE ub.profile_id = p_user_id
-                  AND b.code = 'QUIZ_MASTER'
-           )
-        THEN
-
+        ELSIF v_completed_count >= 100 AND NOT EXISTS (
+            SELECT 1 FROM public.user_badges AS ub
+            INNER JOIN public.badges AS b ON b.id = ub.badge_id
+            WHERE ub.profile_id = p_user_id AND b.code = 'QUIZ_MASTER'
+        ) THEN
             v_target_badge_code := 'QUIZ_MASTER';
-
         END IF;
-
     END IF;
 
-
-    -- ========================================================================
     -- 11. QUIZ NON SUPERATO / NESSUN BADGE DA ASSEGNARE
-    -- ========================================================================
-
     IF v_target_badge_code IS NULL THEN
-
-        SELECT
-            COALESCE(p.total_xp, 0),
-            COALESCE(p.current_level, 1)
-
-        INTO
-            v_new_total_xp,
-            v_new_level
-
+        SELECT COALESCE(p.total_xp, 0), COALESCE(p.current_level, 1)
+        INTO v_new_total_xp, v_new_level
         FROM public.profiles AS p
-
         WHERE p.id = p_user_id;
 
-
         RETURN QUERY
-        SELECT
-            FALSE,
-            NULL::varchar,
-            NULL::varchar,
-            0,
-            v_new_total_xp,
-            v_new_level;
-
+        SELECT FALSE, NULL::varchar, NULL::varchar, 0, v_new_total_xp, v_new_level;
         RETURN;
-
     END IF;
 
-
-    -- ========================================================================
     -- 12. CARICAMENTO BADGE
-    -- ========================================================================
-
-    SELECT *
-
-    INTO v_badge
-
+    SELECT * INTO v_badge
     FROM public.badges AS b
-
-    WHERE b.code = v_target_badge_code
-      AND b.badge_type = 'quiz'
-
+    WHERE b.code = v_target_badge_code AND b.badge_type = 'quiz'
     LIMIT 1;
 
-
     IF NOT FOUND THEN
-
-        RAISE EXCEPTION
-            'Badge quiz "%" non configurato',
-            v_target_badge_code;
-
+        RAISE EXCEPTION 'Badge quiz "%" non configurato', v_target_badge_code;
     END IF;
 
-
-    -- ========================================================================
     -- 13. VERIFICA DUPLICATO
-    -- ========================================================================
-
     SELECT EXISTS (
-
-        SELECT 1
-
-        FROM public.user_badges AS ub
-
-        WHERE ub.profile_id = p_user_id
-          AND ub.badge_id = v_badge.id
-
-    )
-
-    INTO v_badge_exists;
-
+        SELECT 1 FROM public.user_badges AS ub
+        WHERE ub.profile_id = p_user_id AND ub.badge_id = v_badge.id
+    ) INTO v_badge_exists;
 
     IF v_badge_exists THEN
-
-        SELECT
-            COALESCE(p.total_xp, 0),
-            COALESCE(p.current_level, 1)
-
-        INTO
-            v_new_total_xp,
-            v_new_level
-
+        SELECT COALESCE(p.total_xp, 0), COALESCE(p.current_level, 1)
+        INTO v_new_total_xp, v_new_level
         FROM public.profiles AS p
-
         WHERE p.id = p_user_id;
 
-
         RETURN QUERY
-        SELECT
-            TRUE,
-            v_badge.title,
-            v_badge.icon,
-            0,
-            v_new_total_xp,
-            v_new_level;
-
+        SELECT TRUE, v_badge.title, v_badge.icon, 0, v_new_total_xp, v_new_level;
         RETURN;
-
     END IF;
 
-
-    -- ========================================================================
-    -- 14. INSERIMENTO BADGE
-    -- ========================================================================
-    --
-    -- Il badge viene inserito prima dell'assegnazione XP.
-    --
-    -- In questo modo l'XP viene assegnato soltanto quando il badge è realmente
-    -- nuovo.
-    -- ========================================================================
-
-    INSERT INTO public.user_badges
-    (
-        profile_id,
-        badge_id,
-        course_id,
-        quiz_id,
-        awarded_at
-    )
-    VALUES
-    (
-        p_user_id,
-        v_badge.id,
-        v_course_id,
-        v_quiz_id,
-        NOW()
-    )
+    -- 14. INSERIMENTO BADGE (CON QUIZ_ID CORRETTO SU USER_BADGES)
+    INSERT INTO public.user_badges (profile_id, badge_id, course_id, quiz_id, awarded_at)
+    VALUES (p_user_id, v_badge.id, v_course_id, v_quiz_id, NOW())
     ON CONFLICT DO NOTHING;
 
+    GET DIAGNOSTICS v_inserted_count = ROW_COUNT;
 
-    GET DIAGNOSTICS
-        v_inserted_count = ROW_COUNT;
-
-
-    -- ========================================================================
     -- 15. RACE CONDITION
-    -- ========================================================================
-
     IF v_inserted_count = 0 THEN
-
-        SELECT
-            COALESCE(p.total_xp, 0),
-            COALESCE(p.current_level, 1)
-
-        INTO
-            v_new_total_xp,
-            v_new_level
-
+        SELECT COALESCE(p.total_xp, 0), COALESCE(p.current_level, 1)
+        INTO v_new_total_xp, v_new_level
         FROM public.profiles AS p
-
         WHERE p.id = p_user_id;
 
-
         RETURN QUERY
-        SELECT
-            TRUE,
-            v_badge.title,
-            v_badge.icon,
-            0,
-            v_new_total_xp,
-            v_new_level;
-
+        SELECT TRUE, v_badge.title, v_badge.icon, 0, v_new_total_xp, v_new_level;
         RETURN;
-
     END IF;
 
-
-    -- ========================================================================
     -- 16. XP CENTRALIZZATA
-    -- ========================================================================
-    --
-    -- award_xp() è l'unica funzione responsabile dell'aggiornamento:
-    --
-    --   profiles.total_xp
-    --   profiles.current_level
-    --   user_course_stats.course_xp
-    --   user_course_stats.course_level
-    --
-    -- award_quiz_badge() non modifica direttamente nessuna di queste
-    -- strutture.
-    -- ========================================================================
+    SELECT * INTO v_xp_result
+    FROM public.award_xp(p_user_id, v_badge.xp_reward, v_course_id);
 
-    SELECT *
+    v_xp_gained    := COALESCE(v_xp_result.xp_gained, 0);
+    v_new_total_xp := COALESCE(v_xp_result.global_total_xp, 0);
+    v_new_level    := COALESCE(v_xp_result.global_level, 1);
 
-    INTO v_xp_result
-
-    FROM public.award_xp(
-        p_user_id,
-        v_badge.xp_reward,
-        v_course_id
-    );
-
-
-    v_xp_gained :=
-        COALESCE(
-            v_xp_result.xp_gained,
-            0
-        );
-
-    v_new_total_xp :=
-        COALESCE(
-            v_xp_result.global_total_xp,
-            0
-        );
-
-    v_new_level :=
-        COALESCE(
-            v_xp_result.global_level,
-            1
-        );
-
-
-    -- ========================================================================
     -- 17. OUTPUT
-    -- ========================================================================
-
     RETURN QUERY
-    SELECT
-        FALSE,
-        v_badge.title,
-        v_badge.icon,
-        v_xp_gained,
-        v_new_total_xp,
-        v_new_level;
+    SELECT FALSE, v_badge.title, v_badge.icon, v_xp_gained, v_new_total_xp, v_new_level;
 
 END;
-
 $$;
 
 
-ALTER FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric, "p_max_score" numeric) OWNER TO "postgres";
+ALTER FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."award_xp"("p_user_id" "uuid", "p_xp" integer, "p_course_id" "uuid" DEFAULT NULL::"uuid") RETURNS TABLE("xp_gained" integer, "course_xp" integer, "course_level" integer, "global_total_xp" integer, "global_level" integer)
@@ -2962,7 +2517,8 @@ CREATE TABLE IF NOT EXISTS "public"."quizzes" (
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "passing_score" numeric(5,2) DEFAULT 60.00 NOT NULL,
     "course_id" "uuid",
-    "module_id" "uuid"
+    "module_id" "uuid",
+    "lesson_id" "uuid"
 );
 
 
@@ -3703,6 +3259,10 @@ CREATE INDEX "idx_quizzes_course_id" ON "public"."quizzes" USING "btree" ("cours
 
 
 
+CREATE INDEX "idx_quizzes_lesson_id" ON "public"."quizzes" USING "btree" ("lesson_id");
+
+
+
 CREATE INDEX "idx_quizzes_module_id" ON "public"."quizzes" USING "btree" ("module_id");
 
 
@@ -4068,6 +3628,11 @@ ALTER TABLE ONLY "public"."quizzes"
 
 ALTER TABLE ONLY "public"."quizzes"
     ADD CONSTRAINT "quizzes_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."quizzes"
+    ADD CONSTRAINT "quizzes_lesson_id_fkey" FOREIGN KEY ("lesson_id") REFERENCES "public"."course_lessons"("id") ON DELETE SET NULL;
 
 
 
@@ -4610,9 +4175,9 @@ GRANT ALL ON FUNCTION "public"."award_module_badge"("p_user_id" "uuid", "p_lesso
 
 
 
-GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric, "p_max_score" numeric) TO "anon";
-GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric, "p_max_score" numeric) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text", "p_score" numeric, "p_max_score" numeric) TO "service_role";
+GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."award_quiz_badge"("p_user_id" "uuid", "p_quiz_code" "text") TO "service_role";
 
 
 

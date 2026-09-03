@@ -9,6 +9,7 @@ export const QuizFrontMatterSchema = z.object({
   negative_mark: z.number().nonnegative().default(0.25),
   courseId: z.string().nullable().optional(),
   moduleId: z.string().nullable().optional(),
+  lessonId: z.string().nullable().optional(),
 });
 
 // 2. Validazione della singola opzione per le risposte chiuse

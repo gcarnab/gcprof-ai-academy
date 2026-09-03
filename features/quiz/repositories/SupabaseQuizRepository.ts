@@ -63,9 +63,13 @@ export class SupabaseQuizRepository implements IQuizRepository {
   async createFromParsed(
     parsedQuiz: ParsedQuiz,
     adminId: string,
+    context?: { courseId?: string; moduleId?: string; lessonId?: string }
   ): Promise<Quiz> {
-    const courseId = parsedQuiz.metadata.courseId || null;
-    let moduleId = parsedQuiz.metadata.moduleId || null;
+    // Ipotizza e priorotizza i parametri del contesto applicativo inviati dall'interfaccia o API,
+    // mantenendo il fallback sui metadati definiti nel Markdown.
+    const courseId = context?.courseId || parsedQuiz.metadata.courseId || null;
+    let moduleId = context?.moduleId || parsedQuiz.metadata.moduleId || null;
+    const lessonId = context?.lessonId || parsedQuiz.metadata.lessonId || null;
 
     // Risoluzione automatica del module_id se il corso è presente ma il modulo manca
     if (courseId && !moduleId) {
@@ -83,6 +87,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
         created_by: adminId,
         course_id: courseId,
         module_id: moduleId,
+        lesson_id: lessonId,
       })
       .select("*")
       .single();
@@ -199,6 +204,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
     quizId: string,
     courseId: string,
     moduleId?: string,
+    lessonId?: string,
   ): Promise<void> {
     let resolvedModuleId = moduleId;
 
@@ -213,6 +219,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .update({
         course_id: courseId,
         module_id: resolvedModuleId ?? null,
+        lesson_id: lessonId ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", quizId);
@@ -232,6 +239,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       .update({
         course_id: null,
         module_id: null,
+        lesson_id: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", quizId);
@@ -625,6 +633,7 @@ export class SupabaseQuizRepository implements IQuizRepository {
       passingScore: Number(q.passing_score ?? 60),
       courseId: q.course_id ?? undefined,
       moduleId: q.module_id ?? undefined,
+      lessonId: q.lesson_id ?? undefined,
       createdBy: q.created_by ?? undefined,
       createdAt: new Date(q.created_at),
       updatedAt: new Date(q.updated_at),

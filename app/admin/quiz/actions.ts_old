@@ -4,11 +4,10 @@ import { logger } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
-export interface AssignQuizPayload {
+interface AssignQuizPayload {
   quizId: string;
   courseId: string;
-  moduleId?: string | null;
-  lessonId?: string | null;
+  moduleId?: string | null; // 👈 Aggiunto supporto al modulo
   dueDate: string | null;
   isVisible: boolean;
 }
@@ -18,13 +17,12 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
 
   logger.info("👉 DATI RICEVUTI DALLA SERVER ACTION:", payload);
 
-  // 1. Aggiorna la tabella `quizzes`
+  // 1. Aggiorna direttamente la tabella `quizzes` (Essenziale per i Certificati)
   const { error: quizError } = await supabase
     .from("quizzes")
     .update({
       course_id: payload.courseId,
       module_id: payload.moduleId || null,
-      lesson_id: payload.lessonId || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", payload.quizId);
@@ -34,7 +32,7 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
     return { success: false, error: quizError.message };
   }
 
-  // 2. Salva o aggiorna i metadati in `quiz_assignments`
+  // 2. Salva o aggiorna i metadati di assegnazione (Scadenza e Visibilità)
   const { error: assignmentError } = await supabase.from("quiz_assignments").upsert(
     {
       quiz_id: payload.quizId,
@@ -50,6 +48,7 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
     return { success: false, error: assignmentError.message };
   }
 
+  // Forza il refresh delle cache Next.js
   revalidatePath(`/admin/quiz/${payload.quizId}/analytics`);
   revalidatePath("/admin/quiz", "layout");
   revalidatePath("/admin/dashboard", "layout");
@@ -58,44 +57,21 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
 }
 
 /**
- * Server Action per recuperare i moduli e le relative lezioni
+ * Server Action per recuperare i moduli appartenenti a un corso
  */
 export async function getCourseModulesAction(courseId: string) {
   const supabase = getSupabaseAdmin();
 
-  // Seleziona usando 'course_lessons' anziché 'lessons'
   const { data, error } = await supabase
     .from("course_modules")
-    .select(`
-      id,
-      title,
-      course_lessons (
-        id,
-        title
-      )
-    `)
+    .select("id, title")
     .eq("course_id", courseId)
     .order("order_index", { ascending: true });
 
   if (error) {
-    logger.error(`❌ Errore caricamento moduli/lezioni per corso ${courseId}:`, error.message);
-
-    // Fallback: recupera solo i moduli
-    const { data: modulesOnly } = await supabase
-      .from("course_modules")
-      .select("id, title")
-      .eq("course_id", courseId)
-      .order("order_index", { ascending: true });
-
-    return { success: true, modules: modulesOnly ?? [] };
+    logger.error(`❌ Errore caricamento moduli per corso ${courseId}:`, error.message);
+    return { success: false, modules: [] };
   }
 
-  // Normalizza l'output mappando 'course_lessons' sulla chiave 'lessons' per la modale
-  const formattedModules = (data ?? []).map((m: any) => ({
-    id: m.id,
-    title: m.title,
-    lessons: m.course_lessons ?? [],
-  }));
-
-  return { success: true, modules: formattedModules };
+  return { success: true, modules: data ?? [] };
 }

@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 export interface AutoIssueParams {
   userId: string;
   courseId: string;
-  moduleId: string;
+  moduleId?: string;
   lessonId?: string;
   title: string;
   subtitle?: string;
@@ -26,27 +26,58 @@ export class CertificateAutoIssueService {
 
   async processAndIssue(params: AutoIssueParams) {
     try {
-      // Guardrail: Blocco immediato se courseId o moduleId non sono definiti
-      if (!params.courseId || !params.moduleId) {
-        logger.error(
-          "❌ [CertificateAutoIssueService] courseId o moduleId mancanti:",
-          params,
-        );
+      const supabase = getSupabaseAdmin();
+
+      // 1. Guardrail e Auto-Risoluzione del moduleId se non fornito esplicitamente
+      let resolvedModuleId = params.moduleId;
+
+      if (!params.courseId) {
+        logger.error("❌ [CertificateAutoIssueService] courseId mancante:", params);
         throw new Error(
-          "Impossibile procedere: il quiz/lezione non è associato ad alcun corso o modulo valido.",
+          "Impossibile procedere: il quiz/lezione non è associato ad alcun corso valido."
         );
       }
 
-      // 1. Recupera il profilo dello studente per ricavare nome ed email
-      const { data: studentProfile } = await getSupabaseAdmin()
+      if (!resolvedModuleId) {
+        const { data: moduleData } = await supabase
+          .from("course_modules")
+          .select("id")
+          .eq("course_id", params.courseId)
+          .order("order_index", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        resolvedModuleId = moduleData?.id;
+      }
+
+      if (!resolvedModuleId) {
+        logger.error("❌ [CertificateAutoIssueService] Impossibile risolvere moduleId:", params);
+        throw new Error(
+          "Impossibile procedere: modulo di riferimento non trovato per il corso fornito."
+        );
+      }
+
+      // 2. Recupera il profilo dello studente con gestione difensiva degli errori
+      const { data: studentProfile, error: profileError } = await supabase
         .from("profiles")
         .select("first_name, last_name, display_name, email")
         .eq("id", params.userId)
-        .single();
+        .maybeSingle();
+
+      if (profileError) {
+        logger.warn(
+          `⚠️ [CertificateAutoIssueService] Errore recupero profilo utente ${params.userId}:`,
+          profileError.message
+        );
+      }
+
+      const firstName = studentProfile?.first_name?.trim() || "";
+      const lastName = studentProfile?.last_name?.trim() || "";
+      const fullName = `${firstName} ${lastName}`.trim();
 
       const studentName =
         params.studentName ||
-        `${studentProfile?.first_name || ""} ${studentProfile?.last_name || ""}`.trim() ||
+        fullName ||
         studentProfile?.display_name ||
         "Studente";
 
@@ -59,20 +90,20 @@ export class CertificateAutoIssueService {
           ? params.completionPercentage
           : 100;
 
-      // 2. Segna il modulo come completato
+      // 3. Segna il modulo come completato
       await this.certificateService.markModuleCompleted(
         params.userId,
         params.courseId,
-        params.moduleId,
+        resolvedModuleId,
         safePercentage,
         safeScore,
       );
 
-      // 3. Genera il certificato
+      // 4. Genera il certificato con l'eventuale tracciamento della lezione
       const certificate = await this.certificateService.generateCertificate({
         userId: params.userId,
         courseId: params.courseId,
-        moduleId: params.moduleId,
+        moduleId: resolvedModuleId,
         lessonId: params.lessonId,
         title: params.title,
         subtitle: params.subtitle,
@@ -82,7 +113,7 @@ export class CertificateAutoIssueService {
         issuedBy: params.issuedBy,
       });
 
-      // 4. Genera PDF, esegue l'upload su Storage e invia l'Email
+      // 5. Genera PDF, upload su Storage e invio email
       await this.certificateService.processAutomations(
         certificate,
         studentName,

@@ -11,6 +11,7 @@ export interface Quiz {
   passingScore: number;
   courseId?: string;
   moduleId?: string;
+  lessonId?: string;
   createdBy?: string;
   createdAt: Date;
   updatedAt: Date;

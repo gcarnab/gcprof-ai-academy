@@ -152,10 +152,10 @@ export class CertificateService {
   ): Promise<boolean> {
     const certificates = await this.repository.getUserCertificates(userId);
     return certificates.some((c) => {
-      if (lessonId && c.lessonId) {
+      if (lessonId) {
         return c.moduleId === moduleId && c.lessonId === lessonId;
       }
-      return c.moduleId === moduleId;
+      return c.moduleId === moduleId && !c.lessonId;
     });
   }
 
@@ -176,6 +176,7 @@ export class CertificateService {
         "❌ [CertificateService] generateCertificate invocato senza moduleId.",
       );
     }
+
     // 1. Lettura diretta da module_completions per dare priorità a quiz_score dal DB
     const completion = await this.repository.getModuleCompletion(
       data.userId,
@@ -208,7 +209,7 @@ export class CertificateService {
         ? Number(data.completionPercentage)
         : 100;
 
-    // Recupero preventivo delle impostazioni di sistema per risolvere il template_id predefinito prima dell'inserimento
+    // Recupero preventivo delle impostazioni di sistema per risolvere il template_id predefinito
     const settings = await this.repository.getSettings();
     const effectiveTemplateId =
       data.templateId || settings?.defaultTemplateId || null;
@@ -216,11 +217,13 @@ export class CertificateService {
     const userCertificates = await this.repository.getUserCertificates(
       data.userId,
     );
+
+    // Ricerca puntuale per evitare collisioni tra attestati di lezione e attestati di modulo
     const existingCertificate = userCertificates.find((c) => {
-      if (data.lessonId && c.lessonId) {
+      if (data.lessonId) {
         return c.moduleId === data.moduleId && c.lessonId === data.lessonId;
       }
-      return c.moduleId === data.moduleId;
+      return c.moduleId === data.moduleId && !c.lessonId;
     });
 
     if (existingCertificate) {
@@ -273,7 +276,7 @@ export class CertificateService {
       return existingCertificate;
     }
 
-    // Creazione nuovo certificato con templateId ed issuedBy valorizzati in origine
+    // Creazione nuovo certificato
     const certificatePayload = {
       userId: data.userId,
       courseId: data.courseId,
