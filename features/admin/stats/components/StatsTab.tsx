@@ -63,7 +63,7 @@ export default function StatsTab({ stats }: Props) {
                   <tr>
                     <th className="px-6 py-3.5">Corso</th>
                     <th className="px-6 py-3.5 text-center">Studenti</th>
-                    <th className="px-6 py-3.5 text-center">Tempo di Studio</th>
+                    <th className="px-6 py-3.5 text-center">Tempo di Studio(min)</th>
                     <th className="px-6 py-3.5 text-center">XP Erogati</th>
                     <th className="px-6 py-3.5 text-center">Livello Medio</th>
                   </tr>

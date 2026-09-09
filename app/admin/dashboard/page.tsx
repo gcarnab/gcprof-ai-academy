@@ -1,3 +1,4 @@
+
 /**
  * GCPROF AI ACADEMY
  * File: app/admin/dashboard/page.tsx
@@ -50,7 +51,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     systemSettingsRepository,
   );
 
-  // 📡 Esecuzione in parallelo delle chiamate principali (incluso il recupero impostazioni IA)
+  // 📡 Esecuzione in parallelo delle chiamate principali
   const [
     stats,
     trackingStats,
@@ -99,9 +100,11 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       .from("courses")
       .select("id, title, slug, published, difficulty, created_at")
       .order("title", { ascending: true }),
+
     supabase
       .from("user_course_stats")
       .select("course_id, profile_id, course_xp, course_level"),
+
     systemSettingsService.getHomeBannerSettings(),
     getAiSettingsAction(),
   ]);
@@ -140,11 +143,20 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     );
 
     const enrolledStudentsCount = statsForCourse.length;
+
     const totalXp = statsForCourse.reduce(
       (acc, curr) => acc + (curr.course_xp || 0),
       0,
     );
-    const totalMinutesStudied = 0; // In attesa di tracciamento minuti dedicati per singolo corso
+
+    // Recupera il tempo di studio già aggregato dal servizio statistiche.
+    // Non deve essere impostato artificialmente a 0.
+    const statsCourse = stats?.courseStats?.find(
+      (s: any) => String(s.courseId) === String(course.id),
+    );
+
+    const totalMinutesStudied =
+      Number(statsCourse?.totalMinutesStudied) || 0;
 
     const averageLevel =
       enrolledStudentsCount > 0

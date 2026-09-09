@@ -49,7 +49,7 @@ export async function getAdminDashboardStats() {
       .gte("login_at", twoWeeksAgo.toISOString()),
     supabaseAdmin
       .from("profile_lessons_progress")
-      .select("course_id, user_id, minutes_watched, is_completed"),
+      .select("course_id, profile_id, minutes_watched, is_completed"),
     supabaseAdmin
       .from("quiz_ai_reviews")
       .select("prompt_tokens, completion_tokens, model, created_at")
@@ -119,7 +119,8 @@ export async function getAdminDashboardStats() {
 
     // Modello AI
     const modelName = review.model || "Gemini / AI Standard";
-    aiModelDistribution[modelName] = (aiModelDistribution[modelName] || 0) + 1;
+    aiModelDistribution[modelName] =
+      (aiModelDistribution[modelName] || 0) + 1;
 
     // Trend giornaliero
     if (review.created_at) {
@@ -188,7 +189,12 @@ export async function getAdminDashboardStats() {
 
     const entry = courseProgressMap.get(key)!;
     entry.totalMinutes += Number(p.minutes_watched || 0);
-    if (p.user_id) entry.uniqueStudents.add(p.user_id);
+
+    // profile_lessons_progress utilizza profile_id come riferimento allo studente.
+    if (p.profile_id) {
+      entry.uniqueStudents.add(p.profile_id);
+    }
+
     if (p.is_completed) entry.completedLessons += 1;
   });
 
@@ -457,3 +463,4 @@ export async function getAdminDashboardStats() {
     raw: { users, classes, courses, course_classes: courseClasses },
   };
 }
+

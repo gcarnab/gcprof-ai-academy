@@ -15,7 +15,7 @@
 
 ---
 
-## 🚀 CLASSE QUARTA (5ª LSA)
+## 🚀 CLASSE QUINTA (5ª LSA)
 
 ### 📚 MODULO 1: Problem Solving, Algoritmi e Logica di Base
 - **Teoria:**
@@ -50,7 +50,18 @@
 - **Laboratorio & Strumenti:**
   - Database: Utilizzo strumenti online e Creazione di un progetto completo in Python.
 
-### 🤖 MODULO 4: AI Prompt Engineering & Innovazione Didattica
+### 🌐 MODULO 5: Architettura Hardware & Rete (ICDL Online Essentials)
+- **Teoria:**
+  - Cenni all'architettura dei calcolatori: Macchina di Von Neumann, CPU, memorie RAM/ROM, memoria di massa, I/O.
+  - Storia di Internet e sua evoluzione (dalle origini ad ARPANET e al Web moderno).
+  - Mezzi trasmissivi (guidati e wireless) e topologie di rete.
+  - Il modello architetturale **Client-Server**.
+  - World Wide Web: il funzionamento di URL, HTTP/HTTPS, DNS e motori di ricerca.
+- **Laboratorio & Strumenti:**
+  - Esercitazioni pratiche per il modulo **ICDL Online Essentials**.
+  - Utilizzo consapevole dei servizi cloud, comunicazione e ricerca avanzata sul Web.
+
+### 🤖 MODULO 6: AI Prompt Engineering & Innovazione Didattica
 - **Teoria & Etica:**
   - AI Prompt engineering: nozioni base per la didattica.
 - **Laboratorio & Strumenti:**
