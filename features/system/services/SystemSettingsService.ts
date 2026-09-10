@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { ISystemSettingsRepository } from "../ports/ISystemSettingsRepository";
 import {
   HomeBannerSettings,
+  MaintenanceSettings,
   SystemConfiguration,
   SystemSetting,
 } from "../types/SystemConfiguration";
@@ -17,6 +18,7 @@ export class SystemSettingsService {
 
     const configuration: SystemConfiguration = {
       homeBanner: this.buildHomeBannerSettings(settings),
+      maintenance: this.buildMaintenanceSettings(settings),
     };
 
     logger.info("[SystemSettingsService] Configuration built successfully.");
@@ -30,9 +32,35 @@ export class SystemSettingsService {
     return this.buildHomeBannerSettings(settings);
   }
 
+  async getMaintenanceSettings(): Promise<MaintenanceSettings> {
+    const settings = await this.repository.getAll();
+
+    return this.buildMaintenanceSettings(settings);
+  }
+
   // --------------------------------------------------------
   // PRIVATE
   // --------------------------------------------------------
+
+  private buildMaintenanceSettings(
+    settings: SystemSetting[],
+  ): MaintenanceSettings {
+    return {
+      enabled: this.getBoolean(settings, "MAINTENANCE_MODE", false),
+
+      title: this.getString(
+        settings,
+        "MAINTENANCE_TITLE",
+        "Sito temporaneamente in manutenzione",
+      ),
+
+      message: this.getString(
+        settings,
+        "MAINTENANCE_MESSAGE",
+        "Il sito è temporaneamente non disponibile. Stiamo effettuando alcune operazioni di manutenzione. Riprova più tardi.",
+      ),
+    };
+  }
 
   private buildHomeBannerSettings(
     settings: SystemSetting[],
@@ -52,7 +80,11 @@ export class SystemSettingsService {
 
       endAt: this.getDate(settings, "HOME_BANNER_END_AT"),
 
-      dismissible: this.getBoolean(settings, "HOME_BANNER_DISMISSIBLE", true),
+      dismissible: this.getBoolean(
+        settings,
+        "HOME_BANNER_DISMISSIBLE",
+        true,
+      ),
 
       buttonText: this.getString(settings, "HOME_BANNER_BUTTON_TEXT"),
 
@@ -149,3 +181,4 @@ export class SystemSettingsService {
     }
   }
 }
+

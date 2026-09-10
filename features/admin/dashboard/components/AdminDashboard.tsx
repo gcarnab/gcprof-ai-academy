@@ -11,8 +11,12 @@ import RequestsTab from "./RequestsTab";
 import QuizzesTab from "./QuizzesTab";
 import ResourceAdminTable from "@/features/resources/components/ResourceAdminTable";
 import { Resource } from "@/features/resources/types/Resource";
-import { HomeBannerSettings } from "@/features/system/types/SystemConfiguration";
-import HomeBannerAdminForm from "@/features/system/actions/HomeBannerAdminForm";
+import {
+  HomeBannerSettings,
+  MaintenanceSettings,
+} from "@/features/system/types/SystemConfiguration";
+import HomeBannerAdminForm from "@/features/system/components/HomeBannerAdminForm";
+import MaintenanceAdminForm from "@/features/system/components/MaintenanceAdminForm";
 import AiSettingsForm from "@/features/ai/components/AiSettingsForm";
 
 interface Props {
@@ -21,6 +25,7 @@ interface Props {
   trackingStats: any;
   initialResources: Resource[];
   initialSystemSettings?: HomeBannerSettings;
+  initialMaintenanceSettings?: MaintenanceSettings;
   initialAiSettings?: any;
   paymentsTab?: React.ReactNode;
 }
@@ -44,15 +49,20 @@ export default function AdminDashboard({
   trackingStats,
   initialResources,
   initialSystemSettings,
+  initialMaintenanceSettings,
   initialAiSettings,
   paymentsTab,
 }: Props) {
   const router = useRouter();
-  const [settingsSubTab, setSettingsSubTab] = useState<"system" | "ai">("system");
+
+  const [settingsSubTab, setSettingsSubTab] = useState<
+    "system" | "ai"
+  >("system");
 
   const availableClassesNames = (stats.raw?.classes || []).map(
-    (c: any) => c.name
+    (c: any) => c.name,
   );
+
   const availableQuizzes = stats.raw?.quizzes || [];
   const availableCourses = stats.courseStats || [];
 
@@ -67,28 +77,31 @@ export default function AdminDashboard({
         <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
           Pannello Amministratore
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground max-w-3xl">
-          Gestisci la struttura dei corsi, gli utenti, i quiz di sbarramento e
-          tutte le funzionalità amministrative della piattaforma.
+
+        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+          Gestisci la struttura dei corsi, gli utenti, i quiz di
+          sbarramento e tutte le funzionalità amministrative della
+          piattaforma.
         </p>
       </div>
 
       {/* TAB BAR E CONTENUTO */}
       <div className="rounded-xl border bg-card text-card-foreground shadow-sm">
-        {/* Scroll orizzontale su mobile */}
-        <div className="flex overflow-x-auto border-b no-scrollbar">
+        <div className="no-scrollbar flex overflow-x-auto border-b">
           {tabs.map((tab) => {
             const isActive = currentTab === tab.id;
+
             return (
               <button
                 key={tab.id}
                 onClick={() => changeTab(tab.id)}
                 className={`
-                  whitespace-nowrap px-6 py-4 text-sm font-medium transition-all duration-200 border-b-2
+                  whitespace-nowrap border-b-2 px-6 py-4 text-sm font-medium
+                  transition-all duration-200
                   ${
                     isActive
-                      ? "border-blue-600 dark:border-violet-500 text-blue-600 dark:text-violet-400 bg-blue-50/50 dark:bg-violet-500/10"
-                      : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:border-border"
+                      ? "border-blue-600 bg-blue-50/50 text-blue-600 dark:border-violet-500 dark:bg-violet-500/10 dark:text-violet-400"
+                      : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground"
                   }
                 `}
               >
@@ -98,23 +111,23 @@ export default function AdminDashboard({
           })}
         </div>
 
-        {/* Area Contenuto con animazione fade-in */}
         <div
           key={currentTab}
-          className="p-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
+          className="animate-in slide-in-from-bottom-2 p-6 fade-in duration-300"
         >
-          {/* COURSES */}
-          {currentTab === "courses" && <CoursesTab stats={stats} />}
-
-          {/* QUIZZES */}
-          {currentTab === "quizzes" && (
-            <QuizzesTab availableQuizzes={availableQuizzes} availableCourses={availableCourses} />
+          {currentTab === "courses" && (
+            <CoursesTab stats={stats} />
           )}
 
-          {/* REQUESTS */}
+          {currentTab === "quizzes" && (
+            <QuizzesTab
+              availableQuizzes={availableQuizzes}
+              availableCourses={availableCourses}
+            />
+          )}
+
           {currentTab === "requests" && <RequestsTab />}
 
-          {/* USERS */}
           {currentTab === "users" && (
             <UsersTab
               users={stats.raw?.users || []}
@@ -122,36 +135,32 @@ export default function AdminDashboard({
             />
           )}
 
-          {/* MAIL */}
           {currentTab === "mail" && (
             <MailTab availableClasses={availableClassesNames} />
           )}
 
-          {/* STATS */}
-          {currentTab === "stats" && <StatsTab stats={stats} />}
+          {currentTab === "stats" && (
+            <StatsTab stats={stats} />
+          )}
 
-          {/* TRACKING */}
           {currentTab === "tracking" && (
             <TrackingTab trackingStats={trackingStats} />
           )}
 
-          {/* RESOURCES */}
           {currentTab === "resources" && (
             <ResourceAdminTable resources={initialResources} />
           )}
 
-          {/* PAYMENTS */}
           {currentTab === "payments" && paymentsTab}
 
-          {/* SETTINGS (CON SOTTO-TAB INTERNI) */}
           {currentTab === "settings" && (
             <div className="space-y-6">
-              {/* BARRA SOTTO-TAB */}
-              <div className="flex border-b border-border pb-3 gap-2">
+              {/* SETTINGS SUB TABS */}
+              <div className="flex gap-2 border-b border-border pb-3">
                 <button
                   type="button"
                   onClick={() => setSettingsSubTab("system")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                     settingsSubTab === "system"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -159,10 +168,11 @@ export default function AdminDashboard({
                 >
                   🎨 Banner Home & Sistema
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setSettingsSubTab("ai")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                     settingsSubTab === "ai"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -172,14 +182,26 @@ export default function AdminDashboard({
                 </button>
               </div>
 
-              {/* CONTENUTO SOTTO-TAB 1: BANNER E SISTEMA */}
-              {settingsSubTab === "system" && initialSystemSettings && (
-                <HomeBannerAdminForm initialSettings={initialSystemSettings} />
+              {settingsSubTab === "system" && (
+                <div className="space-y-6">
+                  {initialSystemSettings && (
+                    <HomeBannerAdminForm
+                      initialSettings={initialSystemSettings}
+                    />
+                  )}
+
+                  {initialMaintenanceSettings && (
+                    <MaintenanceAdminForm
+                      initialSettings={initialMaintenanceSettings}
+                    />
+                  )}
+                </div>
               )}
 
-              {/* CONTENUTO SOTTO-TAB 2: CONFIGURAZIONE IA */}
               {settingsSubTab === "ai" && (
-                <AiSettingsForm initialSettings={initialAiSettings} />
+                <AiSettingsForm
+                  initialSettings={initialAiSettings}
+                />
               )}
             </div>
           )}

@@ -7,25 +7,23 @@ export interface SystemSetting {
 
 export interface HomeBannerSettings {
   enabled: boolean;
+
   title: string;
   message: string;
+
   type: "info" | "success" | "warning" | "danger";
+
   startAt: Date | null;
   endAt: Date | null;
+
   dismissible: boolean;
+
   buttonText: string;
   buttonUrl: string;
-  version: string;
-}
 
-export interface MaintenanceSettings {
-  enabled: boolean;
-  title: string;
-  message: string;
+  version: string;
 }
 
 export interface SystemConfiguration {
   homeBanner: HomeBannerSettings;
-  maintenance: MaintenanceSettings;
 }
-

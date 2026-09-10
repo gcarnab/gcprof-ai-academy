@@ -1,4 +1,3 @@
-
 /**
  * GCPROF AI ACADEMY
  * File: app/admin/dashboard/page.tsx
@@ -16,7 +15,6 @@ import { getTrackingStats } from "@/features/admin/tracking/services/trackingQue
 import { PaymentsTabContent } from "@/features/payments/components/PaymentsTabContent";
 import { logger } from "@/lib/logger";
 
-// Import dell'infrastruttura di gestione configurazioni di sistema e IA
 import { SupabaseSystemSettingsRepository } from "@/features/system/repositories/SupabaseSystemSettingsRepository";
 import { SystemSettingsService } from "@/features/system/services/SystemSettingsService";
 import { getAiSettingsAction } from "@/features/ai/actions/aiActions";
@@ -41,17 +39,19 @@ interface Props {
   }>;
 }
 
-export default async function AdminDashboardPage({ searchParams }: Props) {
+export default async function AdminDashboardPage({
+  searchParams,
+}: Props) {
   const params = await searchParams;
   const supabase = getSupabaseAdmin();
 
-  // Inizializzazione repository e servizio per le impostazioni
-  const systemSettingsRepository = new SupabaseSystemSettingsRepository();
+  const systemSettingsRepository =
+    new SupabaseSystemSettingsRepository();
+
   const systemSettingsService = new SystemSettingsService(
     systemSettingsRepository,
   );
 
-  // 📡 Esecuzione in parallelo delle chiamate principali
   const [
     stats,
     trackingStats,
@@ -60,6 +60,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     coursesRes,
     courseStatsRes,
     initialSystemSettings,
+    initialMaintenanceSettings,
     aiSettingsRes,
   ] = await Promise.all([
     getAdminDashboardStats(),
@@ -98,14 +99,21 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
 
     supabase
       .from("courses")
-      .select("id, title, slug, published, difficulty, created_at")
+      .select(
+        "id, title, slug, published, difficulty, created_at",
+      )
       .order("title", { ascending: true }),
 
     supabase
       .from("user_course_stats")
-      .select("course_id, profile_id, course_xp, course_level"),
+      .select(
+        "course_id, profile_id, course_xp, course_level",
+      ),
 
     systemSettingsService.getHomeBannerSettings(),
+
+    systemSettingsService.getMaintenanceSettings(),
+
     getAiSettingsAction(),
   ]);
 
@@ -130,10 +138,10 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     );
   }
 
-  // Estrazione dati delle impostazioni IA con fallback sicuro
-  const initialAiSettings = aiSettingsRes?.success ? aiSettingsRes.data : null;
+  const initialAiSettings = aiSettingsRes?.success
+    ? aiSettingsRes.data
+    : null;
 
-  // 🧮 Aggregazione delle metriche di Gamification e Utilizzo per Singolo Corso
   const coursesList = coursesRes.data || [];
   const rawCourseStats = courseStatsRes.data || [];
 
@@ -149,8 +157,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       0,
     );
 
-    // Recupera il tempo di studio già aggregato dal servizio statistiche.
-    // Non deve essere impostato artificialmente a 0.
     const statsCourse = stats?.courseStats?.find(
       (s: any) => String(s.courseId) === String(course.id),
     );
@@ -162,7 +168,8 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
       enrolledStudentsCount > 0
         ? Math.round(
             (statsForCourse.reduce(
-              (acc, curr) => acc + (curr.course_level || 1),
+              (acc, curr) =>
+                acc + (curr.course_level || 1),
               0,
             ) /
               enrolledStudentsCount) *
@@ -188,19 +195,24 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     courseStats,
     raw: {
       ...(stats?.raw || {}),
-      quizzes: (quizzesRes.data || []).map((quiz: any) => ({
-        ...quiz,
+      quizzes: (quizzesRes.data || []).map(
+        (quiz: any) => ({
+          ...quiz,
 
-        attemptsCount: quiz.quiz_attempts?.length ?? 0,
+          attemptsCount:
+            quiz.quiz_attempts?.length ?? 0,
 
-        pendingReviews:
-          quiz.quiz_attempts?.filter((a: any) => a.status === "submitted")
-            .length ?? 0,
+          pendingReviews:
+            quiz.quiz_attempts?.filter(
+              (a: any) => a.status === "submitted",
+            ).length ?? 0,
 
-        assignedCourse: quiz.courses ?? null,
+          assignedCourse: quiz.courses ?? null,
 
-        assignedModule: quiz.course_modules ?? null,
-      })),
+          assignedModule:
+            quiz.course_modules ?? null,
+        }),
+      ),
     },
   };
 
@@ -215,6 +227,9 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           trackingStats={trackingStats}
           initialResources={resources}
           initialSystemSettings={initialSystemSettings}
+          initialMaintenanceSettings={
+            initialMaintenanceSettings
+          }
           initialAiSettings={initialAiSettings}
           paymentsTab={
             <Suspense
@@ -225,7 +240,9 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
                 </div>
               }
             >
-              <PaymentsTabContent subtab={params.subtab} />
+              <PaymentsTabContent
+                subtab={params.subtab}
+              />
             </Suspense>
           }
         />
