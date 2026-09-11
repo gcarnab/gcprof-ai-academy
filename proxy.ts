@@ -11,7 +11,6 @@ const PROTECTED_ROUTES = [
   "/dashboard",
   "/admin",
   "/profile",
-  "/courses",
   "/students",
 ];
 
