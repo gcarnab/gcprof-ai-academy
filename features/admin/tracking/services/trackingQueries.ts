@@ -1,17 +1,31 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
+export interface SessionRecord {
+  id: string;
+  profile_id: string;
+  login_at: string;
+  logout_at: string | null;
+  session_duration_seconds: number | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  profiles: {
+    display_name: string | null;
+    email: string | null;
+  } | null;
+}
+
 export async function getTrackingStats() {
   const supabase = getSupabaseAdmin();
 
-  // Data di inizio giornata (oggi a mezzanotte) per i filtri mirati
+  // Calcolo preciso della mezzanotte UTC/ISO corrente senza sfasamenti di fuso orario
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  now.setUTCHours(0, 0, 0, 0);
+  const todayStart = now.toISOString();
 
   try {
-    // 1. Recupero parallelo per ottimizzare i tempi di risposta ed evitare colli di bottiglia
     const [sessionsResponse, statsResponse] = await Promise.all([
-      // Query per gli ultimi 50 accessi da mostrare nella tabella
+      // 1. Ultimi 50 accessi dettagliati per la tabella dashboard
       supabase
         .from("user_sessions")
         .select(`
@@ -30,10 +44,10 @@ export async function getTrackingStats() {
         .order("login_at", { ascending: false })
         .limit(50),
 
-      // Query globale per calcolare le metriche reali di oggi su tutto il set di dati
+      // 2. Sessioni di oggi per conteggio e utenti unici
       supabase
         .from("user_sessions")
-        .select("profile_id, login_at, session_duration_seconds")
+        .select("profile_id, session_duration_seconds")
         .gte("login_at", todayStart)
     ]);
 
@@ -47,25 +61,32 @@ export async function getTrackingStats() {
       return getEmptyStats();
     }
 
-    const sessions = sessionsResponse.data ?? [];
+    const rawSessions = sessionsResponse.data ?? [];
     const todaySessions = statsResponse.data ?? [];
 
-    // 2. Calcolo metriche accurate basate su tutte le sessioni odierne (senza il cap di 50 elementi)
+    // Normalizzazione sicura del campo profiles (gestione array vs oggetto)
+    const sessions: SessionRecord[] = rawSessions.map((s: any) => ({
+      ...s,
+      profiles: Array.isArray(s.profiles) ? s.profiles[0] ?? null : s.profiles ?? null,
+    }));
+
+    // Metriche aggregate
     const todayLogins = todaySessions.length;
     const activeUsers = new Set(todaySessions.map((s) => s.profile_id)).size;
 
-    // Calcolo della permanenza media basata sullo storico delle sessioni concluse caricate
-    const durations = sessions
+    // Media permanenza basata sulle sessioni odierne (con fallback sulle ultime 50 se vuota)
+    const activeDurationsSource = todaySessions.length > 0 ? todaySessions : sessions;
+    const validDurations = activeDurationsSource
       .map((s) => s.session_duration_seconds)
-      .filter((v): v is number => v !== null);
+      .filter((v): v is number => typeof v === "number" && v > 0);
 
     const averageDuration =
-      durations.length > 0
-        ? Math.floor(durations.reduce((a, b) => a + b, 0) / durations.length)
+      validDurations.length > 0
+        ? Math.floor(validDurations.reduce((a, b) => a + b, 0) / validDurations.length)
         : 0;
 
     return {
-      totalSessions: sessions.length, // Conteggio relativo al set visualizzato o estendibile
+      totalSessions: sessions.length,
       todayLogins,
       activeUsers,
       averageDuration,
@@ -77,9 +98,6 @@ export async function getTrackingStats() {
   }
 }
 
-/**
- * Ritorna lo stato vuoto di fallback in caso di errore
- */
 function getEmptyStats() {
   return {
     totalSessions: 0,

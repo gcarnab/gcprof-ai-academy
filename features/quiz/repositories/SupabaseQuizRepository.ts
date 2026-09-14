@@ -8,11 +8,6 @@ import { ParsedQuiz } from "../validators/quizValidators";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
-/**
- * Client Supabase centralizzato.
- * Tutta la configurazione server-side risiede in /lib/supabase
- * evitando duplicazioni della logica di inizializzazione.
- */
 const supabase = getSupabaseAdmin();
 
 export class SupabaseQuizRepository implements IQuizRepository {
@@ -20,11 +15,6 @@ export class SupabaseQuizRepository implements IQuizRepository {
   // HELPER AUTOMATICO RISOLUZIONE MODULO
   // ======================================================
 
-  /**
-   * Risolve automaticamente il module_id del modulo principale del corso.
-   * Criterio 1: Cerca il modulo con order_index = 2 ("<NOME_CORSO> Course").
-   * Criterio 2: Esclude i moduli contenenti "preview" o "resources" nel titolo.
-   */
   async resolveMainCourseModule(courseId: string): Promise<string | null> {
     const { data: mainModule } = await supabase
       .from("course_modules")
@@ -65,13 +55,10 @@ export class SupabaseQuizRepository implements IQuizRepository {
     adminId: string,
     context?: { courseId?: string; moduleId?: string; lessonId?: string }
   ): Promise<Quiz> {
-    // Ipotizza e priorotizza i parametri del contesto applicativo inviati dall'interfaccia o API,
-    // mantenendo il fallback sui metadati definiti nel Markdown.
     const courseId = context?.courseId || parsedQuiz.metadata.courseId || null;
     let moduleId = context?.moduleId || parsedQuiz.metadata.moduleId || null;
     const lessonId = context?.lessonId || parsedQuiz.metadata.lessonId || null;
 
-    // Risoluzione automatica del module_id se il corso è presente ma il modulo manca
     if (courseId && !moduleId) {
       moduleId = await this.resolveMainCourseModule(courseId);
     }
@@ -208,7 +195,6 @@ export class SupabaseQuizRepository implements IQuizRepository {
   ): Promise<void> {
     let resolvedModuleId = moduleId;
 
-    // Se moduleId non viene fornito, risolvi automaticamente il modulo principale del corso
     if (!resolvedModuleId) {
       resolvedModuleId =
         (await this.resolveMainCourseModule(courseId)) ?? undefined;
@@ -522,8 +508,8 @@ export class SupabaseQuizRepository implements IQuizRepository {
     return this.mapToAttemptEntity(attemptData);
   }
 
-  // ======================================================
-  // ANALYTICS & STATS
+ // ======================================================
+  // ANALYTICS & STATS (OTTIMIZZATE CON TYPE CASTING RPC)
   // ======================================================
 
   async getGlobalQuizStats(): Promise<{
@@ -533,33 +519,26 @@ export class SupabaseQuizRepository implements IQuizRepository {
     pendingReviewsCount: number;
     averageScore: number;
   }> {
-    const { count: totalCreated } = await supabase
-      .from("quizzes")
-      .select("*", { count: "exact", head: true });
+    const { data, error } = await supabase
+      .rpc("get_quiz_global_stats")
+      .single();
 
-    const { count: totalPublished } = await supabase
-      .from("quizzes")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "active");
+    if (error) throw new Error("Errore recupero statistiche globali quiz: " + error.message);
 
-    const { count: totalCompleted } = await supabase
-      .from("quiz_attempts")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "graded");
-
-    const { count: pendingReviewsCount } = await supabase
-      .from("quiz_attempts")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "submitted");
-
-    const { data: avgData } = await supabase.rpc("get_average_quiz_score");
+    const stats = data as {
+      total_created?: number | string;
+      total_published?: number | string;
+      total_completed?: number | string;
+      pending_reviews_count?: number | string;
+      average_score?: number | string;
+    } | null;
 
     return {
-      totalCreated: totalCreated || 0,
-      totalPublished: totalPublished || 0,
-      totalCompleted: totalCompleted || 0,
-      pendingReviewsCount: pendingReviewsCount || 0,
-      averageScore: avgData ? Number(avgData) : 0.0,
+      totalCreated: Number(stats?.total_created ?? 0),
+      totalPublished: Number(stats?.total_published ?? 0),
+      totalCompleted: Number(stats?.total_completed ?? 0),
+      pendingReviewsCount: Number(stats?.pending_reviews_count ?? 0),
+      averageScore: Number(stats?.average_score ?? 0.0),
     };
   }
 
@@ -582,39 +561,28 @@ export class SupabaseQuizRepository implements IQuizRepository {
     return distribution;
   }
 
+
   async getMostFailedQuestions(
     limit = 5,
   ): Promise<
     { questionId: string; questionText: string; errorCount: number }[]
   > {
     const { data, error } = await supabase
-      .from("quiz_answers")
-      .select(
-        `
-        question_id,
-        quiz_questions(text)
-      `,
-      )
-      .eq("is_correct", false)
-      .limit(limit);
+      .rpc("get_most_failed_questions", { limit_count: limit });
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error("Errore recupero domande con piu errori: " + error.message);
 
-    const counts: Record<string, { text: string; count: number }> = {};
-    (data ?? []).forEach((item: any) => {
-      const qId = item.question_id;
-      const text = item.quiz_questions?.text || "Domanda sconosciuta";
-      if (!counts[qId]) counts[qId] = { text, count: 0 };
-      counts[qId].count++;
-    });
+    const rows = (data as {
+      question_id: string;
+      question_text: string;
+      error_count: number | string;
+    }[] | null) ?? [];
 
-    return Object.entries(counts)
-      .map(([id, val]) => ({
-        questionId: id,
-        questionText: val.text,
-        errorCount: val.count,
-      }))
-      .sort((a, b) => b.errorCount - a.errorCount);
+    return rows.map((row) => ({
+      questionId: row.question_id,
+      questionText: row.question_text || "Domanda sconosciuta",
+      errorCount: Number(row.error_count),
+    }));
   }
 
   // ======================================================
