@@ -116,7 +116,7 @@ export default function AdminDashboardPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (courseId: number, courseTitle: string) => {
+  const handleDelete = async (courseId: string | number, courseTitle: string) => {
     if (
       confirm(
         `Sei sicuro di voler eliminare definitivamente il corso "${courseTitle}"? Questa azione non è reversibile.`,

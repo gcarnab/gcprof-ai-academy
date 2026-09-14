@@ -26,17 +26,20 @@ export interface QuizAssignment {
 }
 
 export interface Course {
-  id: number;
+  id: string | number;
   slug: string;
   title: string;
   description: string;
   category: string;
-  difficulty: CourseDifficulty | string;
+  difficulty: string;
   teacher: string;
   estimatedHours: number;
+  price?: number; // 🟢 Proprietà aggiunta come opzionale
+  isPaid?: boolean;
+  is_paid?: boolean;
   coverImage?: string;
   published: boolean;
   allowedClasses: string[];
-  modules: Module[]; // Struttura ad albero per i contenuti
-  quizAssignments: QuizAssignment[];
+  modules: Module[];
+  quizAssignments?: QuizAssignment[];
 }

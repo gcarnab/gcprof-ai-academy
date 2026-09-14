@@ -36,7 +36,7 @@ export function hasCourseAccess(
   if (user.userType === "EXTERNAL_STUDENT") {
     const userCourses = user.enrolledCourses || [];
 
-    return userCourses.includes(course.id);
+    return userCourses.map(String).includes(String(course.id));
   }
 
   // STUDENTI SCUOLA

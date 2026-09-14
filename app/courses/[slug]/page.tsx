@@ -11,12 +11,12 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 
 import type { Course, Module, Lesson } from "@/features/courses/types/course";
 import { hasCourseAccess } from "@/features/courses/services/courseService";
-import { getLiveCourses } from "@/features/courses/services/courseActions";
+import { getCourseDetails } from "@/features/courses/services/courseActions"; 
 
 import {
   checkExternalCourseAccessAction,
   enrollFreeCourseAction,
-  checkInternalCourseAccessAction, // <-- Importazione aggiunta
+  checkInternalCourseAccessAction,
 } from "@/features/courses/services/checkExternalCourseAccessAction";
 
 import { AccessNoticeBanner } from "@/features/courses/components/AccessNoticeBanner";
@@ -41,11 +41,9 @@ export default function CourseDetailPage() {
     async function loadCourseDetail() {
       setIsLoading(true);
       try {
-        const allCourses = await getLiveCourses(
-          user?.role === "admin" ? "admin" : "student",
-        );
-        const currentCourse = allCourses.find((c: Course) => c.slug === slug);
-        setCourse(currentCourse || null);
+        // 🟢 CARICAMENTO MIRATO DEL SINGOLO CORSO (con `content` incluso)
+        const currentCourse = await getCourseDetails(slug);
+        setCourse(currentCourse);
 
         if (currentCourse) {
           const currentUser = user as any;
@@ -57,12 +55,12 @@ export default function CourseDetailPage() {
             rawUserType === "EXTERNAL_STUDENT" ||
             rawRole === "EXTERNAL_STUDENT";
 
-          // LOGICA DI ACCESSO AGGIORNATA
+          // LOGICA DI ACCESSO
           if (currentUser?.role === "admin") {
             setHasAccess(true);
           } else if (currentUser?.id) {
             try {
-              // 1. Controllo per gli studenti esterni (se applicabile)
+              // 1. Controllo per gli studenti esterni
               if (isExternalStudent) {
                 const hasExternalAccess = await checkExternalCourseAccessAction(
                   String(currentCourse.id),
@@ -74,8 +72,7 @@ export default function CourseDetailPage() {
                 }
               }
 
-              // 2. Controllo REALE sul database per tutti gli altri
-              // Questo bypassa la cache del browser e va dritto su `profile_courses`
+              // 2. Controllo REALE sul database
               const hasRealTimeAccess = await checkInternalCourseAccessAction(
                 String(currentCourse.id),
                 currentUser.id,
@@ -84,7 +81,7 @@ export default function CourseDetailPage() {
               if (hasRealTimeAccess) {
                 setHasAccess(true);
               } else {
-                // 3. Fallback locale di sicurezza
+                // 3. Fallback locale
                 setHasAccess(
                   hasCourseAccess(currentCourse, currentUser) || false,
                 );
@@ -94,7 +91,6 @@ export default function CourseDetailPage() {
                 "Errore durante il controllo real-time dell'accesso:",
                 error,
               );
-              // Fallback in caso di eccezioni di rete/server
               setHasAccess(
                 hasCourseAccess(currentCourse, currentUser) || false,
               );
@@ -160,7 +156,6 @@ export default function CourseDetailPage() {
     user && user.status === "pending" && user.role !== "admin";
   const courseQuizzes = (course as any).quiz_assignments || [];
 
-  // ✅ Lettura robusta del prezzo e dello stato a pagamento
   const rawPrice =
     (course as any)?.price ??
     (course as any)?.price_amount ??

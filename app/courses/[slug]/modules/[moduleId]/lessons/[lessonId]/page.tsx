@@ -5,7 +5,7 @@ import { notFound, useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/features/home/components/Navbar";
 import Footer from "@/features/home/components/Footer";
-import { getLiveCourses } from "@/features/courses/services/courseActions";
+import { getCourseDetails } from "@/features/courses/services/courseActions"; 
 import LessonRenderer, {
   LessonContent,
 } from "@/features/courses/components/lesson/LessonRenderer";
@@ -23,14 +23,7 @@ export default function LessonPage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  logger.info(
-    "gcprof-ai-academy\\app\\courses\\[slug]\\modules\\[moduleId]\\lessons\\[lessonId]\\page.tsx Componente avviato. Params correnti:",
-    params,
-  );
-  logger.info(
-    "gcprof-ai-academy\\app\\courses\\[slug]\\modules\\[moduleId]\\lessons\\[lessonId]\\page.tsx Componente avviato. Params correnti:",
-    params,
-  );
+  logger.info("LessonPage Componente avviato. Params correnti:", params);
 
   const slug = params?.slug as string;
   const moduleId = params?.moduleId as string;
@@ -60,7 +53,6 @@ export default function LessonPage() {
 
   useEffect(() => {
     async function loadLessonData() {
-      // 🔴 CHECKPOINT 2: L'effetto di caricamento parte?
       logger.debug("=== [CHECKPOINT 2] Avvio fetch dati per:", {
         slug,
         moduleId,
@@ -68,16 +60,14 @@ export default function LessonPage() {
       });
 
       try {
-        //const liveCourses = await getLiveCourses(user?.role === "admin" ? "admin" : "student",);
-        const liveCourses = await getLiveCourses("admin");
+        // 🟢 CARICAMENTO MIRATO DEL CORSO (con moduli, lezioni e content)
+        const course = await getCourseDetails(slug);
 
-        // 🔴 CHECKPOINT 3: I corsi live sono arrivati?
         logger.debug(
-          "=== [CHECKPOINT 3] Corsi scaricati dal service. Totale corsi:",
-          liveCourses?.length,
+          "=== [CHECKPOINT 3] Corso scaricato dal service per slug:",
+          slug,
         );
 
-        const course = liveCourses.find((c) => c.slug === slug);
         const module = course?.modules?.find(
           (m: any) => String(m.id) === String(moduleId),
         );
@@ -85,7 +75,6 @@ export default function LessonPage() {
           (l: any) => String(l.id) === String(lessonId),
         );
 
-        // 🔴 CHECKPOINT 4: Esito della ricerca interna
         logger.debug("=== [CHECKPOINT 4] Esito filtri:", {
           corsoTrovato: !!course,
           moduloTrovato: !!module,
@@ -155,7 +144,7 @@ export default function LessonPage() {
     }
   }, [slug, moduleId, lessonId, user]);
 
-  // 🎯 ASCOLTTO EVENTO GLOBALE DI GAMIFICATION DA ACTIVITY TRACKER
+  // 🎯 ASCOLTO EVENTO GLOBALE DI GAMIFICATION DA ACTIVITY TRACKER
   useEffect(() => {
     const handleGamificationUpdate = (event: CustomEvent) => {
       const detail = event.detail;
@@ -191,7 +180,6 @@ export default function LessonPage() {
     };
   }, [lessonId]);
 
-  // 🔴 CHECKPOINT 5: Stato dello switch di rendering
   logger.info("=== [CHECKPOINT 5] Stato render attuale:", {
     isLoading,
     haDati: !!data,
@@ -212,7 +200,6 @@ export default function LessonPage() {
   }
 
   if (!data) {
-    // 🔴 CHECKPOINT 6: Deviazione verso il 404
     logger.warn(
       "=== [CHECKPOINT 6] Dati assenti. Innesco notFound() di Next.js",
     );
@@ -277,7 +264,6 @@ export default function LessonPage() {
     }
   }
 
-  // 🔴 CHECKPOINT 7: Arrivo al traguardo del rendering del Player
   logger.debug(
     "=== [CHECKPOINT 7] Dati pronti per il Player:",
     formattedContents,
@@ -297,32 +283,6 @@ export default function LessonPage() {
       <Navbar />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
-        {/* BREADCRUMB INTERATTIVA 
-        <nav className="text-sm text-muted-foreground flex flex-wrap items-center gap-2 select-none">
-          <Link
-            href="/courses"
-            className="hover:text-blue-600 hover:underline transition-colors"
-          >
-            Corsi
-          </Link>
-          <span className="text-muted-foreground">/</span>
-          <Link
-            href={`/courses/${slug}`}
-            className="hover:text-blue-600 hover:underline transition-colors max-w-[200px] truncate"
-            title={course.title}
-          >
-            {course.title}
-          </Link>
-          <span className="text-muted-foreground">/</span>
-          <span
-            className="text-muted-foreground font-medium max-w-[250px] truncate"
-            title={module.title}
-          >
-            {module.title}
-          </span>
-        </nav>
-*/}
-
         {/* BREADCRUMB INTERATTIVA */}
         <nav className="text-sm text-muted-foreground flex flex-wrap items-center gap-2 select-none">
           {user && (

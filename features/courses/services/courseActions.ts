@@ -25,7 +25,7 @@ export async function getLiveCourses(
   role?: "admin" | "student",
 ): Promise<Course[]> {
   try {
-    // 1. 🟢 QUERY: Recupera i corsi (campo `content` rimosso da course_lessons per alleggerire il payload)
+    // 1. 🟢 QUERY: Recupera i corsi includendo price e is_paid
     const { data: coursesData, error: coursesError } = await supabaseAdmin.from(
       "courses",
     ).select(`
@@ -55,6 +55,7 @@ export async function getLiveCourses(
             content_type,
             external_url,
             video_url,
+            content,
             order_index,
             duration
           )
@@ -72,6 +73,7 @@ export async function getLiveCourses(
     if (!coursesData) return [];
 
     // 2. QUIZ
+    // Recupera solamente i quiz pubblicati per la visualizzazione studenti
     const quizzesByCourse: Record<string, any[]> = {};
 
     try {
@@ -140,12 +142,22 @@ export async function getLiveCourses(
         (a: any, b: any) => a.order_index - b.order_index,
       );
 
+      /*
+      logger.debug(
+        `[COURSES] ${dbCourse.title}: ${sortedModules.filter((m: any) => m.is_preview).length} preview module(s) su ${sortedModules.length}`,
+      );
+*/
+      // Mappiamo i nomi delle classi abilitate a questo specifico corso
       const allowedClassesNames = (dbCourse.course_classes || [])
         .map((cc: any) => cc.academy_classes?.name)
         .filter(Boolean);
 
+      // Recuperiamo i quiz associati a questo ID corso (se presenti)
       const associatedQuizzes = quizzesByCourse[dbCourse.id] || [];
 
+      //logger.debug(`[COURSES] Mapping corso "${dbCourse.title}" completato`);
+
+      // ✅ Estrazione e parsing sicuro del prezzo
       const numPrice = dbCourse.price !== undefined && dbCourse.price !== null
         ? parseFloat(String(dbCourse.price))
         : 0;
@@ -169,6 +181,7 @@ export async function getLiveCourses(
         published: dbCourse.published ?? true,
         allowedClasses: allowedClassesNames,
 
+        // ✅ Inseriamo i campi prezzo e is_paid nel mapping ritornato
         price: numPrice,
         is_paid: isPaidCourse,
         isPaid: isPaidCourse,
@@ -207,6 +220,7 @@ export async function getLiveCourses(
               title: les.title,
               duration: les.duration || 15,
               contentType: les.content_type,
+              // Propaghiamo l'anteprima dal modulo padre sia in cammello che con underscore
               isPreview: moduleIsPreview,
               is_preview: moduleIsPreview,
               youtubeUrl:
@@ -217,7 +231,7 @@ export async function getLiveCourses(
                 les.content_type === "document" ? les.external_url : undefined,
               external_url: les.external_url || "",
               video_url: les.video_url || "",
-              content: "", // Safe fallback per evitare rotture di interfaccia
+              content: les.content || "",
             })),
           };
         }),
@@ -226,6 +240,134 @@ export async function getLiveCourses(
   } catch (err) {
     logger.error("Eccezione generale durante il fetch dei corsi dal DB:", err);
     return [];
+  }
+}
+
+/**
+ * 🎯 NUOVA: Recupera i dettagli completi di un SINGOLO corso (comprensivo di `content` per le lezioni).
+ * Da utilizzare esclusivamente nella pagina di dettaglio/fruizione del corso.
+ */
+export async function getCourseDetails(
+  courseIdOrSlug: string,
+): Promise<Course | null> {
+  try {
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+        .test(courseIdOrSlug);
+
+    let query = supabaseAdmin.from("courses").select(`
+        id, 
+        title, 
+        slug, 
+        description, 
+        category, 
+        difficulty, 
+        teacher, 
+        estimated_hours, 
+        cover_image, 
+        published,
+        price,
+        is_paid,
+        course_classes (
+          academy_classes ( name )
+        ),
+        course_modules (
+          id, 
+          title, 
+          order_index,
+          is_preview,
+          course_lessons (
+            id,
+            title,
+            content_type,
+            external_url,
+            video_url,
+            content,
+            order_index,
+            duration
+          )
+        )
+      `);
+
+    query = isUuid
+      ? query.eq("id", courseIdOrSlug)
+      : query.eq("slug", courseIdOrSlug);
+
+    const { data: dbCourse, error } = await query.single();
+
+    if (error || !dbCourse) {
+      logger.error("Errore recupero dettaglio corso:", error?.message);
+      return null;
+    }
+
+    const sortedModules = (dbCourse.course_modules || []).sort(
+      (a: any, b: any) => a.order_index - b.order_index,
+    );
+
+    const allowedClassesNames = (dbCourse.course_classes || [])
+      .map((cc: any) => cc.academy_classes?.name)
+      .filter(Boolean);
+
+    const numPrice =
+      dbCourse.price !== undefined && dbCourse.price !== null
+        ? parseFloat(String(dbCourse.price))
+        : 0;
+
+    const isPaidCourse = dbCourse.is_paid ?? (numPrice > 0);
+
+    return {
+      id: dbCourse.id,
+      title: dbCourse.title,
+      slug: dbCourse.slug || "",
+      description: dbCourse.description || "",
+      category: dbCourse.category || "Informatica",
+      difficulty: dbCourse.difficulty || "Facile",
+      teacher:
+        dbCourse.teacher ||
+        process.env.NEXT_PUBLIC_DEFAULT_TEACHER ||
+        "Prof. G. Carnabuci",
+      estimatedHours: dbCourse.estimated_hours || 0,
+      coverImage:
+        dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_01.png",
+      published: dbCourse.published ?? true,
+      allowedClasses: allowedClassesNames,
+      price: numPrice,
+      is_paid: isPaidCourse,
+      isPaid: isPaidCourse,
+      modules: sortedModules.map((mod: any) => {
+        const sortedLessons = (mod.course_lessons || []).sort(
+          (a: any, b: any) => a.order_index - b.order_index,
+        );
+        const moduleIsPreview = Boolean(mod.is_preview);
+
+        return {
+          id: mod.id,
+          title: mod.title,
+          isPreview: moduleIsPreview,
+          is_preview: moduleIsPreview,
+          lessons: sortedLessons.map((les: any) => ({
+            id: les.id,
+            title: les.title,
+            duration: les.duration || 15,
+            contentType: les.content_type,
+            isPreview: moduleIsPreview,
+            is_preview: moduleIsPreview,
+            youtubeUrl:
+              les.content_type === "video"
+                ? les.external_url || les.video_url
+                : undefined,
+            googleDriveUrl:
+              les.content_type === "document" ? les.external_url : undefined,
+            external_url: les.external_url || "",
+            video_url: les.video_url || "",
+            content: les.content || "", // 🟢 RESTITUITO PER IL SINGOLO CORSO
+          })),
+        };
+      }),
+    };
+  } catch (err) {
+    logger.error("Eccezione recupero dettaglio corso:", err);
+    return null;
   }
 }
 
