@@ -25,7 +25,7 @@ export async function getLiveCourses(
   role?: "admin" | "student",
 ): Promise<Course[]> {
   try {
-    // 1. 🟢 QUERY: Recupera i corsi includendo price e is_paid
+    // 1. 🟢 QUERY: Recupera i corsi (campo `content` rimosso da course_lessons per alleggerire il payload)
     const { data: coursesData, error: coursesError } = await supabaseAdmin.from(
       "courses",
     ).select(`
@@ -55,7 +55,6 @@ export async function getLiveCourses(
             content_type,
             external_url,
             video_url,
-            content,
             order_index,
             duration
           )
@@ -73,7 +72,6 @@ export async function getLiveCourses(
     if (!coursesData) return [];
 
     // 2. QUIZ
-    // Recupera solamente i quiz pubblicati per la visualizzazione studenti
     const quizzesByCourse: Record<string, any[]> = {};
 
     try {
@@ -142,22 +140,12 @@ export async function getLiveCourses(
         (a: any, b: any) => a.order_index - b.order_index,
       );
 
-      /*
-      logger.debug(
-        `[COURSES] ${dbCourse.title}: ${sortedModules.filter((m: any) => m.is_preview).length} preview module(s) su ${sortedModules.length}`,
-      );
-*/
-      // Mappiamo i nomi delle classi abilitate a questo specifico corso
       const allowedClassesNames = (dbCourse.course_classes || [])
         .map((cc: any) => cc.academy_classes?.name)
         .filter(Boolean);
 
-      // Recuperiamo i quiz associati a questo ID corso (se presenti)
       const associatedQuizzes = quizzesByCourse[dbCourse.id] || [];
 
-      //logger.debug(`[COURSES] Mapping corso "${dbCourse.title}" completato`);
-
-      // ✅ Estrazione e parsing sicuro del prezzo
       const numPrice = dbCourse.price !== undefined && dbCourse.price !== null
         ? parseFloat(String(dbCourse.price))
         : 0;
@@ -181,7 +169,6 @@ export async function getLiveCourses(
         published: dbCourse.published ?? true,
         allowedClasses: allowedClassesNames,
 
-        // ✅ Inseriamo i campi prezzo e is_paid nel mapping ritornato
         price: numPrice,
         is_paid: isPaidCourse,
         isPaid: isPaidCourse,
@@ -220,7 +207,6 @@ export async function getLiveCourses(
               title: les.title,
               duration: les.duration || 15,
               contentType: les.content_type,
-              // Propaghiamo l'anteprima dal modulo padre sia in cammello che con underscore
               isPreview: moduleIsPreview,
               is_preview: moduleIsPreview,
               youtubeUrl:
@@ -231,7 +217,7 @@ export async function getLiveCourses(
                 les.content_type === "document" ? les.external_url : undefined,
               external_url: les.external_url || "",
               video_url: les.video_url || "",
-              content: les.content || "",
+              content: "", // Safe fallback per evitare rotture di interfaccia
             })),
           };
         }),
