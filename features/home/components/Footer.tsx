@@ -37,10 +37,9 @@ export default function Footer() {
           </div>
         </Link>
 
-
         {/* Menu Footer */}
         <nav>
-          <ul className="flex gap-6">
+          <ul className="flex flex-wrap items-center justify-center gap-6">
             <li>
               <Link 
                 href="/" 
@@ -67,12 +66,20 @@ export default function Footer() {
                 Contatti
               </Link>
             </li>
+
+            <li>
+              <Link
+                href="/privacy"
+                className="transition-colors hover:text-blue-600 font-medium"
+              >
+                Privacy Policy
+              </Link>
+            </li>
           </ul>
         </nav>
 
-
         {/* Copyright */}
-        <p>
+        <p className="text-center md:text-right">
           © {currentYear} {appName} {appSubtitle} ({appVersion})
         </p>
 

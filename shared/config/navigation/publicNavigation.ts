@@ -29,4 +29,8 @@ export const publicNavigation: NavigationItem[] = [
     label: "Contatti",
     href: "/contacts",
   },
+  {
+    label: "Privacy",
+    href: "/privacy",
+  },
 ];
