@@ -3,6 +3,7 @@ export const MailTemplateKeys = {
   PASSWORD_RESET: "PASSWORD_RESET",
   CONTACT_REPLY: "CONTACT_REPLY",
   ADMIN_NEW_REGISTRATION: "ADMIN_NEW_REGISTRATION",
+  USER_ACTIVATED: "USER_ACTIVATED",
 } as const;
 
 export type MailTemplateKey =

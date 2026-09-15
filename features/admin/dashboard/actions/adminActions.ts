@@ -3,16 +3,37 @@
 import { logger } from "@/lib/logger";
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { EmailService } from "@/features/admin/mail/services/EmailService";
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 /**
  * Cambia lo stato approvativo di un utente (es. da pending ad active)
  */
-export async function updateUserStatus(userId: string, newStatus: "pending" | "active" | "blocked") {
+export async function updateUserStatus(
+  userId: string,
+  newStatus: "pending" | "active" | "blocked",
+) {
+  // Pre-fetch delle informazioni utente in caso di attivazione
+  let userData: { email: string | null; name: string } | null = null;
+  if (newStatus === "active") {
+    const { data: userProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("email, first_name, display_name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (userProfile && userProfile.email) {
+      userData = {
+        email: userProfile.email,
+        name: userProfile.first_name || userProfile.display_name || "Studente",
+      };
+    }
+  }
+
   const { error } = await supabaseAdmin
     .from("profiles")
     .update({ status: newStatus, updated_at: new Date().toISOString() })
@@ -22,6 +43,19 @@ export async function updateUserStatus(userId: string, newStatus: "pending" | "a
     return { success: false, error: error.message };
   }
 
+  // Se l'update ha successo ed è un'attivazione, invia l'email
+  if (newStatus === "active" && userData?.email) {
+    try {
+      const emailService = new EmailService();
+      await emailService.sendUserActivatedEmail(userData.email, userData.name);
+    } catch (mailErr: any) {
+      logger.error(
+        `[UPDATE USER STATUS MAIL ERROR] Fallito invio a ${userData.email}:`,
+        mailErr.message,
+      );
+    }
+  }
+
   revalidatePath("/admin/dashboard");
   return { success: true };
 }
@@ -29,7 +63,10 @@ export async function updateUserStatus(userId: string, newStatus: "pending" | "a
 /**
  * Riassegna le classi a un determinato utente (Svuota le precedenti e inserisce le nuove)
  */
-export async function updateUserClasses(userId: string, classNames: string[]) {
+export async function updateUserClasses(
+  userId: string,
+  classNames: string[],
+) {
   // 1. Rimuove tutte le associazioni attuali nella tabella pivot
   const { error: deleteError } = await supabaseAdmin
     .from("profile_classes")
@@ -79,8 +116,8 @@ export async function createClass(name: string, description?: string) {
   const generatedSlug = name
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, "-")     // Sostituisce caratteri non alfanumerici (incluso il simbolo °) con un trattino
-    .replace(/(^-|-$)/g, "");         // Rimuove i trattini all'inizio o alla fine
+    .replace(/[^a-z0-9]+/g, "-") // Sostituisce caratteri non alfanumerici (incluso il simbolo °) con un trattino
+    .replace(/(^-|-$)/g, ""); // Rimuove i trattini all'inizio o alla fine
 
   const { data, error } = await supabaseAdmin
     .from("academy_classes")
@@ -95,7 +132,10 @@ export async function createClass(name: string, description?: string) {
     .single();
 
   if (error) {
-    logger.error("❌ [ADMIN ACTION ERROR] Creazione classe fallita:", error.message);
+    logger.error(
+      "❌ [ADMIN ACTION ERROR] Creazione classe fallita:",
+      error.message,
+    );
     return { success: false, error: error.message };
   }
 
