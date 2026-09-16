@@ -5,29 +5,96 @@ import { getAllCoursesList } from "../../courses/services/adminStructureService"
 import { getCourseClasses } from "@/features/courses/services/courseActions";
 import { logger } from "@/lib/logger";
 
-// 🎯 Interfaccia esportata per ProgressChartCard.tsx
 export interface ChartDataPoint {
   date: string;
   views: number;
   completions: number;
 }
 
+export interface StudentEngagementItem {
+  name: string;
+  hours: number;
+  classes: string;
+}
+
+export interface AdminStatsData {
+  totals: {
+    users: number;
+    courses: number;
+    classes: number;
+    modules: number;
+    lessons: number;
+    totalXp: number;
+    totalHoursActive: number;
+    averageLevel: number;
+    completionRate?: number;
+    dropOffRate?: number;
+    ai: {
+      totalReviews: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+    };
+  };
+  courseStats: Array<{
+    courseId: string;
+    title: string;
+    slug: string;
+    isPublished: boolean;
+    difficulty: string;
+    enrolledStudentsCount: number;
+    totalMinutesStudied: number;
+    totalXp: number;
+    averageLevel: number;
+  }>;
+  charts: {
+    usersByRole: Record<string, number>;
+    usersByStatus: Record<string, number>;
+    studentsByClass: Record<string, number>;
+    studentsByTrack: Record<string, number>;
+    studentsBySection: Record<string, number>;
+    studentEngagement: StudentEngagementItem[];
+    coursesByCategory: Record<string, number>;
+    publishedCourses: { published: number; draft: number };
+    modulesPerCourse: Array<{ title: string; modules: number }>;
+    lessonsPerCourse: Array<{ title: string; lessons: number }>;
+    courseComplexity: Record<string, number>;
+    hourlyTraffic: Record<string, number>;
+    dailyTrend: Record<string, number>;
+    sessionDurationDist: Record<string, number>;
+    deviceDistribution: Record<string, number>;
+    mostViewedCourses: Record<string, number>;
+    mostViewedLessons: Record<string, number>;
+    aiDailyTokensTrend: Record<string, number>;
+    aiDailyReviewsTrend: Record<string, number>;
+    aiModelDistribution: Record<string, number>;
+    quizPassRate: Record<string, number>;
+    quizScoreDistribution: Record<string, number>;
+  };
+  raw?: {
+    users: any[];
+    classes: any[];
+    courses: any[];
+    course_classes: any[];
+  };
+}
+
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function getAdminDashboardStats() {
+export async function getAdminDashboardStats(): Promise<AdminStatsData> {
   const statsWindowDays = parseInt(
     process.env.NEXT_PUBLIC_ADMIN_STATS_WINDOW_DAYS || "7",
-    10,
+    10
   );
 
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - statsWindowDays);
 
   logger.info(
-    `Estrazione statistiche admin con finestra temporale di ${statsWindowDays} giorni.`,
+    `Estrazione statistiche admin con finestra temporale di ${statsWindowDays} giorni.`
   );
 
   const [
@@ -38,6 +105,8 @@ export async function getAdminDashboardStats() {
     sessionsResponse,
     progressResponse,
     aiReviewsResponse,
+    userCourseStatsResponse,
+    quizAttemptsResponse,
   ] = await Promise.all([
     getAdminUsersList(),
     getAvailableClassesForCourses(),
@@ -54,40 +123,45 @@ export async function getAdminDashboardStats() {
       .from("quiz_ai_reviews")
       .select("prompt_tokens, completion_tokens, model, created_at")
       .gte("created_at", twoWeeksAgo.toISOString()),
+    supabaseAdmin
+      .from("user_course_stats")
+      .select("course_id, profile_id, course_xp, course_level"),
+    supabaseAdmin
+      .from("quiz_attempts")
+      .select("final_score, status")
+      .eq("status", "graded"),
   ]);
 
-  // 🔍 DEBUG: Verifica errori o dati restituiti da Supabase
   if (aiReviewsResponse.error) {
-    logger.error(
-      "❌ Errore Supabase quiz_ai_reviews:",
-      aiReviewsResponse.error,
-    );
-  } else {
-    logger.info(
-      `✅ Trovate ${aiReviewsResponse.data?.length || 0} righe in quiz_ai_reviews.`,
-    );
+    logger.error("❌ Errore Supabase quiz_ai_reviews:", aiReviewsResponse.error);
+  }
+  if (userCourseStatsResponse.error) {
+    logger.error("❌ Errore Supabase user_course_stats:", userCourseStatsResponse.error);
+  }
+  if (quizAttemptsResponse.error) {
+    logger.error("❌ Errore Supabase quiz_attempts:", quizAttemptsResponse.error);
   }
 
   const sessions = sessionsResponse.data ?? [];
   const lessonProgress = progressResponse.data ?? [];
   const aiReviews = aiReviewsResponse.data ?? [];
+  const rawUserCourseStats = userCourseStatsResponse.data ?? [];
+  const quizAttempts = quizAttemptsResponse.data ?? [];
 
   const statsLimit = parseInt(
     process.env.NEXT_PUBLIC_ADMIN_STATS_LIMIT || "5",
-    10,
+    10
   );
   const engagementLimit = parseInt(
     process.env.NEXT_PUBLIC_ADMIN_STATS_ENGAGEMENT_LIMIT || "8",
-    10,
+    10
   );
 
   const totalUsers = users.length;
   const totalCourses = courses.length;
   const totalClasses = classes.length;
 
-  // ============================================================================
-  // 🤖 METRICHE E AGGREGAZIONE CONSUMI AI & TOKEN
-  // ============================================================================
+  // AI & Token Metriche
   let totalPromptTokens = 0;
   let totalCompletionTokens = 0;
   let totalAiTokens = 0;
@@ -117,12 +191,9 @@ export async function getAdminDashboardStats() {
     totalCompletionTokens += cTokens;
     totalAiTokens += tTokens;
 
-    // Modello AI
     const modelName = review.model || "Gemini / AI Standard";
-    aiModelDistribution[modelName] =
-      (aiModelDistribution[modelName] || 0) + 1;
+    aiModelDistribution[modelName] = (aiModelDistribution[modelName] || 0) + 1;
 
-    // Trend giornaliero
     if (review.created_at) {
       const reviewDate = new Date(review.created_at);
       const dayStr = reviewDate.toLocaleDateString("it-IT", {
@@ -137,9 +208,39 @@ export async function getAdminDashboardStats() {
     }
   });
 
-  // ============================================================================
-  // 🏆 CALCOLO GAMIFICATION & TEMPO CUMULATO GLOBALE
-  // ============================================================================
+  // Analytics Quiz & Voti
+  const quizPassRate: Record<string, number> = {
+    "Superato (≥ 6.0)": 0,
+    "Non Superato (< 6.0)": 0,
+  };
+
+  const quizScoreDistribution: Record<string, number> = {
+    "Insufficiente (<6.0)": 0,
+    "Sufficiente (6.0-7.0)": 0,
+    "Buono (7.1-8.5)": 0,
+    "Eccellente (8.6-10.0)": 0,
+  };
+
+  quizAttempts.forEach((q: any) => {
+    const score = Number(q.final_score ?? 0);
+    if (score >= 6.0) {
+      quizPassRate["Superato (≥ 6.0)"]++;
+    } else {
+      quizPassRate["Non Superato (< 6.0)"]++;
+    }
+
+    if (score < 6.0) {
+      quizScoreDistribution["Insufficiente (<6.0)"]++;
+    } else if (score <= 7.0) {
+      quizScoreDistribution["Sufficiente (6.0-7.0)"]++;
+    } else if (score <= 8.5) {
+      quizScoreDistribution["Buono (7.1-8.5)"]++;
+    } else {
+      quizScoreDistribution["Eccellente (8.6-10.0)"]++;
+    }
+  });
+
+  // Gamification Globale
   let totalXp = 0;
   let totalMinutesActive = 0;
   let totalLevelSum = 0;
@@ -163,9 +264,7 @@ export async function getAdminDashboardStats() {
   const averageLevel =
     studentCount > 0 ? Number((totalLevelSum / studentCount).toFixed(1)) : 1;
 
-  // ============================================================================
-  // 📊 CALCOLO AGGREGATO GAMIFICATION PER SINGOLO CORSO
-  // ============================================================================
+  // Aggregazione lezioni e statistiche corsi
   const courseProgressMap = new Map<
     string,
     {
@@ -190,12 +289,28 @@ export async function getAdminDashboardStats() {
     const entry = courseProgressMap.get(key)!;
     entry.totalMinutes += Number(p.minutes_watched || 0);
 
-    // profile_lessons_progress utilizza profile_id come riferimento allo studente.
     if (p.profile_id) {
       entry.uniqueStudents.add(p.profile_id);
     }
 
     if (p.is_completed) entry.completedLessons += 1;
+  });
+
+  const courseGamificationMap = new Map<
+    string,
+    { totalXp: number; levelSum: number; count: number }
+  >();
+
+  rawUserCourseStats.forEach((ucs) => {
+    if (!ucs.course_id) return;
+    const key = String(ucs.course_id);
+    if (!courseGamificationMap.has(key)) {
+      courseGamificationMap.set(key, { totalXp: 0, levelSum: 0, count: 0 });
+    }
+    const g = courseGamificationMap.get(key)!;
+    g.totalXp += Number(ucs.course_xp || 0);
+    g.levelSum += Number(ucs.course_level || 1);
+    g.count += 1;
   });
 
   const courseStats = courses.map((c: any) => {
@@ -209,29 +324,37 @@ export async function getAdminDashboardStats() {
         completedLessons: 0,
       };
 
+    const gamificationData = courseGamificationMap.get(courseIdStr) || {
+      totalXp: progData.completedLessons * 50,
+      levelSum: 1,
+      count: 1,
+    };
+
     return {
-      courseId: String(c.id),
+      courseId: courseIdStr,
       title: c.title,
       slug: c.slug,
       isPublished: Boolean(c.published),
       difficulty: c.difficulty || "Facile",
       enrolledStudentsCount: progData.uniqueStudents.size,
       totalMinutesStudied: progData.totalMinutes,
-      totalXp: progData.completedLessons * 50,
-      averageLevel: 1,
+      totalXp: gamificationData.totalXp,
+      averageLevel: Number(
+        (gamificationData.levelSum / (gamificationData.count || 1)).toFixed(1)
+      ),
     };
   });
 
-  // ============================================================================
-  // 👥 USERS CHARTS
-  // ============================================================================
+  // Profilazione Utenti
   const usersByRole = users.reduce((acc: any, u: any) => {
-    acc[u.role] = (acc[u.role] || 0) + 1;
+    const r = u.role || "studente";
+    acc[r] = (acc[r] || 0) + 1;
     return acc;
   }, {});
 
   const usersByStatus = users.reduce((acc: any, u: any) => {
-    acc[u.status] = (acc[u.status] || 0) + 1;
+    const s = u.status || "attivo";
+    acc[s] = (acc[s] || 0) + 1;
     return acc;
   }, {});
 
@@ -259,8 +382,8 @@ export async function getAdminDashboardStats() {
     return acc;
   }, {});
 
-  const studentEngagement = users
-    .filter((u: any) => u.role === "student")
+  const studentEngagement: StudentEngagementItem[] = users
+    .filter((u: any) => u.role === "student" || !u.role)
     .map((u: any) => {
       const userClassesArray = u.classes || [];
       return {
@@ -269,7 +392,7 @@ export async function getAdminDashboardStats() {
           `${u.first_name || ""} ${u.last_name || ""}`.trim() ||
           u.email ||
           "Studente",
-        hours: u.total_minutes_active ?? 0,
+        hours: Math.round((Number(u.total_minutes_active ?? 0) / 60) * 10) / 10,
         classes:
           userClassesArray.length > 0
             ? userClassesArray.join(", ")
@@ -279,9 +402,7 @@ export async function getAdminDashboardStats() {
     .sort((a, b) => b.hours - a.hours)
     .slice(0, engagementLimit);
 
-  // ============================================================================
-  // 🛰️ TRACKING & TRAFFIC CHARTS
-  // ============================================================================
+  // Traffico & Log
   const hourlyTraffic: Record<string, number> = {};
   for (let i = 0; i < 24; i++) {
     hourlyTraffic[`${String(i).padStart(2, "0")}:00`] = 0;
@@ -347,9 +468,7 @@ export async function getAdminDashboardStats() {
     }
   });
 
-  // ============================================================================
-  // 🎓 COURSES CHARTS
-  // ============================================================================
+  // Struttura Didattica
   const coursesByCategory = courses.reduce((acc: any, c: any) => {
     const category =
       c.category ||
@@ -377,7 +496,7 @@ export async function getAdminDashboardStats() {
 
   const modulesPerCourse = courses
     .map((c: any) => ({
-      title: c.title,
+      title: String(c.title || "Senza titolo"),
       modules: c.course_modules?.length ?? 0,
     }))
     .sort((a, b) => b.modules - a.modules)
@@ -385,17 +504,17 @@ export async function getAdminDashboardStats() {
 
   const lessonsPerCourse = courses
     .map((c: any) => ({
-      title: c.title,
+      title: String(c.title || "Senza titolo"),
       lessons:
         c.course_modules?.reduce(
           (acc: number, m: any) => acc + (m.course_lessons?.length ?? 0),
-          0,
+          0
         ) ?? 0,
     }))
     .sort((a, b) => b.lessons - a.lessons)
     .slice(0, statsLimit);
 
-  const courseComplexity = {
+  const courseComplexity: Record<string, number> = {
     Facile: 0,
     Intermedio: 0,
     Avanzato: 0,
@@ -411,14 +530,6 @@ export async function getAdminDashboardStats() {
       courseComplexity["Facile"]++;
     }
   });
-
-  const mostViewedCourses: Record<string, number> = {
-    "Page view disabilitate": 0,
-  };
-
-  const mostViewedLessons: Record<string, number> = {
-    "Page view disabilitate": 0,
-  };
 
   return {
     totals: {
@@ -454,13 +565,14 @@ export async function getAdminDashboardStats() {
       dailyTrend,
       sessionDurationDist,
       deviceDistribution,
-      mostViewedCourses,
-      mostViewedLessons,
+      mostViewedCourses: { "Dati non disponibili": 0 },
+      mostViewedLessons: { "Dati non disponibili": 0 },
       aiDailyTokensTrend,
       aiDailyReviewsTrend,
       aiModelDistribution,
+      quizPassRate,
+      quizScoreDistribution,
     },
     raw: { users, classes, courses, course_classes: courseClasses },
   };
 }
-

@@ -6,46 +6,29 @@ import BarChartCard from "./charts/BarChartCard";
 import DonutChartCard from "./charts/DonutChartCard";
 import StatsKpiCards from "./charts/StatsKpiCards";
 import HorizontalBarChartCard from "./charts/HorizontalBarChartCard";
+import type { AdminStatsData } from "../services/adminStatsService";
 
 type Props = {
-  stats: any;
+  stats: AdminStatsData;
 };
 
 export default function AdminStatsDashboard({ stats }: Props) {
   const avgLessonsPerModule = useMemo(() => {
-    return stats?.totals?.modules > 0
-      ? (stats.totals.lessons / stats.totals.modules).toFixed(1)
-      : "0";
+    const modules = stats?.totals?.modules ?? 0;
+    const lessons = stats?.totals?.lessons ?? 0;
+    return modules > 0 ? (lessons / modules).toFixed(1) : "0";
   }, [stats?.totals?.modules, stats?.totals?.lessons]);
 
   const completionRate = stats?.totals?.completionRate ?? 0;
   const dropOffRate = stats?.totals?.dropOffRate ?? 0;
 
   const refinedStudentEngagement = useMemo(() => {
-    return (stats?.charts?.studentEngagement || []).map((student: any) => ({
+    return (stats?.charts?.studentEngagement || []).map((student) => ({
       name: student.name,
       hours: student.hours,
-      classes: student.classes || student.class_name || undefined,
+      classes: student.classes || undefined,
     }));
   }, [stats?.charts?.studentEngagement]);
-
-  const modulesPerCourseData = useMemo(() => {
-    return Object.fromEntries(
-      (stats?.charts?.modulesPerCourse || []).map((c: any) => [
-        c.title,
-        c.modules,
-      ]),
-    );
-  }, [stats?.charts?.modulesPerCourse]);
-
-  const lessonsPerCourseData = useMemo(() => {
-    return Object.fromEntries(
-      (stats?.charts?.lessonsPerCourse || []).map((c: any) => [
-        c.title,
-        c.lessons,
-      ]),
-    );
-  }, [stats?.charts?.lessonsPerCourse]);
 
   const aiTotals = stats?.totals?.ai || {
     totalReviews: 0,
@@ -56,9 +39,7 @@ export default function AdminStatsDashboard({ stats }: Props) {
 
   return (
     <div className="space-y-10 p-6">
-      {/* ==========================================
-          📊 SEZIONE KPI PRINCIPALI & METRICHE RAPIDE
-          ========================================== */}
+      {/* 📊 KPI PRINCIPALI */}
       <div className="relative">
         <StatsKpiCards
           totalUsers={stats?.totals?.users || 0}
@@ -99,9 +80,34 @@ export default function AdminStatsDashboard({ stats }: Props) {
         </div>
       </div>
 
-      {/* ==========================================
-          🤖 SEZIONE 0: INTELLIGENZA ARTIFICIALE & TOKEN
-          ========================================== */}
+      {/* 📝 VALUTAZIONI & QUIZ */}
+      <div className="space-y-4 pt-2">
+        <div className="border-b border-border pb-2">
+          <h2 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
+            📝 Valutazioni & Performance Quiz
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Analisi dettagliata dei punteggi ottenuti dagli studenti e del tasso di superamento dei test.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="md:col-span-2">
+            <BarChartCard
+              title="Distribuzione Voti Quiz (Scala 0-10)"
+              data={stats?.charts?.quizScoreDistribution || {}}
+            />
+          </div>
+          <div>
+            <DonutChartCard
+              title="Tasso di Superamento Quiz"
+              data={stats?.charts?.quizPassRate || {}}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 🤖 CONSUMO AI */}
       <div className="space-y-4 pt-2">
         <div className="border-b border-border pb-2">
           <h2 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
@@ -112,7 +118,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
           </p>
         </div>
 
-        {/* KPI Sintetici AI */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
             <p className="text-xs font-medium text-muted-foreground">Valutazioni AI Totali</p>
@@ -140,7 +145,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
           </div>
         </div>
 
-        {/* Grafici AI */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <BarChartCard
             title="Consumo Token AI (Finestra temporale)"
@@ -157,9 +161,7 @@ export default function AdminStatsDashboard({ stats }: Props) {
         </div>
       </div>
 
-      {/* ==========================================
-          👥 SEZIONE 1: ANALYTICS COMMUNITY & STUDENTI
-          ========================================== */}
+      {/* 👥 COMMUNITY */}
       <div className="space-y-4">
         <div className="border-b border-border pb-2">
           <h2 className="text-lg font-bold text-foreground tracking-tight">
@@ -188,46 +190,32 @@ export default function AdminStatsDashboard({ stats }: Props) {
         </div>
       </div>
 
-      {/* ==========================================
-          🎓 SEZIONE 2: ANALYTICS CATALOGO & STRUTTURA LMS
-          ========================================== */}
+      {/* 🎓 STRUTTURA DIDATTICA */}
       <div className="space-y-4 pt-4">
         <div className="border-b border-border pb-2">
           <h2 className="text-lg font-bold text-foreground tracking-tight">
             Struttura Didattica & Corsi
           </h2>
           <p className="text-xs text-muted-foreground">
-            Analisi della complessità del catalogo, categorie e volumi interni.
+            Analisi sintetica delle categorie presenti a catalogo.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-          <BarChartCard
-            title="Corsi per Categoria"
-            data={stats?.charts?.coursesByCategory || {}}
-          />
-          <BarChartCard
-            title="Top Corsi per Lezioni"
-            data={lessonsPerCourseData}
-          />
-          <BarChartCard
-            title="Top Corsi per Moduli"
-            data={modulesPerCourseData}
-          />
-          <PieChartCard
-            title="Complessità dei Corsi"
-            data={stats?.charts?.courseComplexity || {}}
-          />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <BarChartCard
+              title="Corsi per Categoria"
+              data={stats?.charts?.coursesByCategory || {}}
+            />
+          </div>
         </div>
       </div>
 
-      {/* ==========================================
-          🛰️ SEZIONE 3: MONITORAGGIO ACCESSI & TRAFFICO
-          ========================================== */}
+      {/* 🛰️ MONITORAGGIO ACCESSI & ATTIVITÀ */}
       <div className="space-y-6 pt-2">
         <div className="border-b border-border pb-2">
           <h2 className="text-lg font-bold text-foreground tracking-tight">
-            Monitoraggio Accessi & Piattaforma
+            Monitoraggio Accessi & Attività
           </h2>
           <p className="text-xs text-muted-foreground">
             Analisi analitica dei flussi di traffico, tempi di ritenzione,
@@ -261,24 +249,14 @@ export default function AdminStatsDashboard({ stats }: Props) {
 
         <div className="space-y-3 pt-2">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Fruizione Contenuti & Attività
+            Fruizione Contenuti
           </h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <DonutChartCard
-              title="Classifica Corsi Più Visualizzati"
-              data={stats?.charts?.mostViewedCourses || {}}
+          <div className="grid grid-cols-1 gap-4">
+            <HorizontalBarChartCard
+              title="Tempo di Attività Studenti"
+              subtitle="Classifica del tempo totale cumulato dagli studenti all'interno dei corsi"
+              data={refinedStudentEngagement}
             />
-            <BarChartCard
-              title="Lezioni Con Maggior Frequenza di Click"
-              data={stats?.charts?.mostViewedLessons || {}}
-            />
-            <div className="lg:col-span-2">
-              <HorizontalBarChartCard
-                title="Tempo di Attività Studenti"
-                subtitle="Classifica del tempo totale cumulato dagli studenti all'interno dei corsi"
-                data={refinedStudentEngagement}
-              />
-            </div>
           </div>
         </div>
       </div>

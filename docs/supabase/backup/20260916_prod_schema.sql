@@ -1099,6 +1099,40 @@ $$;
 ALTER FUNCTION "public"."get_admin_courses_gamification_stats"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_most_failed_questions"("limit_count" integer DEFAULT 5) RETURNS TABLE("question_id" "uuid", "question_text" "text", "error_count" bigint)
+    LANGUAGE "sql" STABLE
+    AS $$
+  SELECT 
+    qa.question_id,
+    qq.text AS question_text,
+    COUNT(*) AS error_count
+  FROM quiz_answers qa
+  JOIN quiz_questions qq ON qq.id = qa.question_id
+  WHERE qa.is_correct = false
+  GROUP BY qa.question_id, qq.text
+  ORDER BY error_count DESC
+  LIMIT limit_count;
+$$;
+
+
+ALTER FUNCTION "public"."get_most_failed_questions"("limit_count" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_quiz_global_stats"() RETURNS TABLE("total_created" bigint, "total_published" bigint, "total_completed" bigint, "pending_reviews_count" bigint, "average_score" numeric)
+    LANGUAGE "sql" STABLE
+    AS $$
+  SELECT 
+    (SELECT COUNT(*) FROM quizzes) AS total_created,
+    (SELECT COUNT(*) FROM quizzes WHERE status = 'active') AS total_published,
+    (SELECT COUNT(*) FROM quiz_attempts WHERE status = 'graded') AS total_completed,
+    (SELECT COUNT(*) FROM quiz_attempts WHERE status = 'submitted') AS pending_reviews_count,
+    COALESCE((SELECT AVG(final_score) FROM quiz_attempts WHERE status = 'graded'), 0.0) AS average_score;
+$$;
+
+
+ALTER FUNCTION "public"."get_quiz_global_stats"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_user_gamification_overview"("p_user_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -3115,6 +3149,10 @@ CREATE INDEX "idx_course_categories_home" ON "public"."course_categories" USING 
 
 
 
+CREATE INDEX "idx_course_lessons_module_id" ON "public"."course_lessons" USING "btree" ("module_id");
+
+
+
 CREATE INDEX "idx_course_modules_course" ON "public"."course_modules" USING "btree" ("course_id");
 
 
@@ -3239,11 +3277,23 @@ CREATE INDEX "idx_profile_progress_last_accessed" ON "public"."profile_lessons_p
 
 
 
-CREATE INDEX "idx_quiz_ai_reviews_attempt_question" ON "public"."quiz_ai_reviews" USING "btree" ("attempt_id", "question_id");
+CREATE INDEX "idx_quiz_ai_reviews_created_at" ON "public"."quiz_ai_reviews" USING "btree" ("created_at" DESC);
 
 
 
 CREATE INDEX "idx_quiz_ai_reviews_question" ON "public"."quiz_ai_reviews" USING "btree" ("question_id");
+
+
+
+CREATE INDEX "idx_quiz_answers_incorrect" ON "public"."quiz_answers" USING "btree" ("question_id") WHERE ("is_correct" = false);
+
+
+
+CREATE INDEX "idx_quiz_attempts_quiz_student" ON "public"."quiz_attempts" USING "btree" ("quiz_id", "student_id");
+
+
+
+CREATE INDEX "idx_quiz_attempts_status" ON "public"."quiz_attempts" USING "btree" ("status");
 
 
 
@@ -3256,6 +3306,10 @@ CREATE INDEX "idx_quiz_questions_quiz" ON "public"."quiz_questions" USING "btree
 
 
 CREATE INDEX "idx_quizzes_course_id" ON "public"."quizzes" USING "btree" ("course_id");
+
+
+
+CREATE INDEX "idx_quizzes_course_status" ON "public"."quizzes" USING "btree" ("course_id", "status", "created_at");
 
 
 
@@ -4226,6 +4280,18 @@ GRANT ALL ON FUNCTION "public"."generate_certificate_number"() TO "service_role"
 GRANT ALL ON FUNCTION "public"."get_admin_courses_gamification_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_admin_courses_gamification_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_admin_courses_gamification_stats"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_most_failed_questions"("limit_count" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_most_failed_questions"("limit_count" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_most_failed_questions"("limit_count" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_quiz_global_stats"() TO "anon";
+GRANT ALL ON FUNCTION "public"."get_quiz_global_stats"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_quiz_global_stats"() TO "service_role";
 
 
 

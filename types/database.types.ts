@@ -2316,6 +2316,24 @@ export type Database = {
           total_xp_awarded: number
         }[]
       }
+      get_most_failed_questions: {
+        Args: { limit_count?: number }
+        Returns: {
+          error_count: number
+          question_id: string
+          question_text: string
+        }[]
+      }
+      get_quiz_global_stats: {
+        Args: never
+        Returns: {
+          average_score: number
+          pending_reviews_count: number
+          total_completed: number
+          total_created: number
+          total_published: number
+        }[]
+      }
       get_user_gamification_overview: {
         Args: { p_user_id: string }
         Returns: Json
