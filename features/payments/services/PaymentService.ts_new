@@ -1,0 +1,904 @@
+/**
+ * GCPROF AI ACADEMY - SERVICE: PAYMENT SERVICE
+ * File: features/payments/services/PaymentService.ts
+ *
+ * Servizio di dominio per la gestione dei pagamenti e dei webhook Stripe.
+ *
+ * SOURCE OF TRUTH:
+ * - `profile_courses` viene gestita esclusivamente da EnrollmentService.
+ * - Il webhook Stripe viene elaborato tramite `payment_logs`.
+ * - Gli identificativi Stripe vengono mantenuti distinti:
+ *   - Checkout Session ID
+ *   - PaymentIntent ID
+ *   - Event ID
+ *
+ * Il servizio non gestisce direttamente la tabella legacy `enrollments`.
+ */
+
+import Stripe from "stripe";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
+import { CouponService } from "./CouponService";
+import { EnrollmentService } from "./EnrollmentService";
+
+export class PaymentService {
+  private readonly couponService: CouponService;
+  private readonly enrollmentService: EnrollmentService;
+
+  constructor(private readonly supabase: SupabaseClient) {
+    this.couponService = new CouponService(supabase);
+    this.enrollmentService = new EnrollmentService(supabase);
+  }
+
+  /**
+   * Elabora un evento webhook Stripe già verificato dalla route.
+   *
+   * La verifica della firma Stripe viene effettuata dal gateway/route.
+   * Qui viene gestita esclusivamente la logica applicativa.
+   */
+  public async processWebhookEvent(event: Stripe.Event): Promise<void> {
+    const dataObject = event.data.object as Stripe.Event.Data.Object;
+
+    /**
+     * Idempotenza:
+     * prima di tentare una nuova INSERT verifichiamo se l'evento
+     * è già stato processato.
+     *
+     * Questo evita di rieseguire fulfillment, coupon e pagamento
+     * durante i normali retry Stripe.
+     */
+    const { data: existingLog, error: existingLogError } =
+      await this.supabase
+        .from("payment_logs")
+        .select("processed")
+        .eq("provider", "STRIPE")
+        .eq("provider_event_id", event.id)
+        .maybeSingle();
+
+    if (existingLogError) {
+      logger.error(
+        "[PaymentService.processWebhookEvent] Errore verifica idempotenza webhook",
+        {
+          eventId: event.id,
+          eventType: event.type,
+          error: existingLogError.message,
+        }
+      );
+
+      throw new Error(
+        `Impossibile verificare lo stato del webhook Stripe ${event.id}.`
+      );
+    }
+
+    if (existingLog?.processed === true) {
+      logger.info(
+        "[PaymentService.processWebhookEvent] Evento già processato",
+        {
+          eventId: event.id,
+          eventType: event.type,
+        }
+      );
+
+      return;
+    }
+
+    await this.logWebhookEvent(event.id, event.type, dataObject);
+
+    switch (event.type) {
+      case "checkout.session.completed":
+        await this.handleCheckoutSessionCompleted(
+          event.id,
+          dataObject as Stripe.Checkout.Session
+        );
+        break;
+
+      case "payment_intent.payment_failed":
+        await this.handlePaymentFailed(
+          event.id,
+          dataObject as Stripe.PaymentIntent
+        );
+        break;
+
+      default:
+        logger.info(
+          "[PaymentService.processWebhookEvent] Evento Stripe non gestito",
+          {
+            eventId: event.id,
+            eventType: event.type,
+          }
+        );
+
+        await this.markLogAsProcessed(event.id);
+        break;
+    }
+  }
+
+  /**
+   * Gestisce il completamento di una Stripe Checkout Session.
+   *
+   * Il fulfillment viene eseguito esclusivamente dopo:
+   * 1. verifica della firma Stripe;
+   * 2. verifica dell'ordine;
+   * 3. verifica della corrispondenza profile;
+   * 4. verifica dello stato di pagamento Stripe;
+   * 5. verifica importo;
+   * 6. verifica valuta.
+   */
+  private async handleCheckoutSessionCompleted(
+    eventId: string,
+    session: Stripe.Checkout.Session
+  ): Promise<void> {
+    const metadata = session.metadata ?? {};
+
+    const orderId = metadata.order_id;
+    const profileId = metadata.profile_id;
+
+    if (!orderId || !profileId) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Metadata Stripe incompleti",
+        {
+          eventId,
+          orderId,
+          profileId,
+          sessionId: session.id,
+        }
+      );
+
+      throw new Error(
+        "Metadata Stripe incompleti: order_id e profile_id sono obbligatori."
+      );
+    }
+
+    const { data: order, error: orderError } = await this.supabase
+      .from("orders")
+      .select(
+        `
+        id,
+        profile_id,
+        status,
+        total,
+        currency,
+        coupon_id,
+        order_items (
+          course_id
+        )
+      `
+      )
+      .eq("id", orderId)
+      .single();
+
+    if (orderError || !order) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Ordine non trovato",
+        {
+          eventId,
+          orderId,
+          profileId,
+          error: orderError?.message,
+        }
+      );
+
+      throw new Error(`Ordine ${orderId} non trovato.`);
+    }
+
+    if (order.profile_id !== profileId) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Profile ID non coerente con l'ordine",
+        {
+          eventId,
+          orderId,
+          metadataProfileId: profileId,
+          orderProfileId: order.profile_id,
+        }
+      );
+
+      throw new Error(
+        `Profile ID non coerente per l'ordine ${orderId}.`
+      );
+    }
+
+    if (order.status === "FULFILLED") {
+      logger.info(
+        "[PaymentService.handleCheckoutSessionCompleted] Ordine già evaso",
+        {
+          eventId,
+          orderId,
+        }
+      );
+
+      await this.markLogAsProcessed(eventId);
+      return;
+    }
+
+    /**
+     * Per il checkout commerciale standard utilizziamo esclusivamente
+     * pagamenti effettivamente pagati.
+     *
+     * Eventuali flussi asincroni richiederebbero eventi Stripe dedicati
+     * e non devono essere trattati come pagamento immediatamente catturato.
+     */
+    if (session.payment_status !== "paid") {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Checkout Session non pagata",
+        {
+          eventId,
+          orderId,
+          sessionId: session.id,
+          paymentStatus: session.payment_status,
+        }
+      );
+
+      throw new Error(
+        `Checkout Session ${session.id} non risulta pagata.`
+      );
+    }
+
+    const orderItems = Array.isArray(order.order_items)
+      ? order.order_items.filter(
+          (item): item is { course_id: string } =>
+            Boolean(item?.course_id)
+        )
+      : [];
+
+    if (orderItems.length === 0) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Ordine privo di corsi",
+        {
+          eventId,
+          orderId,
+        }
+      );
+
+      throw new Error(`Nessun corso trovato per l'ordine ${orderId}.`);
+    }
+
+    const paymentIntentId =
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : null;
+
+    if (!paymentIntentId) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] PaymentIntent assente",
+        {
+          eventId,
+          orderId,
+          sessionId: session.id,
+        }
+      );
+
+      throw new Error(
+        `PaymentIntent assente nella Checkout Session ${session.id}.`
+      );
+    }
+
+    if (typeof session.amount_total !== "number") {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Importo Stripe assente",
+        {
+          eventId,
+          orderId,
+          sessionId: session.id,
+        }
+      );
+
+      throw new Error(
+        `Importo Stripe assente nella Checkout Session ${session.id}.`
+      );
+    }
+
+    if (
+      typeof order.total !== "number" &&
+      typeof order.total !== "string"
+    ) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Totale ordine non valido",
+        {
+          eventId,
+          orderId,
+          orderTotal: order.total,
+        }
+      );
+
+      throw new Error(`Totale non valido per l'ordine ${orderId}.`);
+    }
+
+    const stripeAmount = session.amount_total / 100;
+    const orderTotal = Number(order.total);
+
+    if (!Number.isFinite(orderTotal)) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Totale ordine non numerico",
+        {
+          eventId,
+          orderId,
+          orderTotal: order.total,
+        }
+      );
+
+      throw new Error(`Totale non valido per l'ordine ${orderId}.`);
+    }
+
+    /**
+     * Confronto monetario effettuato in centesimi per evitare
+     * problemi di precisione floating-point.
+     */
+    const stripeAmountCents = session.amount_total;
+    const orderAmountCents = Math.round(orderTotal * 100);
+
+    if (stripeAmountCents !== orderAmountCents) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Importo Stripe non coerente con l'ordine",
+        {
+          eventId,
+          orderId,
+          sessionId: session.id,
+          stripeAmountCents,
+          orderAmountCents,
+        }
+      );
+
+      throw new Error(
+        `Importo Stripe non coerente con l'ordine ${orderId}.`
+      );
+    }
+
+    const stripeCurrency =
+      typeof session.currency === "string"
+        ? session.currency.toUpperCase()
+        : null;
+
+    const orderCurrency =
+      typeof order.currency === "string"
+        ? order.currency.toUpperCase()
+        : null;
+
+    if (!stripeCurrency || !orderCurrency) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Valuta assente",
+        {
+          eventId,
+          orderId,
+          stripeCurrency,
+          orderCurrency,
+        }
+      );
+
+      throw new Error(
+        `Valuta non valida per l'ordine ${orderId}.`
+      );
+    }
+
+    if (stripeCurrency !== orderCurrency) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Valuta Stripe non coerente con l'ordine",
+        {
+          eventId,
+          orderId,
+          stripeCurrency,
+          orderCurrency,
+        }
+      );
+
+      throw new Error(
+        `Valuta Stripe non coerente con l'ordine ${orderId}.`
+      );
+    }
+
+    const amount = stripeAmountCents / 100;
+    const currency = stripeCurrency;
+
+    /**
+     * `payments.order_id` NON è UNIQUE nello schema attuale.
+     *
+     * Usiamo quindi la Checkout Session ID, che è UNIQUE,
+     * come identificativo del pagamento Stripe.
+     */
+    const { data: existingPayment, error: existingPaymentError } =
+      await this.supabase
+        .from("payments")
+        .select("id")
+        .eq("provider", "STRIPE")
+        .eq("provider_checkout_session_id", session.id)
+        .maybeSingle();
+
+    if (existingPaymentError) {
+      logger.error(
+        "[PaymentService.handleCheckoutSessionCompleted] Errore ricerca pagamento esistente",
+        {
+          eventId,
+          orderId,
+          sessionId: session.id,
+          error: existingPaymentError.message,
+        }
+      );
+
+      throw new Error(
+        "Impossibile verificare il pagamento Stripe esistente."
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    const paymentData = {
+      order_id: orderId,
+      provider: "STRIPE",
+      provider_payment_id: paymentIntentId,
+      provider_checkout_session_id: session.id,
+      provider_event_id: eventId,
+      status: "CAPTURED",
+      amount,
+      currency,
+      paid_at: now,
+      raw_response: session,
+      updated_at: now,
+    };
+
+    if (existingPayment) {
+      const { error: paymentUpdateError } = await this.supabase
+        .from("payments")
+        .update(paymentData)
+        .eq("id", existingPayment.id);
+
+      if (paymentUpdateError) {
+        logger.error(
+          "[PaymentService.handleCheckoutSessionCompleted] Errore aggiornamento pagamento",
+          {
+            eventId,
+            orderId,
+            sessionId: session.id,
+            error: paymentUpdateError.message,
+          }
+        );
+
+        throw new Error(
+          "Impossibile aggiornare il pagamento Stripe."
+        );
+      }
+    } else {
+      const { error: paymentInsertError } = await this.supabase
+        .from("payments")
+        .insert({
+          ...paymentData,
+          created_at: now,
+        });
+
+      if (paymentInsertError) {
+        /**
+         * Possibile elaborazione concorrente:
+         * un'altra istanza potrebbe aver registrato la stessa
+         * Checkout Session tra SELECT e INSERT.
+         */
+        const { data: concurrentPayment, error: concurrentError } =
+          await this.supabase
+            .from("payments")
+            .select("id")
+            .eq("provider", "STRIPE")
+            .eq("provider_checkout_session_id", session.id)
+            .maybeSingle();
+
+        if (concurrentError || !concurrentPayment) {
+          logger.error(
+            "[PaymentService.handleCheckoutSessionCompleted] Errore inserimento pagamento",
+            {
+              eventId,
+              orderId,
+              sessionId: session.id,
+              error: paymentInsertError.message,
+              concurrentCheckError: concurrentError?.message,
+            }
+          );
+
+          throw new Error(
+            "Impossibile registrare il pagamento Stripe."
+          );
+        }
+
+        logger.info(
+          "[PaymentService.handleCheckoutSessionCompleted] Pagamento già registrato da elaborazione concorrente",
+          {
+            eventId,
+            orderId,
+            sessionId: session.id,
+          }
+        );
+      }
+    }
+
+    /**
+     * Il coupon è un'operazione secondaria rispetto al pagamento.
+     * Un errore coupon non deve trasformare un pagamento Stripe
+     * verificato in un falso pagamento fallito.
+     */
+    if (order.coupon_id) {
+      try {
+        await this.couponService.redeemCoupon(
+          order.coupon_id,
+          profileId,
+          orderId
+        );
+      } catch (couponError) {
+        logger.error(
+          "[PaymentService.handleCheckoutSessionCompleted] Errore redeem coupon",
+          {
+            eventId,
+            orderId,
+            couponId: order.coupon_id,
+            error:
+              couponError instanceof Error
+                ? couponError.message
+                : String(couponError),
+          }
+        );
+      }
+    }
+
+    /**
+     * Unico punto di enrollment per il pagamento.
+     *
+     * profile_courses viene gestita esclusivamente da EnrollmentService.
+     */
+    await this.enrollmentService.fulfillOrder(orderId, orderItems);
+
+    await this.clearActiveCart(profileId);
+
+    await this.markLogAsProcessed(eventId);
+
+    logger.info(
+      "[PaymentService.handleCheckoutSessionCompleted] Checkout Stripe completato",
+      {
+        eventId,
+        orderId,
+        profileId,
+        sessionId: session.id,
+        paymentIntentId,
+        amount,
+        currency,
+        coursesCount: orderItems.length,
+      }
+    );
+  }
+
+  /**
+   * Gestisce un PaymentIntent Stripe fallito.
+   */
+  private async handlePaymentFailed(
+    eventId: string,
+    paymentIntent: Stripe.PaymentIntent
+  ): Promise<void> {
+    const orderId =
+      typeof paymentIntent.metadata?.order_id === "string"
+        ? paymentIntent.metadata.order_id
+        : null;
+
+    if (!orderId) {
+      logger.error(
+        "[PaymentService.handlePaymentFailed] order_id assente nei metadata",
+        {
+          eventId,
+          paymentIntentId: paymentIntent.id,
+        }
+      );
+
+      throw new Error(
+        "order_id assente nei metadata del PaymentIntent."
+      );
+    }
+
+    const failureReason =
+      paymentIntent.last_payment_error?.message ??
+      "Pagamento Stripe non riuscito.";
+
+    /**
+     * Il PaymentIntent ID è UNIQUE in payments.
+     *
+     * È quindi preferibile identificare il record direttamente
+     * tramite provider_payment_id invece di aggiornare tutti i
+     * pagamenti appartenenti allo stesso ordine.
+     */
+    const { data: existingPayment, error: existingPaymentError } =
+      await this.supabase
+        .from("payments")
+        .select("id")
+        .eq("provider", "STRIPE")
+        .eq("provider_payment_id", paymentIntent.id)
+        .maybeSingle();
+
+    if (existingPaymentError) {
+      logger.error(
+        "[PaymentService.handlePaymentFailed] Errore ricerca PaymentIntent",
+        {
+          eventId,
+          orderId,
+          paymentIntentId: paymentIntent.id,
+          error: existingPaymentError.message,
+        }
+      );
+
+      throw new Error(
+        "Impossibile verificare il pagamento Stripe fallito."
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    const paymentData = {
+      order_id: orderId,
+      provider: "STRIPE",
+      provider_payment_id: paymentIntent.id,
+      provider_event_id: eventId,
+      status: "FAILED",
+      failure_reason: failureReason,
+      raw_response: paymentIntent,
+      updated_at: now,
+    };
+
+    if (existingPayment) {
+      const { error: paymentError } = await this.supabase
+        .from("payments")
+        .update(paymentData)
+        .eq("id", existingPayment.id);
+
+      if (paymentError) {
+        logger.error(
+          "[PaymentService.handlePaymentFailed] Errore aggiornamento pagamento fallito",
+          {
+            eventId,
+            orderId,
+            paymentIntentId: paymentIntent.id,
+            error: paymentError.message,
+          }
+        );
+
+        throw new Error(
+          "Impossibile registrare il fallimento del pagamento Stripe."
+        );
+      }
+    } else {
+      const { error: paymentInsertError } = await this.supabase
+        .from("payments")
+        .insert({
+          ...paymentData,
+          created_at: now,
+        });
+
+      if (paymentInsertError) {
+        logger.error(
+          "[PaymentService.handlePaymentFailed] Errore inserimento pagamento fallito",
+          {
+            eventId,
+            orderId,
+            paymentIntentId: paymentIntent.id,
+            error: paymentInsertError.message,
+          }
+        );
+
+        throw new Error(
+          "Impossibile registrare il fallimento del pagamento Stripe."
+        );
+      }
+    }
+
+    const { error: orderError } = await this.supabase
+      .from("orders")
+      .update({
+        status: "FAILED",
+        updated_at: now,
+      })
+      .eq("id", orderId)
+      .neq("status", "FULFILLED");
+
+    if (orderError) {
+      logger.error(
+        "[PaymentService.handlePaymentFailed] Errore aggiornamento ordine FAILED",
+        {
+          eventId,
+          orderId,
+          error: orderError.message,
+        }
+      );
+
+      throw new Error(
+        `Impossibile aggiornare l'ordine ${orderId}.`
+      );
+    }
+
+    await this.markLogAsProcessed(eventId);
+
+    logger.info(
+      "[PaymentService.handlePaymentFailed] Pagamento Stripe fallito registrato",
+      {
+        eventId,
+        orderId,
+        paymentIntentId: paymentIntent.id,
+        failureReason,
+      }
+    );
+  }
+
+  /**
+   * Registra un evento webhook Stripe.
+   *
+   * `provider_event_id` è UNIQUE nel database.
+   *
+   * La funzione tollera il caso in cui un'altra elaborazione
+   * concorrente abbia già registrato l'evento.
+   */
+  private async logWebhookEvent(
+    eventId: string,
+    eventType: string,
+    payload: Stripe.Event.Data.Object
+  ): Promise<void> {
+    const { error } = await this.supabase
+      .from("payment_logs")
+      .insert({
+        provider: "STRIPE",
+        provider_event_id: eventId,
+        event: eventType,
+        payload,
+        processed: false,
+      });
+
+    if (!error) {
+      return;
+    }
+
+    /**
+     * Il database possiede una protezione UNIQUE su
+     * provider_event_id e un trigger dedicato ai duplicati.
+     *
+     * Verifichiamo quindi se l'evento esiste realmente già.
+     */
+    const { data: existingLog, error: existingLogError } =
+      await this.supabase
+        .from("payment_logs")
+        .select("processed")
+        .eq("provider", "STRIPE")
+        .eq("provider_event_id", eventId)
+        .maybeSingle();
+
+    if (existingLogError || !existingLog) {
+      logger.error(
+        "[PaymentService.logWebhookEvent] Errore registrazione webhook",
+        {
+          eventId,
+          eventType,
+          error: error.message,
+          verificationError: existingLogError?.message,
+        }
+      );
+
+      throw new Error(
+        `Impossibile registrare l'evento webhook Stripe ${eventId}.`
+      );
+    }
+
+    logger.info(
+      "[PaymentService.logWebhookEvent] Evento webhook già registrato",
+      {
+        eventId,
+        eventType,
+        processed: existingLog.processed,
+      }
+    );
+  }
+
+  /**
+   * Marca il webhook come elaborato.
+   */
+  private async markLogAsProcessed(eventId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from("payment_logs")
+      .update({
+        processed: true,
+        processed_at: new Date().toISOString(),
+        error: null,
+      })
+      .eq("provider", "STRIPE")
+      .eq("provider_event_id", eventId);
+
+    if (error) {
+      logger.error(
+        "[PaymentService.markLogAsProcessed] Errore marcatura webhook processato",
+        {
+          eventId,
+          error: error.message,
+        }
+      );
+
+      throw new Error(
+        `Impossibile aggiornare lo stato del webhook ${eventId}.`
+      );
+    }
+  }
+
+  /**
+   * Svuota il carrello ACTIVE dell'utente dopo il completamento
+   * dell'acquisto.
+   *
+   * Non vengono toccati eventuali carrelli con altri stati.
+   */
+  private async clearActiveCart(profileId: string): Promise<void> {
+    const { data: cart, error: cartError } = await this.supabase
+      .from("shopping_carts")
+      .select("id")
+      .eq("profile_id", profileId)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    if (cartError) {
+      logger.error(
+        "[PaymentService.clearActiveCart] Errore recupero carrello ACTIVE",
+        {
+          profileId,
+          error: cartError.message,
+        }
+      );
+
+      throw new Error(
+        "Impossibile recuperare il carrello attivo."
+      );
+    }
+
+    if (!cart) {
+      logger.info(
+        "[PaymentService.clearActiveCart] Nessun carrello ACTIVE da svuotare",
+        {
+          profileId,
+        }
+      );
+
+      return;
+    }
+
+    const { error: deleteError } = await this.supabase
+      .from("shopping_cart_items")
+      .delete()
+      .eq("cart_id", cart.id);
+
+    if (deleteError) {
+      logger.error(
+        "[PaymentService.clearActiveCart] Errore svuotamento carrello",
+        {
+          profileId,
+          cartId: cart.id,
+          error: deleteError.message,
+        }
+      );
+
+      throw new Error(
+        "Impossibile svuotare il carrello dopo il pagamento."
+      );
+    }
+
+    logger.info(
+      "[PaymentService.clearActiveCart] Carrello ACTIVE svuotato",
+      {
+        profileId,
+        cartId: cart.id,
+      }
+    );
+  }
+
+  /**
+   * Metodo di compatibilità per i chiamanti esistenti.
+   *
+   * L'enrollment reale viene delegato esclusivamente a EnrollmentService.
+   */
+  public async enrollUser(
+    profileId: string,
+    courseId: string
+  ): Promise<void> {
+    if (!profileId || !courseId) {
+      throw new Error(
+        "[PaymentService.enrollUser] Parametri non validi."
+      );
+    }
+
+    await this.enrollmentService.enrollUserInCourses(
+      profileId,
+      [courseId]
+    );
+  }
+}
+

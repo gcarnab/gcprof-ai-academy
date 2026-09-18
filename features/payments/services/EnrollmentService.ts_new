@@ -1,0 +1,329 @@
+/**
+ * GCPROF AI ACADEMY - SERVICE: ENROLLMENT SERVICE
+ * File: features/payments/services/EnrollmentService.ts
+ *
+ * Servizio di dominio per l'abilitazione e iscrizione degli studenti ai corsi.
+ *
+ * SOURCE OF TRUTH:
+ * - `profile_courses` è la tabella autorevole per l'accesso ai corsi.
+ * - La tabella legacy `enrollments` non viene più utilizzata dal nuovo flusso.
+ *
+ * Il servizio è indipendente dal gateway di pagamento e viene utilizzato da:
+ * - assegnazione manuale Admin;
+ * - iscrizione gratuita;
+ * - fulfillment di ordini pagati tramite Stripe;
+ * - eventuali altri flussi applicativi che necessitano di assegnare corsi.
+ */
+
+import { SupabaseClient } from "@supabase/supabase-js";
+import { OrderItem } from "../types/paymentTypes";
+import { logger } from "@/lib/logger";
+
+export class EnrollmentService {
+  constructor(private supabase: SupabaseClient) {}
+
+  /**
+   * Iscrive direttamente un profilo utente a una lista di corsi.
+   *
+   * `profile_courses` è la fonte autorevole per l'accesso ai corsi.
+   *
+   * L'upsert garantisce l'idempotenza:
+   * - nuova iscrizione → INSERT;
+   * - iscrizione esistente/revocata → riattivazione tramite UPDATE.
+   *
+   * `grantedByAdminId` viene mantenuto per compatibilità con il chiamante
+   * dell'assegnazione manuale Admin e per logging/audit applicativo.
+   *
+   * La tabella legacy `enrollments` NON viene più aggiornata.
+   */
+  public async enrollUserInCourses(
+    profileId: string,
+    courseIds: string[],
+    grantedByAdminId?: string
+  ): Promise<void> {
+    if (!profileId) {
+      throw new Error(
+        "[EnrollmentService.enrollUserInCourses] Profile ID non valido."
+      );
+    }
+
+    if (!courseIds || courseIds.length === 0) {
+      logger.info(
+        "[EnrollmentService.enrollUserInCourses] Nessun corso fornito per l'iscrizione.",
+        {
+          profileId,
+        }
+      );
+      return;
+    }
+
+    // Elimina eventuali duplicati per evitare operazioni DB inutili
+    // e mantenere deterministico il numero di corsi elaborati.
+    const uniqueCourseIds = [...new Set(courseIds.filter(Boolean))];
+
+    if (uniqueCourseIds.length === 0) {
+      logger.info(
+        "[EnrollmentService.enrollUserInCourses] Nessun course ID valido fornito.",
+        {
+          profileId,
+        }
+      );
+      return;
+    }
+
+    const now = new Date().toISOString();
+
+    const profileCourses = uniqueCourseIds.map((courseId) => ({
+      profile_id: profileId,
+      course_id: courseId,
+      enrolled_at: now,
+      status: "ACTIVE",
+      updated_at: now,
+    }));
+
+    const { error: profileCoursesError } = await this.supabase
+      .from("profile_courses")
+      .upsert(profileCourses, {
+        onConflict: "profile_id,course_id",
+      });
+
+    if (profileCoursesError) {
+      logger.error(
+        "[EnrollmentService.enrollUserInCourses] Errore durante l'iscrizione in profile_courses",
+        {
+          profileId,
+          courseIds: uniqueCourseIds,
+          error: profileCoursesError.message,
+        }
+      );
+
+      throw new Error(
+        `Impossibile completare l'iscrizione ai corsi per l'utente ${profileId}.`
+      );
+    }
+
+    logger.info(
+      "[EnrollmentService.enrollUserInCourses] Iscrizione completata su profile_courses",
+      {
+        profileId,
+        coursesCount: uniqueCourseIds.length,
+        grantedByAdmin: grantedByAdminId || null,
+      }
+    );
+  }
+
+  /**
+   * Permette all'Admin di assegnare manualmente qualsiasi corso
+   * a qualsiasi utente registrato.
+   *
+   * Il metodo bypassa completamente il checkout e utilizza direttamente
+   * il meccanismo autorevole di enrollment.
+   *
+   * Il controllo dell'identità/autorizzazione dell'Admin deve essere
+   * effettuato dal Server Action chiamante.
+   */
+  public async adminAssignCourses(
+    adminProfileId: string,
+    targetProfileId: string,
+    courseIds: string[]
+  ): Promise<void> {
+    logger.info(
+      "[EnrollmentService.adminAssignCourses] Avvio assegnazione manuale corso via Admin",
+      {
+        adminProfileId,
+        targetProfileId,
+        courseIds,
+      }
+    );
+
+    if (
+      !adminProfileId ||
+      !targetProfileId ||
+      !courseIds ||
+      courseIds.length === 0
+    ) {
+      throw new Error(
+        "[EnrollmentService.adminAssignCourses] Parametri non validi per l'assegnazione manuale."
+      );
+    }
+
+    await this.enrollUserInCourses(
+      targetProfileId,
+      courseIds,
+      adminProfileId
+    );
+
+    logger.info(
+      "[EnrollmentService.adminAssignCourses] Assegnazione manuale Admin completata con successo",
+      {
+        adminProfileId,
+        targetProfileId,
+        coursesCount: [...new Set(courseIds)].length,
+      }
+    );
+  }
+
+  /**
+   * Evade un ordine pagato:
+   *
+   * 1. recupera l'ordine;
+   * 2. verifica che non sia già FULFILLED;
+   * 3. recupera i corsi dall'ordine oppure utilizza quelli precaricati;
+   * 4. abilita i corsi tramite profile_courses;
+   * 5. porta l'ordine a FULFILLED.
+   *
+   * Il metodo è idempotente a livello applicativo:
+   * - ordine già FULFILLED → nessuna ulteriore elaborazione;
+   * - profile_courses → upsert.
+   *
+   * `preloadedItems` viene mantenuto per evitare una query aggiuntiva
+   * quando il chiamante possiede già gli order items.
+   */
+  public async fulfillOrder(
+    orderId: string,
+    preloadedItems?: Array<{ course_id: string }>
+  ): Promise<void> {
+    logger.info("[EnrollmentService.fulfillOrder] Avvio evasione ordine", {
+      orderId,
+    });
+
+    if (!orderId) {
+      throw new Error(
+        "[EnrollmentService.fulfillOrder] Order ID non valido."
+      );
+    }
+
+    // 1. Recupera l'ordine
+    const { data: order, error: orderError } = await this.supabase
+      .from("orders")
+      .select("id, profile_id, status")
+      .eq("id", orderId)
+      .single();
+
+    if (orderError || !order) {
+      logger.error(
+        "[EnrollmentService.fulfillOrder] Ordine non trovato",
+        {
+          orderId,
+          error: orderError?.message,
+        }
+      );
+
+      throw new Error(`Ordine ${orderId} non trovato.`);
+    }
+
+    // Idempotenza: un ordine già evaso non deve essere processato nuovamente.
+    if (order.status === "FULFILLED") {
+      logger.info(
+        "[EnrollmentService.fulfillOrder] Ordine già evaso in precedenza.",
+        {
+          orderId,
+          profileId: order.profile_id,
+        }
+      );
+
+      return;
+    }
+
+    let courseIds: string[] = [];
+
+    // 2. Utilizza gli order items già caricati quando disponibili.
+    if (preloadedItems && preloadedItems.length > 0) {
+      courseIds = preloadedItems
+        .map((item) => item.course_id)
+        .filter(Boolean);
+    } else {
+      const { data: items, error: itemsError } = await this.supabase
+        .from("order_items")
+        .select("course_id")
+        .eq("order_id", orderId);
+
+      if (itemsError) {
+        logger.error(
+          "[EnrollmentService.fulfillOrder] Errore recupero elementi ordine",
+          {
+            orderId,
+            error: itemsError.message,
+          }
+        );
+
+        throw new Error(
+          `Impossibile recuperare i corsi dell'ordine ${orderId}.`
+        );
+      }
+
+      if (!items || items.length === 0) {
+        logger.error(
+          "[EnrollmentService.fulfillOrder] Nessun corso associato all'ordine",
+          {
+            orderId,
+          }
+        );
+
+        throw new Error(`Nessun corso trovato per l'ordine ${orderId}.`);
+      }
+
+      courseIds = (items as Pick<OrderItem, "course_id">[])
+        .map((item) => item.course_id)
+        .filter(Boolean);
+    }
+
+    // Elimina eventuali duplicati.
+    courseIds = [...new Set(courseIds)];
+
+    if (courseIds.length === 0) {
+      logger.error(
+        "[EnrollmentService.fulfillOrder] Nessun course ID valido trovato",
+        {
+          orderId,
+        }
+      );
+
+      throw new Error(`Nessun corso valido trovato per l'ordine ${orderId}.`);
+    }
+
+    // 3. Abilita l'accesso ai corsi.
+    //
+    // profile_courses è l'unica fonte autorevole.
+    await this.enrollUserInCourses(order.profile_id, courseIds);
+
+    // 4. Aggiorna lo stato dell'ordine.
+    //
+    // La condizione evita di sovrascrivere un eventuale FULFILLED
+    // impostato da una elaborazione concorrente.
+    const { error: updateError } = await this.supabase
+      .from("orders")
+      .update({
+        status: "FULFILLED",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId)
+      .neq("status", "FULFILLED");
+
+    if (updateError) {
+      logger.error(
+        "[EnrollmentService.fulfillOrder] Errore aggiornamento stato ordine a FULFILLED",
+        {
+          orderId,
+          profileId: order.profile_id,
+          courseIds,
+          error: updateError.message,
+        }
+      );
+
+      throw new Error(
+        `Impossibile aggiornare lo stato dell'ordine ${orderId} a FULFILLED.`
+      );
+    }
+
+    logger.info(
+      "[EnrollmentService.fulfillOrder] Ordine evaso con successo",
+      {
+        orderId,
+        profileId: order.profile_id,
+        coursesCount: courseIds.length,
+        courseIds,
+      }
+    );
+  }
+}

@@ -1,0 +1,495 @@
+/**
+ * GCPROF AI ACADEMY - SERVICE: CHECKOUT SERVICE
+ * File: features/payments/services/CheckoutService.ts
+ *
+ * Gestisce l'orchestrazione del checkout:
+ * - Per carrelli > 0€: crea ordine e reindirizza su Stripe Checkout.
+ * - Per carrelli = 0€: bypass Stripe, completa l'ordine ed esegue
+ *   l'enrollment tramite EnrollmentService.
+ *
+ * SOURCE OF TRUTH:
+ * - Il prezzo commerciale viene verificato rispetto al corso.
+ * - `order_items` conserva lo snapshot del prezzo applicato all'ordine.
+ * - `profile_courses` viene gestita esclusivamente da EnrollmentService.
+ */
+
+import { SupabaseClient } from "@supabase/supabase-js";
+import { StripeGatewayAdapter } from "../adapters/stripe/StripeGatewayAdapter";
+import {
+  OrderItem,
+  OrderStatusEnum,
+  PaymentStatusEnum,
+} from "../types/paymentTypes";
+import { PAYMENTS_CONFIG, PAYMENT_ROUTES } from "../constants/paymentConstants";
+import { logger } from "@/lib/logger";
+import { IPaymentGateway } from "../ports/IPaymentGateway";
+import { EnrollmentService } from "./EnrollmentService";
+
+export interface CheckoutResult {
+  order_id: string;
+  order_number: string;
+  checkout_url: string;
+  is_free: boolean;
+  session_id: string;
+}
+
+interface CartCourse {
+  id: string;
+  title: string;
+  price: number | string | null;
+  is_paid?: boolean | null;
+}
+
+interface CartItem {
+  id: string;
+  cart_id: string;
+  course_id: string;
+  unit_price: number | string | null;
+  quantity: number | null;
+  courses: CartCourse | null;
+}
+
+export class CheckoutService {
+  private readonly enrollmentService: EnrollmentService;
+
+  constructor(
+    private readonly supabase: SupabaseClient,
+    private readonly stripeGateway: IPaymentGateway | StripeGatewayAdapter,
+  ) {
+    this.enrollmentService = new EnrollmentService(supabase);
+  }
+
+  /**
+   * Avvia il flusso di checkout per il carrello attivo dell'utente.
+   */
+  public async createCheckoutSession(
+    profileId: string,
+    customerEmail: string,
+  ): Promise<CheckoutResult> {
+    logger.info("[CheckoutService] Avvio creazione sessione di checkout", {
+      profileId,
+      customerEmail,
+    });
+
+    // ----------------------------------------------------------------------
+    // 1. RECUPERO CARRELLO ACTIVE
+    // ----------------------------------------------------------------------
+
+    const { data: cart, error: cartError } = await this.supabase
+      .from("shopping_carts")
+      .select(
+        `
+        id,
+        shopping_cart_items (
+          id,
+          cart_id,
+          course_id,
+          unit_price,
+          quantity,
+          courses (
+            id,
+            title,
+            price,
+            is_paid
+          )
+        )
+      `,
+      )
+      .eq("profile_id", profileId)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    if (cartError) {
+      logger.error("[CheckoutService] Errore recupero carrello ACTIVE", {
+        profileId,
+        error: cartError.message,
+      });
+
+      throw new Error("Impossibile recuperare il carrello.");
+    }
+
+    if (
+      !cart ||
+      !cart.shopping_cart_items ||
+      cart.shopping_cart_items.length === 0
+    ) {
+      logger.warn(
+        "[CheckoutService] Tentativo di checkout con carrello vuoto o non trovato",
+        {
+          profileId,
+        },
+      );
+
+      throw new Error(
+        "Il carrello è vuoto. Aggiungi un corso prima di procedere al checkout.",
+      );
+    }
+
+    const items: CartItem[] = cart.shopping_cart_items.map((item: any) => ({
+      ...item,
+      courses: Array.isArray(item.courses)
+        ? (item.courses[0] ?? null)
+        : (item.courses ?? null),
+    }));
+
+    // ----------------------------------------------------------------------
+    // 2. VALIDAZIONE PREZZI E QUANTITÀ
+    // ----------------------------------------------------------------------
+
+    let subtotalCents = 0;
+
+    for (const item of items) {
+      if (!item.course_id || !item.courses) {
+        logger.error(
+          "[CheckoutService] Item del carrello privo di corso valido",
+          {
+            profileId,
+            cartId: cart.id,
+            cartItemId: item.id,
+            courseId: item.course_id,
+          },
+        );
+
+        throw new Error("Il carrello contiene un corso non valido.");
+      }
+
+      const quantity = Number(item.quantity ?? 1);
+
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        logger.error("[CheckoutService] Quantità carrello non valida", {
+          profileId,
+          cartId: cart.id,
+          cartItemId: item.id,
+          quantity: item.quantity,
+        });
+
+        throw new Error("Il carrello contiene una quantità non valida.");
+      }
+
+      const cartUnitPrice = Number(item.unit_price ?? 0);
+      const coursePrice = Number(item.courses.price ?? 0);
+
+      if (
+        !Number.isFinite(cartUnitPrice) ||
+        cartUnitPrice < 0 ||
+        !Number.isFinite(coursePrice) ||
+        coursePrice < 0
+      ) {
+        logger.error("[CheckoutService] Prezzo non valido", {
+          profileId,
+          cartId: cart.id,
+          cartItemId: item.id,
+          courseId: item.course_id,
+          cartUnitPrice,
+          coursePrice,
+        });
+
+        throw new Error(`Prezzo non valido per il corso ${item.course_id}.`);
+      }
+
+      /**
+       * Il prezzo presente nel carrello è uno snapshot.
+       *
+       * Per un checkout commerciale non accettiamo automaticamente
+       * uno snapshot diventato obsoleto dopo una modifica del prezzo.
+       */
+      const cartPriceCents = Math.round(cartUnitPrice * 100);
+      const coursePriceCents = Math.round(coursePrice * 100);
+
+      if (cartPriceCents !== coursePriceCents) {
+        logger.error(
+          "[CheckoutService] Prezzo carrello non aggiornato rispetto al corso",
+          {
+            profileId,
+            cartId: cart.id,
+            cartItemId: item.id,
+            courseId: item.course_id,
+            cartPriceCents,
+            coursePriceCents,
+          },
+        );
+
+        throw new Error(
+          `Il prezzo del corso "${item.courses.title}" è cambiato. Aggiorna il carrello prima di procedere.`,
+        );
+      }
+
+      if (item.courses.is_paid === false && coursePriceCents > 0) {
+        logger.error(
+          "[CheckoutService] Incoerenza tra is_paid e prezzo corso",
+          {
+            profileId,
+            courseId: item.course_id,
+            isPaid: item.courses.is_paid,
+            coursePriceCents,
+          },
+        );
+
+        throw new Error(
+          `Configurazione prezzo non valida per il corso "${item.courses.title}".`,
+        );
+      }
+
+      subtotalCents += coursePriceCents * quantity;
+    }
+
+    const subtotal = subtotalCents / 100;
+    const isFreeCheckout = subtotalCents === 0;
+
+    const now = new Date().toISOString();
+
+    const orderNumber = `ORD-${new Date().getFullYear()}-${Math.floor(
+      100000 + Math.random() * 900000,
+    )}`;
+
+    // ----------------------------------------------------------------------
+    // 3. CREAZIONE ORDINE
+    // ----------------------------------------------------------------------
+
+    const initialOrderStatus: OrderStatusEnum = isFreeCheckout
+      ? "FULFILLED"
+      : "CHECKOUT_CREATED";
+
+    const { data: order, error: orderError } = await this.supabase
+      .from("orders")
+      .insert({
+        order_number: orderNumber,
+        profile_id: profileId,
+        status: initialOrderStatus,
+        subtotal,
+        discount: 0,
+        tax: 0,
+        total: subtotal,
+        currency: PAYMENTS_CONFIG.DEFAULT_CURRENCY,
+        payment_provider: PAYMENTS_CONFIG.DEFAULT_PROVIDER,
+        metadata: {
+          cart_id: cart.id,
+          customer_email: customerEmail,
+          is_free_checkout: isFreeCheckout,
+        },
+      })
+      .select("*")
+      .single();
+
+    if (orderError || !order) {
+      logger.error(
+        "[CheckoutService] Impossibile creare l'ordine nel database",
+        {
+          profileId,
+          error: orderError?.message,
+        },
+      );
+
+      throw new Error("Errore durante la creazione dell'ordine.");
+    }
+
+    // ----------------------------------------------------------------------
+    // 4. CREAZIONE ORDER ITEMS
+    // ----------------------------------------------------------------------
+
+    const orderItemsPayload = items.map((item) => {
+      const unitPrice = Number(item.courses?.price ?? 0);
+      const quantity = Number(item.quantity ?? 1);
+      const lineTotal = unitPrice * quantity;
+
+      return {
+        order_id: order.id,
+        course_id: item.course_id,
+        course_title_snapshot: item.courses?.title || "Corso Academy",
+        unit_price: unitPrice,
+        quantity,
+        line_total: lineTotal,
+      };
+    });
+
+    const { data: insertedOrderItems, error: itemsError } = await this.supabase
+      .from("order_items")
+      .insert(orderItemsPayload)
+      .select("*");
+
+    if (itemsError) {
+      logger.error(
+        "[CheckoutService] Errore durante il salvataggio dei dettagli ordine",
+        {
+          orderId: order.id,
+          error: itemsError.message,
+        },
+      );
+
+      throw new Error("Impossibile registrare i dettagli dell'ordine.");
+    }
+
+    const orderItems: OrderItem[] = (
+      insertedOrderItems && insertedOrderItems.length > 0
+        ? insertedOrderItems
+        : orderItemsPayload
+    ).map((item: any, index: number) => {
+      const calculatedTotal = Number(item.line_total ?? item.total_price ?? 0);
+
+      return {
+        id: item.id || `item_${order.id}_${index}`,
+        order_id: item.order_id || order.id,
+        course_id: item.course_id,
+        course_title_snapshot: item.course_title_snapshot || "Corso Academy",
+        unit_price: Number(item.unit_price ?? 0),
+        quantity: Number(item.quantity ?? 1),
+        line_total: calculatedTotal,
+        total_price: calculatedTotal,
+        metadata: item.metadata ?? {},
+        created_at: item.created_at ?? now,
+      };
+    });
+
+    // ----------------------------------------------------------------------
+    // CASE A: CHECKOUT 0€
+    // ----------------------------------------------------------------------
+
+    if (isFreeCheckout) {
+      logger.info(
+        "[CheckoutService] Checkout a 0€. Esecuzione evasione immediata.",
+        {
+          orderId: order.id,
+          profileId,
+        },
+      );
+
+      // A1. Registrazione pagamento gratuito
+      const { error: paymentError } = await this.supabase
+        .from("payments")
+        .insert({
+          order_id: order.id,
+          amount: 0,
+          currency: PAYMENTS_CONFIG.DEFAULT_CURRENCY,
+          status: "CAPTURED" as PaymentStatusEnum,
+          provider: PAYMENTS_CONFIG.DEFAULT_PROVIDER,
+          provider_payment_id: `free_perm_${order.id}`,
+          paid_at: now,
+        });
+
+      if (paymentError) {
+        logger.error(
+          "[CheckoutService] Errore registrazione pagamento gratuito",
+          {
+            orderId: order.id,
+            error: paymentError.message,
+          },
+        );
+
+        throw new Error("Impossibile registrare il pagamento gratuito.");
+      }
+
+      // A2. Enrollment tramite SOURCE OF TRUTH
+      await this.enrollmentService.enrollUserInCourses(
+        profileId,
+        items.map((item) => item.course_id),
+      );
+
+      // A3. Svuotamento tassativo carrello
+      await this.clearCart(cart.id, profileId);
+
+      const freeSessionId = `free_session_${order.id}`;
+
+      const redirectUrl =
+        PAYMENT_ROUTES.SUCCESS_URL.replace(
+          "{CHECKOUT_SESSION_ID}",
+          freeSessionId,
+        ) + `&order_id=${order.id}&is_free=true`;
+
+      return {
+        order_id: order.id,
+        order_number: orderNumber,
+        checkout_url: redirectUrl,
+        is_free: true,
+        session_id: freeSessionId,
+      };
+    }
+
+    // ----------------------------------------------------------------------
+    // CASE B: CHECKOUT COMMERCIALE
+    // ----------------------------------------------------------------------
+
+    const stripeSession = await this.stripeGateway.createCheckoutSession({
+      order,
+      items: orderItems,
+      customerEmail,
+      successUrl: PAYMENT_ROUTES.SUCCESS_URL,
+      cancelUrl: PAYMENT_ROUTES.CANCEL_URL,
+    });
+
+    logger.info("[CheckoutService] Stripe Checkout Session creata", {
+      orderId: order.id,
+      profileId,
+      sessionId: stripeSession.sessionId,
+      total: subtotal,
+      currency: PAYMENTS_CONFIG.DEFAULT_CURRENCY,
+    });
+
+    return {
+      order_id: order.id,
+      order_number: orderNumber,
+      checkout_url: stripeSession.checkoutUrl,
+      is_free: false,
+      session_id: stripeSession.sessionId,
+    };
+  }
+
+  /**
+   * Elimina definitivamente tutti gli elementi dal carrello ACTIVE
+   * dell'utente.
+   */
+  private async clearCart(cartId: string, profileId: string): Promise<void> {
+    const { data: activeCarts, error: cartsError } = await this.supabase
+      .from("shopping_carts")
+      .select("id")
+      .eq("profile_id", profileId)
+      .eq("status", "ACTIVE");
+
+    if (cartsError) {
+      logger.error(
+        "[CheckoutService.clearCart] Errore recupero carrelli ACTIVE",
+        {
+          cartId,
+          profileId,
+          error: cartsError.message,
+        },
+      );
+
+      throw new Error("Impossibile recuperare i carrelli attivi.");
+    }
+
+    const cartIds = Array.from(
+      new Set([cartId, ...(activeCarts ?? []).map((cart) => cart.id)]),
+    );
+
+    if (cartIds.length === 0) {
+      return;
+    }
+
+    const { error: deleteError } = await this.supabase
+      .from("shopping_cart_items")
+      .delete()
+      .in("cart_id", cartIds);
+
+    if (deleteError) {
+      logger.error(
+        "[CheckoutService.clearCart] Errore durante lo svuotamento del carrello",
+        {
+          cartId,
+          profileId,
+          error: deleteError.message,
+        },
+      );
+
+      throw new Error("Impossibile svuotare il carrello.");
+    }
+
+    logger.info(
+      "[CheckoutService.clearCart] Carrelli ACTIVE svuotati con successo",
+      {
+        cartId,
+        profileId,
+        cartsCleared: cartIds.length,
+      },
+    );
+  }
+}
