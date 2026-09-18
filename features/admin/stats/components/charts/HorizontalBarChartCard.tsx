@@ -89,7 +89,7 @@ export default function HorizontalBarChartCard({
                           Classe: <span className="text-muted-foreground font-normal">{dataObj.classes}</span>
                         </p>
                         <p className="text-muted-foreground font-medium">
-                          Tempo di studio: <span className="text-foreground font-bold">{dataObj.value} min</span>
+                          Tempo di studio: <span className="text-foreground font-bold">{dataObj.value} h</span>
                         </p>
                       </div>
                     );

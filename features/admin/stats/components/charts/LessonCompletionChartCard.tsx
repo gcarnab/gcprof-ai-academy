@@ -271,7 +271,7 @@ export default function LessonCompletionChartCard({
               onChange={(e) => setSelectedClass(e.target.value)}
               className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              <option value="all">Tutti (Scolastici ed Esterni)</option>
+              <option value="all">Tutti</option>
               <option value="external">
                 🌐 Studenti Esterni (Senza classe)
               </option>
