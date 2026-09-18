@@ -83,6 +83,8 @@ export interface AdminStatsData {
     classes: any[];
     courses: any[];
     course_classes: any[];
+    lessonProgress?: any[];
+    lesson_progress?: any[];
   };
 }
 
@@ -127,7 +129,9 @@ export async function getAdminDashboardStats(
       .gte("login_at", twoWeeksAgo.toISOString()),
     supabaseAdmin
       .from("profile_lessons_progress")
-      .select("course_id, profile_id, minutes_watched, is_completed"),
+      .select(
+        "course_id, lesson_id, profile_id, minutes_watched, is_completed, last_accessed_at, completed_at",
+      ),
     supabaseAdmin
       .from("quiz_ai_reviews")
       .select(
@@ -143,6 +147,12 @@ export async function getAdminDashboardStats(
       .eq("status", "graded"),
   ]);
 
+  if (progressResponse.error) {
+    logger.error(
+      "❌ Errore Supabase profile_lessons_progress:",
+      progressResponse.error,
+    );
+  }
   if (aiReviewsResponse.error) {
     logger.error(
       "❌ Errore Supabase quiz_ai_reviews:",
@@ -422,6 +432,53 @@ export async function getAdminDashboardStats(
     };
   });
 
+  // Calcolo dinamico di mostViewedCourses e mostViewedLessons
+  const courseTitleMap = new Map<string, string>();
+  const lessonTitleMap = new Map<string, string>();
+
+  courses.forEach((c: any) => {
+    const courseIdStr = String(c.id);
+    courseTitleMap.set(courseIdStr, c.title || "Corso Senza Titolo");
+    if (c.slug) courseTitleMap.set(String(c.slug), c.title || "Corso Senza Titolo");
+
+    (c.course_modules ?? []).forEach((m: any) => {
+      (m.course_lessons ?? []).forEach((l: any) => {
+        lessonTitleMap.set(String(l.id), l.title || "Lezione Senza Titolo");
+      });
+    });
+  });
+
+  const courseViewsCount: Record<string, number> = {};
+  const lessonViewsCount: Record<string, number> = {};
+
+  lessonProgress.forEach((p: any) => {
+    if (p.course_id) {
+      const cTitle = courseTitleMap.get(String(p.course_id)) || "Corso Sconosciuto";
+      courseViewsCount[cTitle] = (courseViewsCount[cTitle] || 0) + 1;
+    }
+    if (p.lesson_id) {
+      const lTitle = lessonTitleMap.get(String(p.lesson_id)) || `Lezione (${String(p.lesson_id).slice(0, 8)})`;
+      lessonViewsCount[lTitle] = (lessonViewsCount[lTitle] || 0) + 1;
+    }
+  });
+
+  const mostViewedCourses = Object.entries(courseViewsCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, statsLimit)
+    .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {} as Record<string, number>);
+
+  const mostViewedLessons = Object.entries(lessonViewsCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, statsLimit)
+    .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {} as Record<string, number>);
+
+  if (Object.keys(mostViewedCourses).length === 0) {
+    mostViewedCourses["Nessun dato disponibile"] = 0;
+  }
+  if (Object.keys(mostViewedLessons).length === 0) {
+    mostViewedLessons["Nessun dato disponibile"] = 0;
+  }
+
   // Profilazione Utenti
   const usersByRole = users.reduce((acc: any, u: any) => {
     const r = u.role || "student";
@@ -642,14 +699,21 @@ export async function getAdminDashboardStats(
       dailyTrend,
       sessionDurationDist,
       deviceDistribution,
-      mostViewedCourses: { "Dati non disponibili": 0 },
-      mostViewedLessons: { "Dati non disponibili": 0 },
+      mostViewedCourses,
+      mostViewedLessons,
       aiDailyTokensTrend,
       aiDailyReviewsTrend,
       aiModelDistribution,
       quizPassRate,
       quizScoreDistribution,
     },
-    raw: { users: rawUsers, classes, courses, course_classes: courseClasses },
+    raw: {
+      users: rawUsers,
+      classes,
+      courses,
+      course_classes: courseClasses,
+      lessonProgress,
+      lesson_progress: lessonProgress,
+    },
   };
 }
