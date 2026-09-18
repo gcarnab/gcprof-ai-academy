@@ -46,6 +46,18 @@
 
 # Perché nasce il Prompt Engineering
 
+<!-- INFOGRAFICA MERMAID: Dal comando al linguaggio naturale -->
+```mermaid
+flowchart LR
+    A[Utente] --> B[Comando preciso]
+    B --> C[Software]
+    C --> D[Risultato]
+    E[Utente] --> F[Linguaggio naturale]
+    F --> G[Modello AI]
+    G --> H[Risultato generato]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
+
 L'evoluzione dell'Intelligenza Artificiale Generativa ha modificato profondamente il rapporto tra uomo e macchina.
 
 Per decenni l'interazione con il computer è stata basata su istruzioni rigide:
@@ -168,6 +180,12 @@ principiante.
 ---
 
 # Gli elementi di un prompt efficace
+
+<!-- INFOGRAFICA SVG: I cinque elementi di un prompt efficace -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" width="100%" role="img" aria-label="I cinque elementi di un prompt efficace">
+<rect x="35" y="75" width="145" height="90" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="107.5" y="113" text-anchor="middle" font-size="18" font-weight="700">RUOLO</text><text x="107.5" y="138" text-anchor="middle" font-size="15">chi deve essere l&#x27;AI</text><rect x="205" y="75" width="145" height="90" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="277.5" y="113" text-anchor="middle" font-size="18" font-weight="700">CONTESTO</text><text x="277.5" y="138" text-anchor="middle" font-size="15">da dove partiamo</text><rect x="375" y="75" width="145" height="90" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="447.5" y="113" text-anchor="middle" font-size="18" font-weight="700">OBIETTIVO</text><text x="447.5" y="138" text-anchor="middle" font-size="15">cosa ottenere</text><rect x="545" y="75" width="145" height="90" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="617.5" y="113" text-anchor="middle" font-size="18" font-weight="700">VINCOLI</text><text x="617.5" y="138" text-anchor="middle" font-size="15">cosa rispettare</text><rect x="715" y="75" width="145" height="90" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="787.5" y="113" text-anchor="middle" font-size="18" font-weight="700">FORMATO</text><text x="787.5" y="138" text-anchor="middle" font-size="15">come rispondere</text>
+</svg>
+<!-- FINE INFOGRAFICA SVG -->
 
 | Elemento | Funzione |
 |-|-|
@@ -486,6 +504,17 @@ Generazione del risultato
 
 # 2.2 Dal linguaggio ai numeri
 
+<!-- INFOGRAFICA MERMAID: Dal testo ai token e all'output -->
+```mermaid
+flowchart TD
+    A[Testo umano] --> B[Tokenizzazione]
+    B --> C[Token numerici]
+    C --> D[Elaborazione del modello]
+    D --> E[Output generato]
+    E --> F[Nuovo contesto]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
+
 <a id="linguaggio-numeri"></a>
 
 [⬆️ Torna all'Indice](#indice)
@@ -572,6 +601,18 @@ ma con una rappresentazione numerica simile a:
 ---
 
 # 2.4 Il principio della previsione del token successivo
+
+<!-- INFOGRAFICA MERMAID: Previsione progressiva del token successivo -->
+```mermaid
+flowchart LR
+    A[Il cielo è] --> B{Probabilità}
+    B --> C[blu]
+    B --> D[verde]
+    B --> E[rosso]
+    C --> F[Nuovo contesto]
+    F --> G[Token successivo]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
 
 <a id="next-token"></a>
 
@@ -684,6 +725,12 @@ Un LLM possiede:
 ---
 
 # 2.6 Il ruolo del contesto
+
+<!-- INFOGRAFICA SVG: Effetto del contesto sulla precisione -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 230" width="100%" role="img" aria-label="Effetto del contesto sulla precisione">
+<rect x="35" y="80" width="240" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="155.0" y="118" text-anchor="middle" font-size="18" font-weight="700">Prompt generico</text><text x="155.0" y="143" text-anchor="middle" font-size="15">molte interpretazioni</text><line x1="275" y1="128" x2="350" y2="128" stroke="currentColor" stroke-width="2"/><polygon points="350,128 341,123 341,133" fill="currentColor"/><rect x="350" y="80" width="200" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="450.0" y="118" text-anchor="middle" font-size="18" font-weight="700">Ambiguità</text><text x="450.0" y="143" text-anchor="middle" font-size="15">più possibilità</text><line x1="550" y1="128" x2="625" y2="128" stroke="currentColor" stroke-width="2"/><polygon points="625,128 616,123 616,133" fill="currentColor"/><rect x="625" y="80" width="240" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="745.0" y="118" text-anchor="middle" font-size="18" font-weight="700">Risposta generica</text><text x="745.0" y="143" text-anchor="middle" font-size="15">meno controllata</text>
+</svg>
+<!-- FINE INFOGRAFICA SVG -->
 
 <a id="ruolo-contesto"></a>
 
@@ -1341,6 +1388,18 @@ anche se le parole esatte non coincidono.
 
 # Applicazione: sistemi RAG
 
+<!-- INFOGRAFICA MERMAID: Flusso concettuale di un sistema RAG -->
+```mermaid
+flowchart LR
+    A[Domanda utente] --> B[Embedding della domanda]
+    B --> C[Ricerca semantica]
+    C --> D[Documenti rilevanti]
+    D --> E[LLM]
+    A --> E
+    E --> F[Risposta contestualizzata]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
+
 Gli embedding sono alla base dei sistemi:
 
 # Retrieval Augmented Generation
@@ -1372,6 +1431,17 @@ Risposta contestualizzata
 ---
 
 # 3.6 Relazione tra Token, Context Window ed Embedding
+
+<!-- INFOGRAFICA MERMAID: Token, context window ed embedding -->
+```mermaid
+flowchart LR
+    A[Testo] --> B[Token]
+    B --> C[Context Window]
+    C --> D[Embedding]
+    D --> E[Elaborazione AI]
+    E --> F[Output]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
 
 [⬆️ Torna all'Indice](#indice)
 
@@ -1861,6 +1931,12 @@ Struttura organizzata
 Un modello molto utilizzato per costruire prompt professionali è:
 
 # RCTFO
+
+<!-- INFOGRAFICA SVG: Framework professionale RCTFO -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 230" width="100%" role="img" aria-label="Framework professionale RCTFO">
+<rect x="55" y="80" width="145" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="127.5" y="118" text-anchor="middle" font-size="18" font-weight="700">R</text><text x="127.5" y="143" text-anchor="middle" font-size="15">Role</text><line x1="200" y1="128" x2="230" y2="128" stroke="currentColor" stroke-width="2"/><polygon points="230,128 221,123 221,133" fill="currentColor"/><rect x="230" y="80" width="145" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="302.5" y="118" text-anchor="middle" font-size="18" font-weight="700">C</text><text x="302.5" y="143" text-anchor="middle" font-size="15">Context</text><line x1="375" y1="128" x2="405" y2="128" stroke="currentColor" stroke-width="2"/><polygon points="405,128 396,123 396,133" fill="currentColor"/><rect x="405" y="80" width="145" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="477.5" y="118" text-anchor="middle" font-size="18" font-weight="700">T</text><text x="477.5" y="143" text-anchor="middle" font-size="15">Task</text><line x1="550" y1="128" x2="580" y2="128" stroke="currentColor" stroke-width="2"/><polygon points="580,128 571,123 571,133" fill="currentColor"/><rect x="580" y="80" width="145" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="652.5" y="118" text-anchor="middle" font-size="18" font-weight="700">F</text><text x="652.5" y="143" text-anchor="middle" font-size="15">Format</text><line x1="725" y1="128" x2="755" y2="128" stroke="currentColor" stroke-width="2"/><polygon points="755,128 746,123 746,133" fill="currentColor"/><rect x="755" y="80" width="100" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="805.0" y="118" text-anchor="middle" font-size="18" font-weight="700">O</text><text x="805.0" y="143" text-anchor="middle" font-size="15">Output</text>
+</svg>
+<!-- FINE INFOGRAFICA SVG -->
 
 ```
 R → Role      (Ruolo)
@@ -2413,6 +2489,15 @@ Formato strutturato
 
 # 5.4 Confronto tra Zero-Shot, One-Shot e Few-Shot
 
+<!-- INFOGRAFICA MERMAID: Progressione delle tecniche Shot -->
+```mermaid
+flowchart LR
+    A[Zero-Shot<br/>0 esempi] --> B[One-Shot<br/>1 esempio]
+    B --> C[Few-Shot<br/>più esempi]
+    C --> D[Maggiore guida del comportamento]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
+
 [⬆️ Torna all'Indice](#indice)
 
 | Tecnica | Numero esempi | Complessità | Precisione |
@@ -2535,6 +2620,17 @@ Permette di ottenere:
 <a id="structured-output"></a>
 
 # 5.7 Structured Output Prompting
+
+<!-- INFOGRAFICA MERMAID: Dal prompt strutturato all'integrazione software -->
+```mermaid
+flowchart LR
+    A[Utente] --> B[Prompt]
+    B --> C[LLM]
+    C --> D[JSON / Markdown / Tabella]
+    D --> E[Software]
+    E --> F[Database / API / Web App]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
 
 [⬆️ Torna all'Indice](#indice)
 
@@ -2881,6 +2977,18 @@ Il modello:
 
 # 6.2 Prompt Chaining
 
+<!-- INFOGRAFICA MERMAID: Prompt Chaining -->
+```mermaid
+flowchart LR
+    A[Problema complesso] --> B[Prompt 1]
+    B --> C[Output intermedio 1]
+    C --> D[Prompt 2]
+    D --> E[Output intermedio 2]
+    E --> F[Prompt 3]
+    F --> G[Output finale]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
+
 [⬆️ Torna all'Indice](#indice)
 
 Il **Prompt Chaining** consiste nel dividere un'attività complessa in una sequenza di prompt collegati.
@@ -3062,6 +3170,18 @@ Utilizzabile per:
 <a id="reflection-prompting"></a>
 
 # 6.4 Reflection Prompting
+
+<!-- INFOGRAFICA MERMAID: Ciclo di riflessione e miglioramento -->
+```mermaid
+flowchart TD
+    A[Prima risposta] --> B[Analisi critica]
+    B --> C[Correzione]
+    C --> D[Versione migliorata]
+    D --> E{Soddisfacente?}
+    E -->|No| B
+    E -->|Sì| F[Output finale]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
 
 [⬆️ Torna all'Indice](#indice)
 
@@ -3428,6 +3548,19 @@ D. Risposte casuali
 <a id="llm-coding-data-analysis"></a>
 
 # 7. Utilizzo degli LLM per Coding e Data Analysis
+
+<!-- INFOGRAFICA MERMAID: AI come assistente nel ciclo professionale -->
+```mermaid
+flowchart LR
+    A[Problema] --> B[Prompt]
+    B --> C[LLM]
+    C --> D[Codice / Analisi]
+    D --> E[Verifica umana]
+    E --> F{Corretto?}
+    F -->|No| B
+    F -->|Sì| G[Utilizzo / Output finale]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
 
 [⬆️ Torna all'Indice](#indice)
 
@@ -4109,6 +4242,12 @@ D. Elimina il database
 
 # 8. Laboratorio pratico
 
+<!-- INFOGRAFICA SVG: Percorso del laboratorio pratico -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 230" width="100%" role="img" aria-label="Percorso del laboratorio pratico">
+<rect x="35" y="80" width="170" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="120.0" y="118" text-anchor="middle" font-size="18" font-weight="700">1</text><text x="120.0" y="143" text-anchor="middle" font-size="15">Prompt iniziale</text><line x1="205" y1="128" x2="250" y2="128" stroke="currentColor" stroke-width="2"/><polygon points="250,128 241,123 241,133" fill="currentColor"/><rect x="250" y="80" width="170" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="335.0" y="118" text-anchor="middle" font-size="18" font-weight="700">2</text><text x="335.0" y="143" text-anchor="middle" font-size="15">Miglioramento</text><line x1="420" y1="128" x2="465" y2="128" stroke="currentColor" stroke-width="2"/><polygon points="465,128 456,123 456,133" fill="currentColor"/><rect x="465" y="80" width="170" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="550.0" y="118" text-anchor="middle" font-size="18" font-weight="700">3</text><text x="550.0" y="143" text-anchor="middle" font-size="15">Verifica</text><line x1="635" y1="128" x2="680" y2="128" stroke="currentColor" stroke-width="2"/><polygon points="680,128 671,123 671,133" fill="currentColor"/><rect x="680" y="80" width="185" height="95" rx="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="772.5" y="118" text-anchor="middle" font-size="18" font-weight="700">4</text><text x="772.5" y="143" text-anchor="middle" font-size="15">Risultato finale</text>
+</svg>
+<!-- FINE INFOGRAFICA SVG -->
+
 [⬆️ Torna all'Indice](#indice)
 
 ---
@@ -4632,6 +4771,18 @@ D. Elimina gli errori
 <a id="riepilogo-modulo2"></a>
 
 # 12. Riepilogo Modulo 2
+
+<!-- INFOGRAFICA MERMAID: Percorso complessivo del Modulo 2 -->
+```mermaid
+flowchart LR
+    A[Prompt] --> B[Contesto]
+    B --> C[Struttura]
+    C --> D[Tecniche]
+    D --> E[Iterazione]
+    E --> F[Verifica]
+    F --> G[Applicazione professionale]
+```
+<!-- FINE INFOGRAFICA MERMAID -->
 
 [⬆️ Torna all'Indice](#indice)
 

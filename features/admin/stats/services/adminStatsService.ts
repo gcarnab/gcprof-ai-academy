@@ -5,6 +5,13 @@ import { getAllCoursesList } from "../../courses/services/adminStructureService"
 import { getCourseClasses } from "@/features/courses/services/courseActions";
 import { logger } from "@/lib/logger";
 
+export interface AdminStatsFilters {
+  role?: string;
+  schoolTrack?: string;
+  schoolSection?: string;
+  className?: string;
+}
+
 export interface ChartDataPoint {
   date: string;
   views: number;
@@ -81,24 +88,26 @@ export interface AdminStatsData {
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-export async function getAdminDashboardStats(): Promise<AdminStatsData> {
+export async function getAdminDashboardStats(
+  filters?: AdminStatsFilters,
+): Promise<AdminStatsData> {
   const statsWindowDays = parseInt(
     process.env.NEXT_PUBLIC_ADMIN_STATS_WINDOW_DAYS || "7",
-    10
+    10,
   );
 
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - statsWindowDays);
 
   logger.info(
-    `Estrazione statistiche admin con finestra temporale di ${statsWindowDays} giorni.`
+    `Estrazione statistiche admin con finestra temporale di ${statsWindowDays} giorni.`,
   );
 
   const [
-    users,
+    rawUsers,
     classes,
     courses,
     courseClasses,
@@ -114,47 +123,115 @@ export async function getAdminDashboardStats(): Promise<AdminStatsData> {
     getCourseClasses(),
     supabaseAdmin
       .from("user_sessions")
-      .select("login_at, user_agent, session_duration_seconds")
+      .select("login_at, user_agent, session_duration_seconds, user_id")
       .gte("login_at", twoWeeksAgo.toISOString()),
     supabaseAdmin
       .from("profile_lessons_progress")
       .select("course_id, profile_id, minutes_watched, is_completed"),
     supabaseAdmin
       .from("quiz_ai_reviews")
-      .select("prompt_tokens, completion_tokens, model, created_at")
+      .select(
+        "prompt_tokens, completion_tokens, model, created_at, quiz_attempts!inner(student_id)",
+      )
       .gte("created_at", twoWeeksAgo.toISOString()),
     supabaseAdmin
       .from("user_course_stats")
       .select("course_id, profile_id, course_xp, course_level"),
     supabaseAdmin
       .from("quiz_attempts")
-      .select("final_score, status")
+      .select("final_score, status, student_id")
       .eq("status", "graded"),
   ]);
 
   if (aiReviewsResponse.error) {
-    logger.error("❌ Errore Supabase quiz_ai_reviews:", aiReviewsResponse.error);
+    logger.error(
+      "❌ Errore Supabase quiz_ai_reviews:",
+      aiReviewsResponse.error,
+    );
   }
   if (userCourseStatsResponse.error) {
-    logger.error("❌ Errore Supabase user_course_stats:", userCourseStatsResponse.error);
+    logger.error(
+      "❌ Errore Supabase user_course_stats:",
+      userCourseStatsResponse.error,
+    );
   }
   if (quizAttemptsResponse.error) {
-    logger.error("❌ Errore Supabase quiz_attempts:", quizAttemptsResponse.error);
+    logger.error(
+      "❌ Errore Supabase quiz_attempts:",
+      quizAttemptsResponse.error,
+    );
   }
 
-  const sessions = sessionsResponse.data ?? [];
-  const lessonProgress = progressResponse.data ?? [];
-  const aiReviews = aiReviewsResponse.data ?? [];
-  const rawUserCourseStats = userCourseStatsResponse.data ?? [];
-  const quizAttempts = quizAttemptsResponse.data ?? [];
+  // 🔍 Applica Filtri Utenti
+  const users = rawUsers.filter((u: any) => {
+    if (filters?.role && filters.role !== "all") {
+      const userRole = u.role || "student";
+      if (userRole !== filters.role) return false;
+    }
+    if (filters?.schoolTrack && filters.schoolTrack !== "all") {
+      const track = u.schoolTrack || u.school_track || "Non Specificato";
+      if (track !== filters.schoolTrack) return false;
+    }
+    if (filters?.schoolSection && filters.schoolSection !== "all") {
+      const section = u.schoolSection || u.school_section || "Non Specificata";
+      if (section !== filters.schoolSection) return false;
+    }
+    if (filters?.className && filters.className !== "all") {
+      const userClasses = u.classes || [];
+      if (!userClasses.includes(filters.className)) return false;
+    }
+    return true;
+  });
+
+  const filteredUserIds = new Set(
+    users.map((u: any) => String(u.id || u.profile_id)),
+  );
+  const hasActiveUserFilter = Boolean(
+    filters?.role ||
+    filters?.schoolTrack ||
+    filters?.schoolSection ||
+    filters?.className,
+  );
+
+  // Filtra dataset secondari solo se sono presenti filtri utenti
+  const sessions = (sessionsResponse.data ?? []).filter(
+    (s: any) =>
+      !hasActiveUserFilter ||
+      !s.user_id ||
+      filteredUserIds.has(String(s.user_id)),
+  );
+
+  const lessonProgress = (progressResponse.data ?? []).filter(
+    (p: any) =>
+      !hasActiveUserFilter ||
+      !p.profile_id ||
+      filteredUserIds.has(String(p.profile_id)),
+  );
+
+  const aiReviews = (aiReviewsResponse.data ?? []).filter((r: any) => {
+    const studentId = String(r.quiz_attempts?.student_id || "");
+    return !hasActiveUserFilter || !studentId || filteredUserIds.has(studentId);
+  });
+
+  const rawUserCourseStats = (userCourseStatsResponse.data ?? []).filter(
+    (ucs: any) =>
+      !hasActiveUserFilter ||
+      !ucs.profile_id ||
+      filteredUserIds.has(String(ucs.profile_id)),
+  );
+
+  const quizAttempts = (quizAttemptsResponse.data ?? []).filter((q: any) => {
+    const studentId = String(q.student_id || "");
+    return !hasActiveUserFilter || !studentId || filteredUserIds.has(studentId);
+  });
 
   const statsLimit = parseInt(
     process.env.NEXT_PUBLIC_ADMIN_STATS_LIMIT || "5",
-    10
+    10,
   );
   const engagementLimit = parseInt(
     process.env.NEXT_PUBLIC_ADMIN_STATS_ENGAGEMENT_LIMIT || "8",
-    10
+    10,
   );
 
   const totalUsers = users.length;
@@ -340,14 +417,14 @@ export async function getAdminDashboardStats(): Promise<AdminStatsData> {
       totalMinutesStudied: progData.totalMinutes,
       totalXp: gamificationData.totalXp,
       averageLevel: Number(
-        (gamificationData.levelSum / (gamificationData.count || 1)).toFixed(1)
+        (gamificationData.levelSum / (gamificationData.count || 1)).toFixed(1),
       ),
     };
   });
 
   // Profilazione Utenti
   const usersByRole = users.reduce((acc: any, u: any) => {
-    const r = u.role || "studente";
+    const r = u.role || "student";
     acc[r] = (acc[r] || 0) + 1;
     return acc;
   }, {});
@@ -508,7 +585,7 @@ export async function getAdminDashboardStats(): Promise<AdminStatsData> {
       lessons:
         c.course_modules?.reduce(
           (acc: number, m: any) => acc + (m.course_lessons?.length ?? 0),
-          0
+          0,
         ) ?? 0,
     }))
     .sort((a, b) => b.lessons - a.lessons)
@@ -573,6 +650,6 @@ export async function getAdminDashboardStats(): Promise<AdminStatsData> {
       quizPassRate,
       quizScoreDistribution,
     },
-    raw: { users, classes, courses, course_classes: courseClasses },
+    raw: { users: rawUsers, classes, courses, course_classes: courseClasses },
   };
 }
