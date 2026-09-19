@@ -7,6 +7,7 @@ import DonutChartCard from "./charts/DonutChartCard";
 import StatsKpiCards from "./charts/StatsKpiCards";
 import HorizontalBarChartCard from "./charts/HorizontalBarChartCard";
 import LessonCompletionChartCard from "./charts/LessonCompletionChartCard";
+import StudentProgressMatrixCard from "./charts/StudentProgressMatrixCard";
 import type { AdminStatsData } from "../services/adminStatsService";
 
 type Props = {
@@ -114,7 +115,7 @@ export default function AdminStatsDashboard({ stats }: Props) {
       {/* 🎓 STRUTTURA DIDATTICA & COMPLETAMENTO LEZIONI */}
       <DashboardSection
         title="🎓 Struttura Didattica & Avanzamento Corsi"
-        subtitle="Analisi sintetica delle categorie e dettaglio del completamento lezioni per corso e classe."
+        subtitle="Analisi sintetica delle categorie, completamento lezioni per corso e dettaglio analitico individuale degli studenti."
       >
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">
@@ -128,6 +129,27 @@ export default function AdminStatsDashboard({ stats }: Props) {
               courses={rawCourses}
               users={rawUsers}
               lessonProgress={rawLessonProgress}
+            />
+          </div>
+        </div>
+
+        {/* 👤 MATRICE DI AVANZAMENTO INDIVIDUALE PER STUDENTE */}
+        <div className="mt-6">
+          <StudentProgressMatrixCard
+            courses={rawCourses}
+            users={rawUsers}
+            lessonProgress={rawLessonProgress}
+          />
+        </div>
+
+        <div className="space-y-3 pt-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Fruizione Contenuti
+          </h3>
+          <div className="grid grid-cols-1 gap-4">
+            <HorizontalBarChartCard
+              title="Tempo di Attività Studenti"
+              data={refinedStudentEngagement}
             />
           </div>
         </div>
@@ -161,25 +183,33 @@ export default function AdminStatsDashboard({ stats }: Props) {
       >
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
-            <p className="text-xs font-medium text-muted-foreground">Valutazioni AI Totali</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Valutazioni AI Totali
+            </p>
             <p className="mt-1 text-2xl font-extrabold text-foreground">
               {aiTotals.totalReviews.toLocaleString("it-IT")}
             </p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
-            <p className="text-xs font-medium text-muted-foreground">Token Totali Consumati</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Token Totali Consumati
+            </p>
             <p className="mt-1 text-2xl font-extrabold text-purple-600 dark:text-purple-400">
               {aiTotals.totalTokens.toLocaleString("it-IT")}
             </p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
-            <p className="text-xs font-medium text-muted-foreground">Prompt Tokens (Input)</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Prompt Tokens (Input)
+            </p>
             <p className="mt-1 text-2xl font-extrabold text-blue-600 dark:text-blue-400">
               {aiTotals.promptTokens.toLocaleString("it-IT")}
             </p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
-            <p className="text-xs font-medium text-muted-foreground">Completion Tokens (Output)</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Completion Tokens (Output)
+            </p>
             <p className="mt-1 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
               {aiTotals.completionTokens.toLocaleString("it-IT")}
             </p>
@@ -250,19 +280,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
             <DonutChartCard
               title="Dispositivi & Browser Utilizzati"
               data={stats?.charts?.deviceDistribution ?? {}}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-3 pt-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Fruizione Contenuti
-          </h3>
-          <div className="grid grid-cols-1 gap-4">
-            <HorizontalBarChartCard
-              title="Tempo di Attività Studenti"
-              subtitle="Classifica del tempo totale cumulato dagli studenti all'interno dei corsi"
-              data={refinedStudentEngagement}
             />
           </div>
         </div>

@@ -64,7 +64,7 @@ export default function HorizontalBarChartCard({
                 type="number"
                 stroke="var(--muted-foreground)"
                 fontSize={11}
-                tickFormatter={(v) => `${v} m`}
+                tickFormatter={(v) => `${v} h`}
                 domain={[0, "dataMax + 5"]}
                 tickLine={false}
                 axisLine={false}
@@ -113,7 +113,7 @@ export default function HorizontalBarChartCard({
               />
 
               <Bar
-                name="Minuti Attivi per Studente"
+                name="Ore Attive per Studente"
                 dataKey="value"
                 fill="#6366f1"
                 radius={[0, 4, 4, 0]}
