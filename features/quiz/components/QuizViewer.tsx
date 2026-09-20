@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useMemo } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import { Quiz } from "../domain/Quiz";
 import { QuizQuestion } from "../domain/Question";
 import { submitStudentAttemptAction } from "../actions/quizActions";
@@ -18,7 +18,7 @@ interface QuizViewerProps {
 }
 
 /**
- * Algoritmo Fisher-Yates per rimescolare un array in modo imparziale.
+ * Algoritmo Fisher-Yates per rimescolare un array in modo casuale ed imparziale.
  */
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
@@ -33,6 +33,7 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [openAnswer, setOpenAnswer] = useState<string>("");
   const [isPending, startTransition] = useTransition();
+  const [shuffledQuestions, setShuffledQuestions] = useState<QuizQuestion[]>(questions);
   const [feedback, setFeedback] = useState<{
     success: boolean;
     score?: number;
@@ -41,17 +42,19 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
     certificate?: any;
   } | null>(null);
 
-  // ⚡ SHUFFLE OPZIONI: Memoizzato per avvenire una sola volta al caricamento del quiz
-  const shuffledQuestions = useMemo(() => {
-    return questions.map((q) => {
-      if (q.type === "multiple_choice" && q.options && q.options.length > 0) {
-        return {
-          ...q,
-          options: shuffleArray(q.options),
-        };
-      }
-      return q;
-    });
+  // ⚡ SHUFFLE OPZIONI CLIENT-SIDE: Eseguito solo dopo l'idratazione per evitare mismatch HTML
+  useEffect(() => {
+    setShuffledQuestions(
+      questions.map((q) => {
+        if (q.type === "multiple_choice" && q.options && q.options.length > 0) {
+          return {
+            ...q,
+            options: shuffleArray(q.options),
+          };
+        }
+        return q;
+      })
+    );
   }, [questions]);
 
   const handleOptionChange = (questionId: string, optionId: string) => {
@@ -206,17 +209,20 @@ export function QuizViewer({ quiz, questions }: QuizViewerProps) {
                   disabled={isPending}
                   className="space-y-3"
                 >
-                  {question.options.map((option) => (
-                    <div
-                      key={option.id}
-                      className="flex items-center space-x-3 p-3 rounded-lg border border-muted hover:bg-accent/40 transition-colors"
-                    >
-                      <RadioGroupItem value={option.id} id={option.id} />
-                      <Label htmlFor={option.id} className="flex-1 cursor-pointer font-normal leading-relaxed">
-                        {option.text}
-                      </Label>
-                    </div>
-                  ))}
+                  {question.options.map((option) => {
+                    const optionInputId = `q-${question.id}-opt-${option.id}`;
+                    return (
+                      <div
+                        key={option.id}
+                        className="flex items-center space-x-3 p-3 rounded-lg border border-muted hover:bg-accent/40 transition-colors"
+                      >
+                        <RadioGroupItem value={option.id} id={optionInputId} />
+                        <Label htmlFor={optionInputId} className="flex-1 cursor-pointer font-normal leading-relaxed">
+                          {option.text}
+                        </Label>
+                      </div>
+                    );
+                  })}
                 </RadioGroup>
               ) : (
                 <div className="space-y-2">

@@ -34,7 +34,7 @@ export interface Course {
   difficulty: string;
   teacher: string;
   estimatedHours: number;
-  price?: number; // 🟢 Proprietà aggiunta come opzionale
+  price?: number;
   isPaid?: boolean;
   is_paid?: boolean;
   coverImage?: string;
@@ -42,4 +42,7 @@ export interface Course {
   allowedClasses: string[];
   modules: Module[];
   quizAssignments?: QuizAssignment[];
+  // Alias compatibile con i dati restituiti da Supabase
+  // e con app/courses/[slug]/page.tsx
+  quiz_assignments?: QuizAssignment[];
 }

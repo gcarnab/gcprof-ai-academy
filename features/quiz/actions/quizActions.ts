@@ -29,10 +29,16 @@ async function getAuthenticatedSession(
   requiredRole?: "admin" | "student",
 ): Promise<UserSession> {
   const token = await cookieService.getSession();
-  if (!token) throw new Error("Non autorizzato: Sessione mancante.");
+
+  if (!token) {
+    throw new Error("Non autorizzato: Sessione mancante.");
+  }
 
   const payload = (await tokenService.verify(token)) as UserSession | null;
-  if (!payload) throw new Error("Non autorizzato: Token non valido.");
+
+  if (!payload) {
+    throw new Error("Non autorizzato: Token non valido.");
+  }
 
   if (
     requiredRole &&
@@ -45,9 +51,94 @@ async function getAuthenticatedSession(
   return payload;
 }
 
+/**
+ * Verifica server-side l'accesso di uno studente ad un quiz
+ * basandosi sulla tripletta completa: class_id + school_track + school_section.
+ *
+ * Regole:
+ * - Se nessun vincolo è presente sul quiz -> accesso libero agli utenti autenticati;
+ * - Se vincolato -> consentito esclusivamente a SCHOOL_STUDENT con la tripletta corrispondente;
+ * - Nessun dato proveniente dal client viene considerato attendibile.
+ */
+async function assertStudentCanAccessQuiz(
+  quiz: any,
+  studentId: string,
+): Promise<void> {
+  const classId = quiz?.classId ?? quiz?.class_id ?? null;
+  const schoolTrack = quiz?.schoolTrack ?? quiz?.school_track ?? null;
+  const schoolSection = quiz?.schoolSection ?? quiz?.school_section ?? null;
+
+  // 1. Se il quiz non ha alcun vincolo, l'accesso è consentito
+  if (!classId && !schoolTrack && !schoolSection) {
+    return;
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  // 2. Recupera il profilo dello studente comprensivo della tripletta
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("user_type, class_id, school_track, school_section")
+    .eq("id", studentId)
+    .maybeSingle();
+
+  if (profileError) {
+    logger.error(
+      `Errore verifica profilo per lo studente ${studentId}`,
+      profileError,
+    );
+
+    throw new Error("Impossibile verificare il profilo dello studente.");
+  }
+
+  if (!profile || profile.user_type !== "SCHOOL_STUDENT") {
+    throw new Error(
+      "Accesso negato: questo quiz è riservato agli studenti scolastici.",
+    );
+  }
+
+  // 3. Controllo: class_id (se specificato nel quiz)
+  if (classId) {
+    const matchesDirectClass = profile.class_id === classId;
+
+    let matchesClassMembership = false;
+    if (!matchesDirectClass) {
+      const { data: membership } = await supabase
+        .from("profile_classes")
+        .select("profile_id")
+        .eq("profile_id", studentId)
+        .eq("class_id", classId)
+        .maybeSingle();
+
+      matchesClassMembership = !!membership;
+    }
+
+    if (!matchesDirectClass && !matchesClassMembership) {
+      throw new Error(
+        "Accesso negato: questo quiz è riservato ad un'altra classe.",
+      );
+    }
+  }
+
+  // 4. Controllo: school_track (se specificato nel quiz)
+  if (schoolTrack && profile.school_track !== schoolTrack) {
+    throw new Error(
+      "Accesso negato: questo quiz è riservato ad un altro indirizzo scolastico.",
+    );
+  }
+
+  // 5. Controllo: school_section (se specificato nel quiz)
+  if (schoolSection && profile.school_section !== schoolSection) {
+    throw new Error(
+      "Accesso negato: questo quiz è riservato ad un'altra sezione.",
+    );
+  }
+}
+
 // ======================================================
 // HELPER PER EMISSIONE AUTOMATICA CERTIFICATO & GAMIFICATION
 // ======================================================
+
 async function processGamificationAndCertificates(
   userId: string,
   quizId: string,
@@ -70,15 +161,20 @@ async function processGamificationAndCertificates(
 
     // Fallback difensivo centralizzato: usa la risoluzione del repository
     if (!moduleId && courseId) {
-      moduleId = (await quizRepository.resolveMainCourseModule(courseId)) ?? undefined;
+      moduleId =
+        (await quizRepository.resolveMainCourseModule(courseId)) ?? undefined;
     }
 
     if (!courseId || !moduleId) {
       logger.warn(
         "⚠️ Impossibile emettere certificato: courseId o moduleId mancanti nel record del quiz",
-        { quizId, courseId, moduleId }
+        { quizId, courseId, moduleId },
       );
-      return { success: false, error: "Dati corso/modulo mancanti nel quiz. Controllare le relazioni." };
+
+      return {
+        success: false,
+        error: "Dati corso/modulo mancanti nel quiz. Controllare le relazioni.",
+      };
     }
 
     const maxScore = Number(quiz?.maxScore ?? 10);
@@ -92,15 +188,27 @@ async function processGamificationAndCertificates(
       title: quiz?.title
         ? `Attestato: ${quiz.title}`
         : "Certificato di Completamento Modulo",
-      subtitle: `Modulo superato con esito positivo (Voto: ${finalScore.toFixed(2)} / ${maxScore})`,
+      subtitle: `Modulo superato con esito positivo (Voto: ${finalScore.toFixed(
+        2,
+      )} / ${maxScore})`,
       score: scorePercentage,
       completionPercentage: 100,
     });
 
-    return { success: true, certificate: certResult?.certificate };
+    return {
+      success: true,
+      certificate: certResult?.certificate,
+    };
   } catch (error: any) {
-    logger.error("❌ Errore durante l'elaborazione di Gamification/Certificati:", error);
-    return { success: false, error: error.message || "Errore sconosciuto." };
+    logger.error(
+      "❌ Errore durante l'elaborazione di Gamification/Certificati:",
+      error,
+    );
+
+    return {
+      success: false,
+      error: error.message || "Errore sconosciuto.",
+    };
   }
 }
 
@@ -110,7 +218,11 @@ async function processGamificationAndCertificates(
 
 export async function importQuizFromMarkdownAction(
   rawMarkdown: string,
-  context?: { courseId?: string; moduleId?: string; lessonId?: string }
+  context?: {
+    courseId?: string;
+    moduleId?: string;
+    lessonId?: string;
+  },
 ) {
   try {
     const adminSession = await getAuthenticatedSession("admin");
@@ -120,15 +232,19 @@ export async function importQuizFromMarkdownAction(
     const newQuiz = await quizRepository.createFromParsed(
       parsedQuiz,
       adminSession.id,
-      context
+      context,
     );
 
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
 
-    return { success: true, quizId: newQuiz.id };
+    return {
+      success: true,
+      quizId: newQuiz.id,
+    };
   } catch (error: any) {
     logger.error("Errore durante l'importazione del quiz da Markdown", error);
+
     return {
       success: false,
       error: error.message || "Errore sconosciuto durante l'importazione.",
@@ -142,14 +258,22 @@ export async function updateQuizStatusAction(
 ) {
   try {
     await getAuthenticatedSession("admin");
+
     await quizRepository.updateStatus(quizId, status);
 
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
-    return { success: true };
+
+    return {
+      success: true,
+    };
   } catch (error: any) {
     logger.error(`Errore aggiornamento stato quiz ${quizId}`, error);
-    return { success: false, error: error.message };
+
+    return {
+      success: false,
+      error: error.message,
+    };
   }
 }
 
@@ -161,17 +285,25 @@ export async function assignQuizToCourseAction(
 ) {
   try {
     await getAuthenticatedSession("admin");
+
     await quizRepository.assignToCourse(quizId, courseId, moduleId, lessonId);
 
     revalidatePath("/admin/quiz", "layout");
     revalidatePath("/admin/dashboard", "layout");
-    return { success: true };
+
+    return {
+      success: true,
+    };
   } catch (error: any) {
     logger.error(
       `Errore assegnazione quiz ${quizId} al corso ${courseId}`,
       error,
     );
-    return { success: false, error: error.message };
+
+    return {
+      success: false,
+      error: error.message,
+    };
   }
 }
 
@@ -192,6 +324,28 @@ export async function submitStudentAttemptAction(
   try {
     const studentSession = await getAuthenticatedSession("student");
 
+    /**
+     * Il quiz viene recuperato PRIMA del controllo del tentativo
+     * per poter verificare l'eventuale restrizione di classe.
+     *
+     * Questo controllo è server-side e non dipende dalla UI.
+     */
+    const { quiz, questions } =
+      await quizRepository.findFullQuizStructure(quizId);
+
+    /**
+     * Controllo obbligatorio dell'accesso alla classe.
+     *
+     * Deve avvenire prima di:
+     * - hasStudentAttempted()
+     * - calcolo del punteggio
+     * - createAttempt()
+     *
+     * In questo modo una chiamata diretta alla Server Action
+     * non può aggirare la restrizione del quiz.
+     */
+    await assertStudentCanAccessQuiz(quiz, studentSession.id);
+
     const alreadyAttempted = await quizRepository.hasStudentAttempted(
       quizId,
       studentSession.id,
@@ -200,8 +354,6 @@ export async function submitStudentAttemptAction(
     if (alreadyAttempted) {
       throw new Error("Hai già sottomesso un tentativo per questo quiz.");
     }
-
-    const { quiz, questions } = await quizRepository.findFullQuizStructure(quizId);
 
     let calculatedAutoScore = 0.0;
     let wrongClosedAnswers = 0;
@@ -214,6 +366,7 @@ export async function submitStudentAttemptAction(
 
       if (q.type === "multiple_choice") {
         const correctOption = q.options?.find((o) => o.isCorrect);
+
         const isCorrect = correctOption?.id === studentAns?.selectedOptionId;
 
         let scoreForQuestion = 0;
@@ -233,6 +386,7 @@ export async function submitStudentAttemptAction(
         });
       } else {
         hasOpenQuestions = true;
+
         finalAnswersPayload.push({
           questionId: q.id,
           openAnswerText: studentAns?.openAnswerText || "",
@@ -244,6 +398,7 @@ export async function submitStudentAttemptAction(
 
     if (quiz.penaltyEnabled) {
       const penaltyPerWrong = Math.abs(Number(quiz.negativeMark));
+
       calculatedAutoScore -= wrongClosedAnswers * penaltyPerWrong;
     }
 

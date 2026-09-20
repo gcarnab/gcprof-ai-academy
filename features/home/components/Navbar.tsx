@@ -11,7 +11,7 @@ import ThemeToggle from "@/features/theme/components/ThemeToggle";
 import { getNavigationForUser } from "@/shared/config/navigation/getNavigationForUser";
 import { logger } from "@/lib/logger";
 
-// 🛒 MODIFICA 1: Import del sistema Carrello e Pagamenti
+// 🛒 Import del sistema Carrello e Pagamenti
 import { CartBadge } from "@/features/payments/components/CartBadge";
 import { CartDrawer } from "@/features/payments/components/CartDrawer";
 import { getCartSummaryAction } from "@/features/payments/actions/paymentActions";
@@ -22,7 +22,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // 🛒 MODIFICA 2: Stato e gestione apertura Drawer e conteggio Carrello
+  // 🛒 Stato e gestione apertura Drawer e conteggio Carrello
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
 
@@ -95,7 +95,7 @@ export default function Navbar() {
   }, [user]);
 
   // =====================================================
-  // NAVIGATION HELPERS
+  // NAVIGATION HELPERS & FORMATTERS
   // =====================================================
   const navigationItems = getNavigationForUser(user);
 
@@ -129,6 +129,31 @@ export default function Navbar() {
     }
 
     return user.displayName?.substring(0, 2).toUpperCase() || "US";
+  };
+
+  /**
+   * 🎓 Helper per formattare le informazioni scolastiche complete:
+   * Classe, Indirizzo e Sezione (es. "4A • INF • Sez. A")
+   */
+  const formatUserSchoolDetails = (u: typeof user): string => {
+    if (!u) return "";
+
+    const classStr =
+      u.classes?.join(", ") ||
+      u.className ||
+      u.class_name ||
+      "";
+
+    const trackStr = u.schoolTrack || u.school_track || "";
+    const sectionStr = u.schoolSection || u.school_section || "";
+
+    const parts: string[] = [];
+
+    if (classStr) parts.push(String(classStr));
+    if (trackStr) parts.push(String(trackStr));
+    if (sectionStr) parts.push(`Sez. ${sectionStr}`);
+
+    return parts.length > 0 ? parts.join(" • ") : "Studente";
   };
 
   const handleLogout = async () => {
@@ -205,20 +230,6 @@ export default function Navbar() {
                   </Link>
                 </li>
               ))}
-
-              {/*
-              {!user && (
-                <li>
-                  <Link
-                    href="/credits"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Credits
-                  </Link>
-                </li>
-              )}
-              */}
-
             </ul>
           </nav>
 
@@ -226,7 +237,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-4">
             <ThemeToggle />
 
-            {/* 🛒 MODIFICA 3: Badge Carrello per Desktop */}
+            {/* 🛒 Badge Carrello per Desktop */}
             <CartBadge
               itemCount={cartCount}
               onClick={() => setIsCartOpen(true)}
@@ -254,7 +265,7 @@ export default function Navbar() {
                       </span>
                     ) : (
                       <span className="font-medium text-blue-600 dark:text-blue-400">
-                        🎓 {user.classes?.join(", ") || "Studente"}
+                        🎓 {formatUserSchoolDetails(user)}
                       </span>
                     )}
                   </div>
@@ -300,7 +311,7 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* 🛒 MODIFICA 4: Controls Mobile (Carrello sempre accessibile + Menu Hamburger) */}
+          {/* 🛒 Controls Mobile (Carrello sempre accessibile + Menu Hamburger) */}
           <div className="flex md:hidden items-center gap-2">
             <CartBadge
               itemCount={cartCount}
@@ -350,7 +361,7 @@ export default function Navbar() {
                         ? "👨‍🏫 Admin"
                         : user.status === "pending"
                           ? "⏳ In attesa di attivazione"
-                          : `🎓 ${user.classes?.join(", ") || "Studente"}`}
+                          : `🎓 ${formatUserSchoolDetails(user)}`}
                     </p>
                   </div>
                 </div>
@@ -412,7 +423,7 @@ export default function Navbar() {
         )}
       </header>
 
-      {/* 🛒 MODIFICA 5: Componente Drawer del Carrello (Montato globalmente nell'Header) */}
+      {/* 🛒 Componente Drawer del Carrello (Montato globalmente nell'Header) */}
       <CartDrawer
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}

@@ -3,22 +3,26 @@
 import { logger } from "@/lib/logger";
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-// Definiamo il tipo dell'utente nel contesto (allineato alla v2 e alla feature Profilo)
 export interface AuthUser {
   id: string;
   email: string;
   displayName: string;
   role: "admin" | "student";
   status: "active" | "blocked" | "pending";
-  // 🎯 nuovo campo gestione tipologia account
   userType?: "SCHOOL_STUDENT" | "EXTERNAL_STUDENT";
   classes: string[];
-  // studenti esterni
   enrolledCourses?: number[];
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
 
-  firstName?: string; // 🎯 NUOVO
-  lastName?: string; // 🎯 NUOVO
-  avatarUrl?: string; // 🎯 NUOVO
+  // 🎓 Informazioni Istituzionali / Scolastiche
+  schoolTrack?: string;
+  schoolSection?: string;
+  school_track?: string;
+  school_section?: string;
+  className?: string;     // 👈 Aggiunto per evitare cast in Navbar e ProfileForm
+  class_name?: string;    // 👈 Aggiunto per evitare cast in Navbar e ProfileForm
 }
 
 // 🎯 AGGIORNAMENTO CONTRATTO: Definiamo l'interfaccia esatta esposta dall'hook

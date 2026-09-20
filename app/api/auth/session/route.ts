@@ -25,10 +25,12 @@ export async function GET() {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     const userId = payload.id as string;
 
-    // 1. Leggiamo tutti i dati del profilo compreso 'user_type'
+    // 1. Leggiamo tutti i dati del profilo compresi 'user_type', 'school_track' e 'school_section'
     const { data: profile, error: dbError } = await supabaseAdmin
       .from("profiles")
-      .select("status, role, user_type, display_name, first_name, last_name, avatar_url")
+      .select(
+        "status, role, user_type, display_name, first_name, last_name, avatar_url, school_track, school_section"
+      )
       .eq("id", userId)
       .maybeSingle();
 
@@ -60,13 +62,19 @@ export async function GET() {
       id: userId,
       email: payload.email,
       role: profile.role || payload.role,
-      userType: profile.user_type || payload.userType || payload.user_type || undefined, // 🎯 FIX: Inserito userType
+      userType: profile.user_type || payload.userType || payload.user_type || undefined,
       displayName: profile.display_name || payload.displayName,
       classes: currentClasses,
       status: finalStatus,
       firstName: profile.first_name || undefined,
       lastName: profile.last_name || undefined,
       avatarUrl: profile.avatar_url || undefined,
+      
+      // 🎓 Informazioni per il tracciamento scolastico (Disponibili in camelCase e snake_case)
+      schoolTrack: profile.school_track || undefined,
+      schoolSection: profile.school_section || undefined,
+      school_track: profile.school_track || undefined,
+      school_section: profile.school_section || undefined,
     };
 
     return NextResponse.json({ user });

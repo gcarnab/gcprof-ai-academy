@@ -94,39 +94,25 @@ Esempi: una e-mail, un messaggio lasciato in segreteria, un post pubblicato sui 
 | Necessità di essere online insieme | Sì | No |
 | Tollera interruzioni della connessione | Poco (la comunicazione si interrompe) | Bene (il messaggio resta in attesa) |
 
-<svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:sans-serif;">
-  <defs>
-    <marker id="arrowSync" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#065f46"/>
-    </marker>
-    <marker id="arrowAsync" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#92400e"/>
-    </marker>
-  </defs>
-  <rect x="10" y="10" width="300" height="200" rx="12" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
-  <text x="160" y="35" text-anchor="middle" font-size="14" font-weight="bold" fill="#065f46">Comunicazione SINCRONA</text>
-  <circle cx="70" cy="110" r="26" fill="#10b981"/>
-  <text x="70" y="115" text-anchor="middle" font-size="14" fill="white">A</text>
-  <circle cx="250" cy="110" r="26" fill="#10b981"/>
-  <text x="250" y="115" text-anchor="middle" font-size="14" fill="white">B</text>
-  <line x1="98" y1="103" x2="222" y2="103" stroke="#065f46" stroke-width="2" marker-end="url(#arrowSync)"/>
-  <line x1="222" y1="118" x2="98" y2="118" stroke="#065f46" stroke-width="2" marker-end="url(#arrowSync)"/>
-  <text x="160" y="152" text-anchor="middle" font-size="12" fill="#065f46">Scambio in tempo reale</text>
-  <text x="160" y="172" text-anchor="middle" font-size="12" fill="#065f46">(es. videochiamata)</text>
-
-  <rect x="330" y="10" width="300" height="200" rx="12" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="480" y="35" text-anchor="middle" font-size="14" font-weight="bold" fill="#92400e">Comunicazione ASINCRONA</text>
-  <circle cx="380" cy="110" r="24" fill="#f59e0b"/>
-  <text x="380" y="115" text-anchor="middle" font-size="13" fill="white">A</text>
-  <rect x="440" y="92" width="40" height="30" rx="4" fill="white" stroke="#92400e" stroke-width="1.5"/>
-  <path d="M440,92 L460,108 L480,92" fill="none" stroke="#92400e" stroke-width="1.5"/>
-  <circle cx="580" cy="110" r="24" fill="#f59e0b"/>
-  <text x="580" y="115" text-anchor="middle" font-size="13" fill="white">B</text>
-  <line x1="404" y1="108" x2="438" y2="108" stroke="#92400e" stroke-width="2" marker-end="url(#arrowAsync)"/>
-  <line x1="482" y1="108" x2="556" y2="108" stroke="#92400e" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrowAsync)"/>
-  <text x="480" y="152" text-anchor="middle" font-size="12" fill="#92400e">Il messaggio attende</text>
-  <text x="480" y="172" text-anchor="middle" font-size="12" fill="#92400e">di essere letto (es. e-mail)</text>
-</svg>
+```mermaid
+flowchart LR
+    subgraph SINCRONA["🟢 SINCRONA — tempo reale (es. videochiamata)"]
+        direction LR
+        A1((A)) <--> B1((B))
+    end
+    subgraph ASINCRONA["🟠 ASINCRONA — messaggio in attesa (es. e-mail)"]
+        direction LR
+        A2((A)) -.->|invia| M["✉️ messaggio in attesa"]
+        M -.->|letto dopo| B2((B))
+    end
+    style SINCRONA fill:#ecfdf5,stroke:#10b981
+    style ASINCRONA fill:#fffbeb,stroke:#f59e0b
+    style A1 fill:#10b981,color:#fff
+    style B1 fill:#10b981,color:#fff
+    style A2 fill:#f59e0b,color:#fff
+    style B2 fill:#f59e0b,color:#fff
+    style M fill:#ffffff,stroke:#92400e
+```
 
 > 💡 **Approfondimento**
 >
@@ -159,39 +145,26 @@ I dati possono viaggiare **in entrambe le direzioni contemporaneamente**. È la 
 
 Esempio: una normale telefonata, dove entrambi gli interlocutori possono parlare (e sentirsi) nello stesso istante; oppure una connessione Ethernet moderna, dove il computer può inviare e ricevere dati nello stesso momento.
 
-<svg viewBox="0 0 640 330" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:sans-serif;">
-  <defs>
-    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#1f2937"/>
-    </marker>
-  </defs>
-
-  <text x="20" y="28" font-size="14" font-weight="bold" fill="#1e3a8a">SIMPLEX</text>
-  <rect x="20" y="40" width="90" height="40" rx="6" fill="#dbeafe" stroke="#1e3a8a"/>
-  <text x="65" y="65" text-anchor="middle" font-size="12">Dispositivo A</text>
-  <rect x="530" y="40" width="90" height="40" rx="6" fill="#dbeafe" stroke="#1e3a8a"/>
-  <text x="575" y="65" text-anchor="middle" font-size="12">Dispositivo B</text>
-  <line x1="115" y1="60" x2="525" y2="60" stroke="#1e3a8a" stroke-width="2.5" marker-end="url(#arr)"/>
-  <text x="320" y="98" text-anchor="middle" font-size="11" fill="#1e3a8a">una sola direzione</text>
-
-  <text x="20" y="140" font-size="14" font-weight="bold" fill="#7c2d12">HALF-DUPLEX</text>
-  <rect x="20" y="152" width="90" height="40" rx="6" fill="#ffedd5" stroke="#7c2d12"/>
-  <text x="65" y="177" text-anchor="middle" font-size="12">Dispositivo A</text>
-  <rect x="530" y="152" width="90" height="40" rx="6" fill="#ffedd5" stroke="#7c2d12"/>
-  <text x="575" y="177" text-anchor="middle" font-size="12">Dispositivo B</text>
-  <line x1="115" y1="165" x2="525" y2="165" stroke="#7c2d12" stroke-width="2.5" marker-end="url(#arr)"/>
-  <line x1="525" y1="182" x2="115" y2="182" stroke="#7c2d12" stroke-width="2.5" stroke-dasharray="5 4" marker-end="url(#arr)"/>
-  <text x="320" y="210" text-anchor="middle" font-size="11" fill="#7c2d12">entrambe le direzioni, ma non insieme</text>
-
-  <text x="20" y="252" font-size="14" font-weight="bold" fill="#065f46">FULL-DUPLEX</text>
-  <rect x="20" y="264" width="90" height="40" rx="6" fill="#d1fae5" stroke="#065f46"/>
-  <text x="65" y="289" text-anchor="middle" font-size="12">Dispositivo A</text>
-  <rect x="530" y="264" width="90" height="40" rx="6" fill="#d1fae5" stroke="#065f46"/>
-  <text x="575" y="289" text-anchor="middle" font-size="12">Dispositivo B</text>
-  <line x1="115" y1="277" x2="525" y2="277" stroke="#065f46" stroke-width="2.5" marker-end="url(#arr)"/>
-  <line x1="525" y1="292" x2="115" y2="292" stroke="#065f46" stroke-width="2.5" marker-end="url(#arr)"/>
-  <text x="320" y="322" text-anchor="middle" font-size="11" fill="#065f46">entrambe le direzioni, insieme</text>
-</svg>
+```mermaid
+flowchart TD
+    subgraph S["SIMPLEX — una sola direzione"]
+        direction LR
+        SA[Dispositivo A] --> SB[Dispositivo B]
+    end
+    subgraph H["HALF-DUPLEX — a turno, mai insieme"]
+        direction LR
+        HA[Dispositivo A] -->|1| HB[Dispositivo B]
+        HB -.->|2| HA
+    end
+    subgraph F["FULL-DUPLEX — insieme, in entrambe le direzioni"]
+        direction LR
+        FA[Dispositivo A] --> FB[Dispositivo B]
+        FB --> FA
+    end
+    style S fill:#dbeafe,stroke:#1e3a8a
+    style H fill:#ffedd5,stroke:#7c2d12
+    style F fill:#d1fae5,stroke:#065f46
+```
 
 > ⚠️ **Attenzione**
 >
@@ -277,19 +250,16 @@ Nei mezzi **non guidati**, il segnale non è incanalato in un supporto fisico, m
 - utilizzati per comunicazioni a **brevissima distanza** e in linea d'aria diretta (es. telecomandi, alcuni mouse e tastiere di vecchia generazione);
 - non attraversano ostacoli solidi: basta un oggetto tra il trasmettitore e il ricevitore per interrompere la comunicazione.
 
-<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:sans-serif;">
-  <line x1="320" y1="230" x2="320" y2="80" stroke="#374151" stroke-width="4"/>
-  <polygon points="320,60 310,80 330,80" fill="#374151"/>
-  <path d="M 260 90 A 80 80 0 0 1 380 90" fill="none" stroke="#3b82f6" stroke-width="3"/>
-  <path d="M 220 110 A 130 130 0 0 1 420 110" fill="none" stroke="#8b5cf6" stroke-width="3"/>
-  <path d="M 175 138 A 178 178 0 0 1 465 138" fill="none" stroke="#f59e0b" stroke-width="3"/>
-  <circle cx="90" cy="225" r="7" fill="#3b82f6"/>
-  <text x="105" y="230" font-size="12" fill="#1f2937">Onde radio (Wi-Fi, Bluetooth, 3G/4G/5G)</text>
-  <circle cx="90" cy="252" r="7" fill="#8b5cf6"/>
-  <text x="105" y="257" font-size="12" fill="#1f2937">Microonde (ponti radio, satelliti GEO/LEO)</text>
-  <circle cx="90" cy="279" r="7" fill="#f59e0b"/>
-  <text x="105" y="284" font-size="12" fill="#1f2937">Infrarossi (corto raggio, linea diretta)</text>
-</svg>
+```mermaid
+flowchart TD
+    W["Mezzi Trasmissivi Non Guidati (wireless)"] --> R["Onde radio<br/>(Wi-Fi, Bluetooth, 3G/4G/5G)"]
+    W --> MW["Microonde<br/>(ponti radio, satelliti GEO/LEO)"]
+    W --> IR["Infrarossi<br/>(corto raggio, linea diretta)"]
+    style W fill:#e0e7ff,stroke:#3730a3,stroke-width:1.5px
+    style R fill:#dbeafe,stroke:#1d4ed8
+    style MW fill:#ede9fe,stroke:#7c3aed
+    style IR fill:#fef3c7,stroke:#b45309
+```
 
 > ⚠️ **Attenzione**
 >
@@ -313,36 +283,15 @@ Nei mezzi **non guidati**, il segnale non è incanalato in un supporto fisico, m
 
 La **banda** (o larghezza di banda, *bandwidth*) misura la quantità massima di dati che un canale può trasportare in un certo intervallo di tempo, ed è tipicamente espressa in **bit al secondo** (bit/s), o nei suoi multipli: kbit/s, Mbit/s, Gbit/s.
 
-<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:sans-serif;">
-  <text x="10" y="18" font-size="13" font-weight="bold" fill="#1f2937">Velocità relativa dei mezzi trasmissivi (scala qualitativa)</text>
+```mermaid
+xychart-beta
+    title "Velocità relativa dei mezzi trasmissivi (scala qualitativa 1-5)"
+    x-axis [Doppino, Coassiale, Ethernet, Fibra, "Wi-Fi", "5G"]
+    y-axis "Velocità relativa" 0 --> 5
+    bar [1, 2, 3, 5, 3, 4]
+```
 
-  <text x="170" y="42" text-anchor="end" font-size="12" fill="#1f2937">Doppino telefonico</text>
-  <rect x="180" y="28" width="80" height="20" rx="3" fill="#60a5fa"/>
-
-  <text x="170" y="72" text-anchor="end" font-size="12" fill="#1f2937">Cavo coassiale</text>
-  <rect x="180" y="58" width="160" height="20" rx="3" fill="#60a5fa"/>
-
-  <text x="170" y="102" text-anchor="end" font-size="12" fill="#1f2937">Ethernet (rame)</text>
-  <rect x="180" y="88" width="240" height="20" rx="3" fill="#3b82f6"/>
-
-  <text x="170" y="132" text-anchor="end" font-size="12" fill="#1f2937">Fibra ottica</text>
-  <rect x="180" y="118" width="400" height="20" rx="3" fill="#1d4ed8"/>
-
-  <text x="170" y="162" text-anchor="end" font-size="12" fill="#1f2937">Wi-Fi</text>
-  <rect x="180" y="148" width="240" height="20" rx="3" fill="#34d399"/>
-
-  <text x="170" y="192" text-anchor="end" font-size="12" fill="#1f2937">Rete mobile 5G</text>
-  <rect x="180" y="178" width="320" height="20" rx="3" fill="#10b981"/>
-
-  <line x1="180" y1="215" x2="580" y2="215" stroke="#9ca3af" stroke-width="1"/>
-  <text x="180" y="232" font-size="11" fill="#6b7280">bassa</text>
-  <text x="565" y="232" font-size="11" fill="#6b7280">altissima</text>
-
-  <rect x="180" y="250" width="14" height="14" fill="#3b82f6"/>
-  <text x="200" y="261" font-size="11" fill="#1f2937">mezzi guidati (cablati)</text>
-  <rect x="360" y="250" width="14" height="14" fill="#10b981"/>
-  <text x="380" y="261" font-size="11" fill="#1f2937">mezzi non guidati (wireless)</text>
-</svg>
+*Guidati (cablati): Doppino, Coassiale, Ethernet, Fibra — Non guidati (wireless): Wi-Fi, 5G.*
 
 > 💡 **Approfondimento**
 >

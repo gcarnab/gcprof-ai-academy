@@ -12,6 +12,9 @@ export interface Quiz {
   courseId?: string;
   moduleId?: string;
   lessonId?: string;
+  classId?: string;
+  schoolTrack?: string;
+  schoolSection?: string;
   createdBy?: string;
   createdAt: Date;
   updatedAt: Date;

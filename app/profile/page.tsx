@@ -1,13 +1,14 @@
+import type { Metadata } from "next";
 import Navbar from "@/features/home/components/Navbar";
-import Footer from "@/features/home/components/Footer"; // 💡 Nota: Se il Footer si trova in un altro percorso (es. @/shared/ui/Footer), adegua questo import.
+import Footer from "@/features/home/components/Footer";
 import ProfileForm from "@/features/profile/components/ProfileForm";
 import PageContainer from "@/shared/ui/PageContainer";
 import SectionTitle from "@/shared/ui/SectionTitle";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Profilo",
-  description: "Gestisci il tuo profilo personale su GCPROF Academy.",
+  title: "Profilo | GCPROF Academy",
+  description:
+    "Gestisci il tuo profilo personale, visualizza i tuoi dettagli scolastici e aggiorna i tuoi dati su GCPROF Academy.",
   robots: {
     index: false,
     follow: false,
@@ -16,29 +17,23 @@ export const metadata: Metadata = {
 
 export default function ProfilePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-muted/50">
-      {/* 🔹 Barra di navigazione superiore */}
+    <div className="flex flex-col min-h-screen bg-muted/30">
       <Navbar />
 
-      {/* 🔹 Area di contenuto principale centralizzata */}
-      <main className="flex-1">
+      <main className="flex-1 py-8 md:py-12">
         <PageContainer>
-          <div className="space-y-6 py-8">
-            {/* Intestazione della pagina allineata al design system */}
+          <div className="max-w-4xl mx-auto space-y-8">
             <SectionTitle
               title="Gestione Profilo"
-              subtitle="Modifica i dati del tuo account, personalizza il tuo avatar e visualizza i tuoi dettagli istituzionali."
+              subtitle="Consulta le tue informazioni scolastiche (classe, indirizzo, sezione) e personalizza i dati del tuo account."
             />
 
-            {/* Form Client di modifica e upload */}
-            <div className="mt-6">
-              <ProfileForm />
-            </div>
+            {/* Qui viene montato ProfileForm con i campi in sola lettura */}
+            <ProfileForm />
           </div>
         </PageContainer>
       </main>
 
-      {/* 🔹 Footer istituzionale a fondo pagina */}
       <Footer />
     </div>
   );

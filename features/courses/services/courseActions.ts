@@ -4,8 +4,90 @@ import { revalidatePath } from "next/cache";
 import type { Course, Module, Lesson } from "../types/course";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { JoseTokenService } from "@/features/auth/infrastructure/JoseTokenService";
+import { NextCookieService } from "@/features/auth/infrastructure/NextCookieService";
 
 const supabaseAdmin = getSupabaseAdmin();
+
+const tokenService = new JoseTokenService();
+const cookieService = new NextCookieService();
+
+interface CourseUserSession {
+  id: string;
+  email: string;
+  role: "admin" | "student";
+}
+
+interface StudentContext {
+  userType: string | null;
+  track: string | null;
+  section: string | null;
+  classIds: Set<string>;
+}
+
+/**
+ * Recupera la sessione autenticata dal cookie HttpOnly.
+ *
+ * La sessione viene utilizzata esclusivamente server-side per determinare
+ * quali quiz con restrizione di classe/indirizzo/sezione possono essere
+ * restituiti alla pagina del corso.
+ */
+async function getCourseUserSession(): Promise<CourseUserSession | null> {
+  try {
+    const token = await cookieService.getSession();
+
+    if (!token) {
+      return null;
+    }
+
+    const payload = (await tokenService.verify(token)) as
+      | CourseUserSession
+      | null;
+
+    if (!payload?.id || !payload?.role) {
+      return null;
+    }
+
+    return payload;
+  } catch (error) {
+    logger.warn(
+      "Impossibile recuperare la sessione utente per la visibilità dei quiz:",
+      error,
+    );
+
+    return null;
+  }
+}
+
+/**
+ * Recupera gli ID delle classi alle quali appartiene lo studente.
+ *
+ * La tabella profile_classes è la fonte autorevole per l'appartenenza
+ * dello studente alle classi (ANNO).
+ */
+async function getStudentClassIds(
+  studentId: string,
+): Promise<string[]> {
+  const { data, error } = await supabaseAdmin
+    .from("profile_classes")
+    .select("class_id")
+    .eq("profile_id", studentId);
+
+  if (error) {
+    logger.error(
+      `Errore recupero classi dello studente ${studentId}:`,
+      error.message,
+    );
+    return [];
+  }
+
+  return (data ?? [])
+    .map((item: any) => item.class_id)
+    .filter(
+      (classId: any): classId is string =>
+        typeof classId === "string" && classId.length > 0,
+    );
+}
 
 /**
  * Helper interno per generare gli slug in modo coerente e pulito
@@ -14,30 +96,33 @@ function generateSlug(text: string): string {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, "-") // Sostituisce spazi e caratteri speciali con un trattino
-    .replace(/(^-|-$)/g, ""); // Pulisce eventuali trattini all'inizio o alla fine
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 /* ============================================================================
  * 🛰️ LETTURA CORSI
  * ========================================================================== */
+
+
+/*
 export async function getLiveCourses(
   role?: "admin" | "student",
 ): Promise<Course[]> {
   try {
     // 1. 🟢 QUERY: Recupera i corsi includendo price e is_paid
-    const { data: coursesData, error: coursesError } = await supabaseAdmin.from(
-      "courses",
-    ).select(`
-        id, 
-        title, 
-        slug, 
-        description, 
-        category, 
-        difficulty, 
-        teacher, 
-        estimated_hours, 
-        cover_image, 
+    const { data: coursesData, error: coursesError } = await supabaseAdmin
+      .from("courses")
+      .select(`
+        id,
+        title,
+        slug,
+        description,
+        category,
+        difficulty,
+        teacher,
+        estimated_hours,
+        cover_image,
         published,
         price,
         is_paid,
@@ -45,8 +130,8 @@ export async function getLiveCourses(
           academy_classes ( name )
         ),
         course_modules (
-          id, 
-          title, 
+          id,
+          title,
           order_index,
           is_preview,
           course_lessons (
@@ -73,7 +158,7 @@ export async function getLiveCourses(
     if (!coursesData) return [];
 
     // 2. QUIZ
-    // Recupera solamente i quiz pubblicati per la visualizzazione studenti
+    // Recupera i quiz pubblicati e include i campi della tripletta di restrizione
     const quizzesByCourse: Record<string, any[]> = {};
 
     try {
@@ -86,7 +171,10 @@ export async function getLiveCourses(
           quizzes!inner (
             id,
             title,
-            status
+            status,
+            class_id,
+            school_track,
+            school_section
           )
         `,
       );
@@ -94,10 +182,15 @@ export async function getLiveCourses(
       if (role === "student") {
         quizzesQuery = quizzesQuery.eq("quizzes.status", "active");
       }
-      const { data: quizzesData, error: quizzesError } = await quizzesQuery;
+
+      const { data: quizzesData, error: quizzesError } =
+        await quizzesQuery;
 
       if (quizzesError) {
-        logger.warn("Errore recupero quiz assegnati:", quizzesError.message);
+        logger.warn(
+          "Errore recupero quiz assegnati:",
+          quizzesError.message,
+        );
       }
 
       if (quizzesData) {
@@ -121,19 +214,34 @@ export async function getLiveCourses(
           quizzesByCourse[assignment.course_id].push({
             id: assignment.id,
             quiz_id: quizEntity.id,
+            quizId: quizEntity.id,
             quiz_title: quizEntity.title,
+            quizTitle: quizEntity.title,
             due_at: assignment.due_at,
+            dueAt: assignment.due_at,
+            class_id: quizEntity.class_id ?? null,
+            classId: quizEntity.class_id ?? null,
+            school_track: quizEntity.school_track ?? null,
+            schoolTrack: quizEntity.school_track ?? null,
+            school_section: quizEntity.school_section ?? null,
+            schoolSection: quizEntity.school_section ?? null,
 
             quiz: {
               id: quizEntity.id,
               title: quizEntity.title,
               status: quizEntity.status,
+              class_id: quizEntity.class_id ?? null,
+              school_track: quizEntity.school_track ?? null,
+              school_section: quizEntity.school_section ?? null,
             },
           });
         });
       }
     } catch (quizErr) {
-      logger.error("Eccezione durante recupero quiz assegnati:", quizErr);
+      logger.error(
+        "Eccezione durante recupero quiz assegnati:",
+        quizErr,
+      );
     }
 
     // 3. 🗺️ MAPPING FINALE COMBINATO
@@ -142,27 +250,34 @@ export async function getLiveCourses(
         (a: any, b: any) => a.order_index - b.order_index,
       );
 
-      /*
-      logger.debug(
-        `[COURSES] ${dbCourse.title}: ${sortedModules.filter((m: any) => m.is_preview).length} preview module(s) su ${sortedModules.length}`,
-      );
-*/
-      // Mappiamo i nomi delle classi abilitate a questo specifico corso
       const allowedClassesNames = (dbCourse.course_classes || [])
         .map((cc: any) => cc.academy_classes?.name)
         .filter(Boolean);
 
-      // Recuperiamo i quiz associati a questo ID corso (se presenti)
       const associatedQuizzes = quizzesByCourse[dbCourse.id] || [];
 
-      //logger.debug(`[COURSES] Mapping corso "${dbCourse.title}" completato`);
-
-      // ✅ Estrazione e parsing sicuro del prezzo
-      const numPrice = dbCourse.price !== undefined && dbCourse.price !== null
-        ? parseFloat(String(dbCourse.price))
-        : 0;
+      const numPrice =
+        dbCourse.price !== undefined && dbCourse.price !== null
+          ? parseFloat(String(dbCourse.price))
+          : 0;
 
       const isPaidCourse = dbCourse.is_paid ?? (numPrice > 0);
+
+      const mappedAssignments = associatedQuizzes.map((qa: any) => ({
+        id: qa.id,
+        quiz_id: qa.quiz_id,
+        quizId: qa.quiz_id,
+        quiz_title: qa.quiz_title,
+        quizTitle: qa.quiz_title,
+        due_at: qa.due_at,
+        dueAt: qa.due_at,
+        class_id: qa.class_id ?? undefined,
+        classId: qa.class_id ?? undefined,
+        school_track: qa.school_track ?? undefined,
+        schoolTrack: qa.school_track ?? undefined,
+        school_section: qa.school_section ?? undefined,
+        schoolSection: qa.school_section ?? undefined,
+      }));
 
       return {
         id: dbCourse.id,
@@ -177,31 +292,17 @@ export async function getLiveCourses(
           "Prof. G. Carnabuci",
         estimatedHours: dbCourse.estimated_hours || 0,
         coverImage:
-          dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_01.png",
+          dbCourse.cover_image ||
+          "/courses/gcprof-ai-academy_logo_01.png",
         published: dbCourse.published ?? true,
         allowedClasses: allowedClassesNames,
 
-        // ✅ Inseriamo i campi prezzo e is_paid nel mapping ritornato
         price: numPrice,
         is_paid: isPaidCourse,
         isPaid: isPaidCourse,
 
-        quiz_assignments: associatedQuizzes.map((qa: any) => ({
-          id: qa.id,
-          quiz_id: qa.quiz_id,
-          quiz_title: qa.quiz_title,
-          due_at: qa.due_at,
-          quiz: {
-            id: qa.quiz_id,
-            title: qa.quiz_title,
-          },
-        })),
-        quizAssignments: associatedQuizzes.map((qa: any) => ({
-          id: qa.id,
-          quizId: qa.quiz_id,
-          quizTitle: qa.quiz_title,
-          dueAt: qa.due_at,
-        })),
+        quiz_assignments: mappedAssignments,
+        quizAssignments: mappedAssignments,
 
         modules: sortedModules.map((mod: any) => {
           const sortedLessons = (mod.course_lessons || []).sort(
@@ -220,7 +321,6 @@ export async function getLiveCourses(
               title: les.title,
               duration: les.duration || 15,
               contentType: les.content_type,
-              // Propaghiamo l'anteprima dal modulo padre sia in cammello che con underscore
               isPreview: moduleIsPreview,
               is_preview: moduleIsPreview,
               youtubeUrl:
@@ -228,7 +328,9 @@ export async function getLiveCourses(
                   ? les.external_url || les.video_url
                   : undefined,
               googleDriveUrl:
-                les.content_type === "document" ? les.external_url : undefined,
+                les.content_type === "document"
+                  ? les.external_url
+                  : undefined,
               external_url: les.external_url || "",
               video_url: les.video_url || "",
               content: les.content || "",
@@ -238,33 +340,389 @@ export async function getLiveCourses(
       };
     });
   } catch (err) {
-    logger.error("Eccezione generale durante il fetch dei corsi dal DB:", err);
+    logger.error(
+      "Eccezione generale durante il fetch dei corsi dal DB:",
+      err,
+    );
+    return [];
+  }
+}
+*/
+
+
+export async function getLiveCourses(
+  role?: "admin" | "student",
+): Promise<Course[]> {
+  try {
+    const session = await getCourseUserSession();
+
+    let studentContext: StudentContext | null = null;
+    if (session?.role === "student") {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("user_type, school_track, school_section")
+        .eq("id", session.id)
+        .maybeSingle();
+
+      const userType = profile?.user_type ?? null;
+      let classIds = new Set<string>();
+
+      if (userType === "SCHOOL_STUDENT") {
+        const ids = await getStudentClassIds(session.id);
+        classIds = new Set(ids);
+      }
+
+      studentContext = {
+        userType,
+        track: profile?.school_track ?? null,
+        section: profile?.school_section ?? null,
+        classIds,
+      };
+    }
+
+    const { data: coursesData, error: coursesError } = await supabaseAdmin
+      .from("courses")
+      .select(`
+        id, title, slug, description, category, difficulty, teacher,
+        estimated_hours, cover_image, published, price, is_paid,
+        course_classes ( academy_classes ( name ) ),
+        course_modules (
+          id, title, order_index, is_preview,
+          course_lessons (
+            id, title, content_type, external_url, video_url, content, order_index, duration
+          )
+        )
+      `);
+
+    if (coursesError || !coursesData) return [];
+
+    const quizzesByCourse: Record<string, any[]> = {};
+
+    try {
+      const { data: quizzesData, error: quizzesError } = await supabaseAdmin
+        .from("quiz_assignments")
+        .select(`
+          id, course_id, quiz_id, due_at,
+          quizzes!inner (
+            id, title, status, class_id, school_track, school_section
+          )
+        `);
+
+      if (!quizzesError && quizzesData) {
+        quizzesData.forEach((assignment: any) => {
+          const quizEntity = Array.isArray(assignment.quizzes)
+            ? assignment.quizzes[0]
+            : assignment.quizzes;
+
+          if (!quizEntity?.id || !quizEntity?.title) return;
+
+          // Verifica autorizzazione visibilità quiz
+          const isVisible = isQuizVisibleToUser(
+            {
+              status: quizEntity.status,
+              class_id: quizEntity.class_id,
+              school_track: quizEntity.school_track,
+              school_section: quizEntity.school_section,
+            },
+            session,
+            studentContext
+          );
+
+          if (!isVisible) return;
+
+          if (!quizzesByCourse[assignment.course_id]) {
+            quizzesByCourse[assignment.course_id] = [];
+          }
+
+          quizzesByCourse[assignment.course_id].push({
+            id: assignment.id,
+            quiz_id: quizEntity.id,
+            quizId: quizEntity.id,
+            quiz_title: quizEntity.title,
+            quizTitle: quizEntity.title,
+            due_at: assignment.due_at,
+            dueAt: assignment.due_at,
+            class_id: quizEntity.class_id ?? null,
+            classId: quizEntity.class_id ?? null,
+            school_track: quizEntity.school_track ?? null,
+            schoolTrack: quizEntity.school_track ?? null,
+            school_section: quizEntity.school_section ?? null,
+            schoolSection: quizEntity.school_section ?? null,
+            quiz: quizEntity,
+          });
+        });
+      }
+    } catch (quizErr) {
+      logger.error("Eccezione recupero quiz in getLiveCourses:", quizErr);
+    }
+
+    return coursesData.map((dbCourse: any) => {
+      const sortedModules = (dbCourse.course_modules || []).sort(
+        (a: any, b: any) => a.order_index - b.order_index,
+      );
+
+      const allowedClassesNames = (dbCourse.course_classes || [])
+        .map((cc: any) => cc.academy_classes?.name)
+        .filter(Boolean);
+
+      const associatedQuizzes = quizzesByCourse[dbCourse.id] || [];
+      const numPrice = dbCourse.price ? parseFloat(String(dbCourse.price)) : 0;
+      const isPaidCourse = dbCourse.is_paid ?? (numPrice > 0);
+
+      const mappedAssignments = associatedQuizzes.map((qa: any) => ({
+        id: qa.id,
+        quiz_id: qa.quiz_id,
+        quizId: qa.quiz_id,
+        quiz_title: qa.quiz_title,
+        quizTitle: qa.quiz_title,
+        due_at: qa.due_at,
+        dueAt: qa.due_at,
+        class_id: qa.class_id ?? undefined,
+        classId: qa.class_id ?? undefined,
+        school_track: qa.school_track ?? undefined,
+        schoolTrack: qa.school_track ?? undefined,
+        school_section: qa.school_section ?? undefined,
+        schoolSection: qa.school_section ?? undefined,
+      }));
+
+      return {
+        id: dbCourse.id,
+        title: dbCourse.title,
+        slug: dbCourse.slug || "",
+        description: dbCourse.description || "",
+        category: dbCourse.category || "Informatica",
+        difficulty: dbCourse.difficulty || "Facile",
+        teacher: dbCourse.teacher || process.env.NEXT_PUBLIC_DEFAULT_TEACHER || "Prof. G. Carnabuci",
+        estimatedHours: dbCourse.estimated_hours || 0,
+        coverImage: dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_01.png",
+        published: dbCourse.published ?? true,
+        allowedClasses: allowedClassesNames,
+        price: numPrice,
+        is_paid: isPaidCourse,
+        isPaid: isPaidCourse,
+        quiz_assignments: mappedAssignments,
+        quizAssignments: mappedAssignments,
+        modules: sortedModules.map((mod: any) => ({
+          id: mod.id,
+          title: mod.title,
+          isPreview: Boolean(mod.is_preview),
+          is_preview: Boolean(mod.is_preview),
+          lessons: (mod.course_lessons || [])
+            .sort((a: any, b: any) => a.order_index - b.order_index)
+            .map((les: any) => ({
+              id: les.id,
+              title: les.title,
+              duration: les.duration || 15,
+              contentType: les.content_type,
+              isPreview: Boolean(mod.is_preview),
+              is_preview: Boolean(mod.is_preview),
+              youtubeUrl: les.content_type === "video" ? les.external_url || les.video_url : undefined,
+              googleDriveUrl: les.content_type === "document" ? les.external_url : undefined,
+              external_url: les.external_url || "",
+              video_url: les.video_url || "",
+              content: les.content || "",
+            })),
+        })),
+      };
+    });
+  } catch (err) {
+    logger.error("Eccezione generale getLiveCourses:", err);
     return [];
   }
 }
 
-/**
- * 🎯 NUOVA: Recupera i dettagli completi di un SINGOLO corso (comprensivo di `content` per le lezioni).
- * Da utilizzare esclusivamente nella pagina di dettaglio/fruizione del corso.
- */
+
+
+
+/*🎯 Recupera i dettagli completi di un SINGOLO corso*/
+
 export async function getCourseDetails(
   courseIdOrSlug: string,
 ): Promise<Course | null> {
   try {
     const isUuid =
-      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
-        .test(courseIdOrSlug);
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        courseIdOrSlug,
+      );
 
     let query = supabaseAdmin.from("courses").select(`
-        id, 
-        title, 
-        slug, 
-        description, 
-        category, 
-        difficulty, 
-        teacher, 
-        estimated_hours, 
-        cover_image, 
+        id, title, slug, description, category, difficulty, teacher,
+        estimated_hours, cover_image, published, price, is_paid,
+        course_classes ( academy_classes ( name ) ),
+        course_modules (
+          id, title, order_index, is_preview,
+          course_lessons (
+            id, title, content_type, external_url, video_url, content, order_index, duration
+          )
+        )
+      `);
+
+    query = isUuid ? query.eq("id", courseIdOrSlug) : query.eq("slug", courseIdOrSlug);
+
+    const { data: dbCourse, error } = await query.single();
+    if (error || !dbCourse) return null;
+
+    // Sessione e profilo studente
+    const session = await getCourseUserSession();
+    let studentContext: StudentContext | null = null;
+
+    if (session?.role === "student") {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("user_type, school_track, school_section")
+        .eq("id", session.id)
+        .maybeSingle();
+
+      const userType = profile?.user_type ?? null;
+      let classIds = new Set<string>();
+
+      if (userType === "SCHOOL_STUDENT") {
+        const ids = await getStudentClassIds(session.id);
+        classIds = new Set(ids);
+      }
+
+      studentContext = {
+        userType,
+        track: profile?.school_track ?? null,
+        section: profile?.school_section ?? null,
+        classIds,
+      };
+    }
+
+    // Recupero e filtraggio quiz del corso
+    let visibleQuizAssignments: any[] = [];
+    const { data: quizAssignmentsData, error: quizAssignmentsError } =
+      await supabaseAdmin
+        .from("quiz_assignments")
+        .select(`
+          id, course_id, quiz_id, due_at, is_visible,
+          quizzes!inner (
+            id, title, status, class_id, school_track, school_section
+          )
+        `)
+        .eq("course_id", dbCourse.id);
+
+    if (!quizAssignmentsError && quizAssignmentsData) {
+      visibleQuizAssignments = quizAssignmentsData.filter((assignment: any) => {
+        const quizEntity = Array.isArray(assignment.quizzes)
+          ? assignment.quizzes[0]
+          : assignment.quizzes;
+
+        if (!quizEntity?.id || !quizEntity?.title) return false;
+
+        return isQuizVisibleToUser(
+          {
+            status: quizEntity.status,
+            class_id: quizEntity.class_id,
+            school_track: quizEntity.school_track,
+            school_section: quizEntity.school_section,
+          },
+          session,
+          studentContext
+        );
+      });
+    }
+
+    const sortedModules = (dbCourse.course_modules || []).sort(
+      (a: any, b: any) => a.order_index - b.order_index,
+    );
+
+    const allowedClassesNames = (dbCourse.course_classes || [])
+      .map((cc: any) => cc.academy_classes?.name)
+      .filter(Boolean);
+
+    const numPrice = dbCourse.price ? parseFloat(String(dbCourse.price)) : 0;
+    const isPaidCourse = dbCourse.is_paid ?? (numPrice > 0);
+
+    const mappedQuizAssignments = visibleQuizAssignments.map(
+      (assignment: any) => {
+        const quizEntity = Array.isArray(assignment.quizzes)
+          ? assignment.quizzes[0]
+          : assignment.quizzes;
+
+        return {
+          id: assignment.id,
+          quiz_id: assignment.quiz_id,
+          quizId: assignment.quiz_id,
+          quiz_title: quizEntity.title,
+          quizTitle: quizEntity.title,
+          due_at: assignment.due_at,
+          dueAt: assignment.due_at,
+          class_id: quizEntity.class_id ?? undefined,
+          classId: quizEntity.class_id ?? undefined,
+          school_track: quizEntity.school_track ?? undefined,
+          schoolTrack: quizEntity.school_track ?? undefined,
+          school_section: quizEntity.school_section ?? undefined,
+          schoolSection: quizEntity.school_section ?? undefined,
+        };
+      },
+    );
+
+    return {
+      id: dbCourse.id,
+      title: dbCourse.title,
+      slug: dbCourse.slug || "",
+      description: dbCourse.description || "",
+      category: dbCourse.category || "Informatica",
+      difficulty: dbCourse.difficulty || "Facile",
+      teacher: dbCourse.teacher || process.env.NEXT_PUBLIC_DEFAULT_TEACHER || "Prof. G. Carnabuci",
+      estimatedHours: dbCourse.estimated_hours || 0,
+      coverImage: dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_01.png",
+      published: dbCourse.published ?? true,
+      allowedClasses: allowedClassesNames,
+      price: numPrice,
+      is_paid: isPaidCourse,
+      isPaid: isPaidCourse,
+      quiz_assignments: mappedQuizAssignments,
+      quizAssignments: mappedQuizAssignments,
+      modules: sortedModules.map((mod: any) => ({
+        id: mod.id,
+        title: mod.title,
+        isPreview: Boolean(mod.is_preview),
+        is_preview: Boolean(mod.is_preview),
+        lessons: (mod.course_lessons || [])
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((les: any) => ({
+            id: les.id,
+            title: les.title,
+            duration: les.duration || 15,
+            contentType: les.content_type,
+            isPreview: Boolean(mod.is_preview),
+            is_preview: Boolean(mod.is_preview),
+            youtubeUrl: les.content_type === "video" ? les.external_url || les.video_url : undefined,
+            googleDriveUrl: les.content_type === "document" ? les.external_url : undefined,
+            external_url: les.external_url || "",
+            video_url: les.video_url || "",
+            content: les.content || "",
+          })),
+      })),
+    };
+  } catch (err) {
+    logger.error("Eccezione recupero dettaglio corso:", err);
+    return null;
+  }
+}
+
+/*
+export async function getCourseDetails(
+  courseIdOrSlug: string,
+): Promise<Course | null> {
+  try {
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        courseIdOrSlug,
+      );
+
+    let query = supabaseAdmin.from("courses").select(`
+        id,
+        title,
+        slug,
+        description,
+        category,
+        difficulty,
+        teacher,
+        estimated_hours,
+        cover_image,
         published,
         price,
         is_paid,
@@ -272,8 +730,8 @@ export async function getCourseDetails(
           academy_classes ( name )
         ),
         course_modules (
-          id, 
-          title, 
+          id,
+          title,
           order_index,
           is_preview,
           course_lessons (
@@ -296,8 +754,133 @@ export async function getCourseDetails(
     const { data: dbCourse, error } = await query.single();
 
     if (error || !dbCourse) {
-      logger.error("Errore recupero dettaglio corso:", error?.message);
+      logger.error(
+        "Errore recupero dettaglio corso:",
+        error?.message,
+      );
       return null;
+    }
+
+    const session = await getCourseUserSession();
+
+    let allowedStudentClassIds = new Set<string>();
+    let studentUserType: string | null = null;
+    let studentTrack: string | null = null;
+    let studentSection: string | null = null;
+
+    if (session?.role === "student") {
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .select("user_type, school_track, school_section")
+        .eq("id", session.id)
+        .maybeSingle();
+
+      if (profileError) {
+        logger.warn(
+          `Impossibile verificare profilo per ${session.id}:`,
+          profileError.message,
+        );
+      } else {
+        studentUserType = profile?.user_type ?? null;
+        studentTrack = profile?.school_track ?? null;
+        studentSection = profile?.school_section ?? null;
+      }
+
+      if (studentUserType === "SCHOOL_STUDENT") {
+        const classIds = await getStudentClassIds(session.id);
+        allowedStudentClassIds = new Set(classIds);
+      }
+    }
+
+    let visibleQuizAssignments: any[] = [];
+
+    try {
+      const { data: quizAssignmentsData, error: quizAssignmentsError } =
+        await supabaseAdmin
+          .from("quiz_assignments")
+          .select(`
+            id,
+            course_id,
+            quiz_id,
+            due_at,
+            is_visible,
+            quizzes!inner (
+              id,
+              title,
+              status,
+              class_id,
+              school_track,
+              school_section
+            )
+          `)
+          .eq("course_id", dbCourse.id);
+
+      if (quizAssignmentsError) {
+        logger.warn(
+          `Errore recupero quiz del corso ${dbCourse.id}:`,
+          quizAssignmentsError.message,
+        );
+      } else {
+        visibleQuizAssignments = (quizAssignmentsData ?? []).filter(
+          (assignment: any) => {
+            const quizEntity = Array.isArray(assignment.quizzes)
+              ? assignment.quizzes[0]
+              : assignment.quizzes;
+
+            if (!quizEntity?.id || !quizEntity?.title) {
+              return false;
+            }
+
+            // Manteniamo la regola: i quiz non attivi non vengono mostrati agli studenti
+            if (
+              session?.role === "student" &&
+              quizEntity.status !== "active"
+            ) {
+              return false;
+            }
+
+            const quizClassId = quizEntity.class_id ?? null;
+            const quizTrack = quizEntity.school_track ?? null;
+            const quizSection = quizEntity.school_section ?? null;
+
+            // A. Quiz senza restrizione
+            if (!quizClassId && !quizTrack && !quizSection) {
+              return true;
+            }
+
+            // C. Admin bypass
+            if (session?.role === "admin") {
+              return true;
+            }
+
+            // D. Utente non studente interno: non vede quiz con restrizioni
+            if (
+              session?.role !== "student" ||
+              studentUserType !== "SCHOOL_STUDENT"
+            ) {
+              return false;
+            }
+
+            // B. Quiz con restrizione: verifichiamo la tripletta completa
+            const matchesClass = quizClassId
+              ? allowedStudentClassIds.has(quizClassId)
+              : true;
+            const matchesTrack = quizTrack
+              ? studentTrack === quizTrack
+              : true;
+            const matchesSection = quizSection
+              ? studentSection === quizSection
+              : true;
+
+            return matchesClass && matchesTrack && matchesSection;
+          },
+        );
+      }
+    } catch (quizError) {
+      logger.error(
+        `Eccezione durante recupero/filtraggio quiz del corso ${dbCourse.id}:`,
+        quizError,
+      );
     }
 
     const sortedModules = (dbCourse.course_modules || []).sort(
@@ -315,6 +898,30 @@ export async function getCourseDetails(
 
     const isPaidCourse = dbCourse.is_paid ?? (numPrice > 0);
 
+    const mappedQuizAssignments = visibleQuizAssignments.map(
+      (assignment: any) => {
+        const quizEntity = Array.isArray(assignment.quizzes)
+          ? assignment.quizzes[0]
+          : assignment.quizzes;
+
+        return {
+          id: assignment.id,
+          quiz_id: assignment.quiz_id,
+          quizId: assignment.quiz_id,
+          quiz_title: quizEntity.title,
+          quizTitle: quizEntity.title,
+          due_at: assignment.due_at,
+          dueAt: assignment.due_at,
+          class_id: quizEntity.class_id ?? undefined,
+          classId: quizEntity.class_id ?? undefined,
+          school_track: quizEntity.school_track ?? undefined,
+          schoolTrack: quizEntity.school_track ?? undefined,
+          school_section: quizEntity.school_section ?? undefined,
+          schoolSection: quizEntity.school_section ?? undefined,
+        };
+      },
+    );
+
     return {
       id: dbCourse.id,
       title: dbCourse.title,
@@ -328,16 +935,22 @@ export async function getCourseDetails(
         "Prof. G. Carnabuci",
       estimatedHours: dbCourse.estimated_hours || 0,
       coverImage:
-        dbCourse.cover_image || "/courses/gcprof-ai-academy_logo_01.png",
+        dbCourse.cover_image ||
+        "/courses/gcprof-ai-academy_logo_01.png",
       published: dbCourse.published ?? true,
       allowedClasses: allowedClassesNames,
       price: numPrice,
       is_paid: isPaidCourse,
       isPaid: isPaidCourse,
+
+      quiz_assignments: mappedQuizAssignments,
+      quizAssignments: mappedQuizAssignments,
+
       modules: sortedModules.map((mod: any) => {
         const sortedLessons = (mod.course_lessons || []).sort(
           (a: any, b: any) => a.order_index - b.order_index,
         );
+
         const moduleIsPreview = Boolean(mod.is_preview);
 
         return {
@@ -357,10 +970,12 @@ export async function getCourseDetails(
                 ? les.external_url || les.video_url
                 : undefined,
             googleDriveUrl:
-              les.content_type === "document" ? les.external_url : undefined,
+              les.content_type === "document"
+                ? les.external_url
+                : undefined,
             external_url: les.external_url || "",
             video_url: les.video_url || "",
-            content: les.content || "", // 🟢 RESTITUITO PER IL SINGOLO CORSO
+            content: les.content || "",
           })),
         };
       }),
@@ -371,15 +986,20 @@ export async function getCourseDetails(
   }
 }
 
+*/
+
 /* ============================================================================
  * 🟢 CRUD: CORSI (COURSES)
  * ========================================================================== */
 
-export async function upsertCourse(course: Partial<Course> & Record<string, any>) {
+export async function upsertCourse(
+  course: Partial<Course> & Record<string, any>,
+) {
   const payload: Record<string, any> = {
     title: course.title,
     slug:
-      course.slug || (course.title ? generateSlug(course.title) : undefined),
+      course.slug ||
+      (course.title ? generateSlug(course.title) : undefined),
     description: course.description,
     category: course.category,
     difficulty: course.difficulty,
@@ -389,10 +1009,10 @@ export async function upsertCourse(course: Partial<Course> & Record<string, any>
     published: course.published,
   };
 
-  // ✅ Gestione salvataggio prezzo e flag a pagamento
   if (course.price !== undefined) {
     payload.price = course.price;
   }
+
   if (course.is_paid !== undefined) {
     payload.is_paid = course.is_paid;
   } else if (course.price !== undefined) {
@@ -409,7 +1029,9 @@ export async function upsertCourse(course: Partial<Course> & Record<string, any>
     .select()
     .single();
 
-  if (error) throw new Error(`Errore salvataggio corso: ${error.message}`);
+  if (error) {
+    throw new Error(`Errore salvataggio corso: ${error.message}`);
+  }
 
   if (course.allowedClasses && data?.id) {
     await supabaseAdmin
@@ -428,7 +1050,10 @@ export async function upsertCourse(course: Partial<Course> & Record<string, any>
           course_id: data.id,
           class_id: c.id,
         }));
-        await supabaseAdmin.from("course_classes").insert(inserts);
+
+        await supabaseAdmin
+          .from("course_classes")
+          .insert(inserts);
       }
     }
   }
@@ -458,7 +1083,12 @@ export async function deleteCourse(courseId: string | number) {
 
 export async function upsertModule(
   courseId: string | number,
-  mod: { id?: string | number; title: string; orderIndex: number; isPreview?: boolean },
+  mod: {
+    id?: string | number;
+    title: string;
+    orderIndex: number;
+    isPreview?: boolean;
+  },
 ) {
   const payload: Record<string, any> = {
     course_id: courseId,
@@ -480,7 +1110,10 @@ export async function upsertModule(
     .select()
     .single();
 
-  if (error) throw new Error(`Errore salvataggio modulo: ${error.message}`);
+  if (error) {
+    throw new Error(`Errore salvataggio modulo: ${error.message}`);
+  }
+
   return data;
 }
 
@@ -489,7 +1122,10 @@ export async function deleteModule(moduleId: string | number) {
     .from("course_modules")
     .delete()
     .eq("id", moduleId);
-  if (error) throw new Error(`Errore eliminazione modulo: ${error.message}`);
+
+  if (error) {
+    throw new Error(`Errore eliminazione modulo: ${error.message}`);
+  }
 }
 
 /* ============================================================================
@@ -499,7 +1135,12 @@ export async function deleteModule(moduleId: string | number) {
 interface UpsertLessonInput {
   id?: string | number;
   title: string;
-  contentType: "video" | "document" | "colab" | "markdown" | "sandbox";
+  contentType:
+    | "video"
+    | "document"
+    | "colab"
+    | "markdown"
+    | "sandbox";
   externalUrl: string;
   content?: string;
   orderIndex: number;
@@ -531,7 +1172,10 @@ export async function upsertLesson(
     .select()
     .single();
 
-  if (error) throw new Error(`Errore salvataggio lezione: ${error.message}`);
+  if (error) {
+    throw new Error(`Errore salvataggio lezione: ${error.message}`);
+  }
+
   return data;
 }
 
@@ -540,7 +1184,10 @@ export async function deleteLesson(lessonId: string | number) {
     .from("course_lessons")
     .delete()
     .eq("id", lessonId);
-  if (error) throw new Error(`Errore eliminazione lezione: ${error.message}`);
+
+  if (error) {
+    throw new Error(`Errore eliminazione lezione: ${error.message}`);
+  }
 }
 
 /* ============================================================================
@@ -557,18 +1204,23 @@ export async function getLiveCategories(): Promise<string[]> {
     logger.error("Errore recupero categorie:", error.message);
     return [];
   }
+
   return ["Tutti", ...data.map((c: any) => c.name)];
 }
 
 export async function createCategory(name: string) {
   const slug = generateSlug(name);
+
   const { data, error } = await supabaseAdmin
     .from("course_categories")
     .insert([{ name, slug }])
     .select()
     .single();
 
-  if (error) throw new Error(`Errore creazione categoria: ${error.message}`);
+  if (error) {
+    throw new Error(`Errore creazione categoria: ${error.message}`);
+  }
+
   return data;
 }
 
@@ -597,17 +1249,30 @@ export async function getLiveClasses(): Promise<string[]> {
     logger.error("Errore recupero classi:", error.message);
     return [];
   }
+
   return data.map((c: any) => c.name);
 }
 
-export async function createSchoolClass(name: string, description?: string) {
+export async function createSchoolClass(
+  name: string,
+  description?: string,
+) {
   const { data, error } = await supabaseAdmin
     .from("academy_classes")
-    .insert([{ name: name.trim(), slug: generateSlug(name), description }])
+    .insert([
+      {
+        name: name.trim(),
+        slug: generateSlug(name),
+        description,
+      },
+    ])
     .select()
     .single();
 
-  if (error) throw new Error(`Errore creazione classe: ${error.message}`);
+  if (error) {
+    throw new Error(`Errore creazione classe: ${error.message}`);
+  }
+
   return data;
 }
 
@@ -632,7 +1297,10 @@ export async function upsertSchoolClass(
     .select()
     .single();
 
-  if (error) throw new Error(`Errore salvataggio classe: ${error.message}`);
+  if (error) {
+    throw new Error(`Errore salvataggio classe: ${error.message}`);
+  }
+
   return data;
 }
 
@@ -657,7 +1325,10 @@ export async function getClassDetails(className: string) {
     .maybeSingle();
 
   if (error) return { description: "" };
-  return { description: data?.description || "" };
+
+  return {
+    description: data?.description || "",
+  };
 }
 
 /**
@@ -713,4 +1384,58 @@ export async function getCourseClasses() {
   }
 
   return data || [];
+}
+
+/**
+ * Determina se un quiz è visibile all'utente corrente in base alla sessione,
+ * allo stato del quiz e alle restrizioni della tripletta (classe, indirizzo, sezione).
+ */
+function isQuizVisibleToUser(
+  quiz: {
+    status: string;
+    class_id?: string | null;
+    school_track?: string | null;
+    school_section?: string | null;
+  },
+  session: CourseUserSession | null,
+  studentContext?: StudentContext | null
+): boolean {
+  // 1. Solo gli admin vedono i quiz non attivi (draft, hidden, ecc.)
+  if (session?.role !== "admin" && quiz.status !== "active") {
+    return false;
+  }
+
+  // 2. Admin bypassa tutte le restrizioni
+  if (session?.role === "admin") {
+    return true;
+  }
+
+  // 3. Quiz senza restrizioni -> visibile a tutti
+  const hasRestriction = Boolean(
+    quiz.class_id || quiz.school_track || quiz.school_section
+  );
+  if (!hasRestriction) {
+    return true;
+  }
+
+  // 4. Quiz con restrizioni -> richiede uno studente scolastico autenticato
+  if (
+    session?.role !== "student" ||
+    studentContext?.userType !== "SCHOOL_STUDENT"
+  ) {
+    return false;
+  }
+
+  // 5. Verifica esatta della tripletta
+  const matchesClass = quiz.class_id
+    ? studentContext.classIds.has(quiz.class_id)
+    : true;
+  const matchesTrack = quiz.school_track
+    ? studentContext.track === quiz.school_track
+    : true;
+  const matchesSection = quiz.school_section
+    ? studentContext.section === quiz.school_section
+    : true;
+
+  return matchesClass && matchesTrack && matchesSection;
 }

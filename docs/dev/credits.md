@@ -1,6 +1,6 @@
 # Credits & Tecnologie 🚀
 
-Benvenuto nella pagina Credits di **gcprof-ai-academy**, la piattaforma digitale dedicata alla formazione informatica e tecnologica per studenti e docenti.
+Benvenuto nella pagina Credits di **gcprof-academy**, la piattaforma digitale dedicata alla formazione informatica e tecnologica per studenti e docenti.
 
 Un ambiente moderno progettato per integrare apprendimento, contenuti multimediali e strumenti innovativi con il supporto dell'Intelligenza Artificiale.
 
@@ -8,7 +8,7 @@ Un ambiente moderno progettato per integrare apprendimento, contenuti multimedia
 
 ## 🎯 La Mission della Piattaforma
 
-**gcprof-ai-academy** nasce con l'obiettivo di rendere l'apprendimento dell'informatica più semplice, coinvolgente e accessibile.
+**gcprof-academy** nasce con l'obiettivo di rendere l'apprendimento dell'informatica più semplice, coinvolgente e accessibile.
 
 La piattaforma permette di:
 
@@ -84,7 +84,7 @@ L'Intelligenza Artificiale viene utilizzata come supporto alla progettazione, al
 
 ## 💎 Ringraziamenti
 
-Un ringraziamento a tutti coloro che contribuiscono alla crescita di **gcprof-ai-academy**:
+Un ringraziamento a tutti coloro che contribuiscono alla crescita di **gcprof-academy**:
 
 - studenti che utilizzano la piattaforma ogni giorno;
 - docenti che sperimentano nuove modalità di insegnamento;

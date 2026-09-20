@@ -125,7 +125,7 @@ export async function getAdminDashboardStats(
     getCourseClasses(),
     supabaseAdmin
       .from("user_sessions")
-      .select("login_at, user_agent, session_duration_seconds, user_id")
+      .select("login_at, user_agent, session_duration_seconds, profile_id")
       .gte("login_at", twoWeeksAgo.toISOString()),
     supabaseAdmin
       .from("profile_lessons_progress")
@@ -147,6 +147,12 @@ export async function getAdminDashboardStats(
       .eq("status", "graded"),
   ]);
 
+  if (sessionsResponse.error) {
+    logger.error(
+      "❌ Errore Supabase user_sessions:",
+      sessionsResponse.error,
+    );
+  }
   if (progressResponse.error) {
     logger.error(
       "❌ Errore Supabase profile_lessons_progress:",
@@ -204,12 +210,14 @@ export async function getAdminDashboardStats(
   );
 
   // Filtra dataset secondari solo se sono presenti filtri utenti
-  const sessions = (sessionsResponse.data ?? []).filter(
-    (s: any) =>
+  const sessions = (sessionsResponse.data ?? []).filter((s: any) => {
+    const sessionUserId = String(s.profile_id || s.user_id || "");
+    return (
       !hasActiveUserFilter ||
-      !s.user_id ||
-      filteredUserIds.has(String(s.user_id)),
-  );
+      !sessionUserId ||
+      filteredUserIds.has(sessionUserId)
+    );
+  });
 
   const lessonProgress = (progressResponse.data ?? []).filter(
     (p: any) =>
