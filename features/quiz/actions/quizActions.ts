@@ -75,10 +75,10 @@ async function assertStudentCanAccessQuiz(
 
   const supabase = getSupabaseAdmin();
 
-  // 2. Recupera il profilo dello studente comprensivo della tripletta
+  // 2. Recupera il profilo dello studente (school_track e school_section)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("user_type, class_id, school_track, school_section")
+    .select("user_type, school_track, school_section")
     .eq("id", studentId)
     .maybeSingle();
 
@@ -97,23 +97,24 @@ async function assertStudentCanAccessQuiz(
     );
   }
 
-  // 3. Controllo: class_id (se specificato nel quiz)
+  // 3. Controllo: class_id (se specificato nel quiz, tramite la tabella associativa profile_classes)
   if (classId) {
-    const matchesDirectClass = profile.class_id === classId;
+    const { data: membership, error: classError } = await supabase
+      .from("profile_classes")
+      .select("class_id")
+      .eq("profile_id", studentId)
+      .eq("class_id", classId)
+      .maybeSingle();
 
-    let matchesClassMembership = false;
-    if (!matchesDirectClass) {
-      const { data: membership } = await supabase
-        .from("profile_classes")
-        .select("profile_id")
-        .eq("profile_id", studentId)
-        .eq("class_id", classId)
-        .maybeSingle();
-
-      matchesClassMembership = !!membership;
+    if (classError) {
+      logger.error(
+        `Errore verifica appartenenza classe per lo studente ${studentId}`,
+        classError,
+      );
+      throw new Error("Impossibile verificare la classe dello studente.");
     }
 
-    if (!matchesDirectClass && !matchesClassMembership) {
+    if (!membership) {
       throw new Error(
         "Accesso negato: questo quiz è riservato ad un'altra classe.",
       );
@@ -334,15 +335,12 @@ export async function submitStudentAttemptAction(
       await quizRepository.findFullQuizStructure(quizId);
 
     /**
-     * Controllo obbligatorio dell'accesso alla classe.
+     * Controllo obbligatorio dell'accesso alla classe e tripletta.
      *
      * Deve avvenire prima di:
      * - hasStudentAttempted()
      * - calcolo del punteggio
      * - createAttempt()
-     *
-     * In questo modo una chiamata diretta alla Server Action
-     * non può aggirare la restrizione del quiz.
      */
     await assertStudentCanAccessQuiz(quiz, studentSession.id);
 

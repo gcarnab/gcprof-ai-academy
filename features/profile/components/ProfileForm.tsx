@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import {
   updateProfileText,
@@ -35,8 +35,9 @@ export default function ProfileForm() {
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // 🎯 AGGIUNGI QUESTO HOOK per evitare lo "sbiancamento" dei campi
-  React.useEffect(() => {
+
+  // Sincronizzazione campi all'aggiornamento dell'utente
+  useEffect(() => {
     if (user) {
       setFirstName(user.firstName || "");
       setLastName(user.lastName || "");
@@ -52,7 +53,19 @@ export default function ProfileForm() {
     );
   }
 
-  // Gestione dell'aggiornamento dei dati testuali
+  // Estrazione dati scolastici con fallback
+  const currentClass =
+    user.classes && user.classes.length > 0
+      ? user.classes.join(", ")
+      : (user as any).className || (user as any).class_name || "Non assegnata";
+
+  const schoolTrack =
+    user.schoolTrack || (user as any).school_track || "Non specificato";
+
+  const schoolSection =
+    user.schoolSection || (user as any).school_section || "Non specificata";
+
+  // Gestione aggiornamento dati testuali
   const handleSaveText = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingText(true);
@@ -66,7 +79,6 @@ export default function ProfileForm() {
         displayName,
       });
 
-      // Forza il refresh del contesto globale di autenticazione
       await refreshSession();
       setMessage({ type: "success", text: "Profilo aggiornato con successo!" });
     } catch (err: any) {
@@ -79,7 +91,7 @@ export default function ProfileForm() {
     }
   };
 
-  // Gestione della selezione dell'immagine dal file system ed esecuzione dell'upload
+  // Gestione upload avatar
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -94,7 +106,6 @@ export default function ProfileForm() {
     try {
       const result = await uploadAvatar(user.id, formData);
       if (result.success) {
-        // Aggiorna la sessione per mostrare il nuovo avatar ovunque (es. Navbar)
         await refreshSession();
         setMessage({ type: "success", text: "Foto del profilo aggiornata!" });
       }
@@ -105,13 +116,13 @@ export default function ProfileForm() {
       });
     } finally {
       setIsUploadingAvatar(false);
-      if (fileInputRef.current) fileInputRef.current.value = ""; // Reset dell'input
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto p-4">
-      {/* 🔔 Feedback visivo per l'utente */}
+      {/* 🔔 Messaggio di Feedback */}
       {message && (
         <div
           className={`p-4 rounded-lg text-sm font-medium ${
@@ -124,13 +135,60 @@ export default function ProfileForm() {
         </div>
       )}
 
-      {/* 📸 Sezione Gestione Immagine Profilo (Avatar) */}
+      {/* 🎓 SEZIONE 1: INQUADRAMENTO SCOLASTICO (SOLA LETTURA) */}
+      <Card className="border-primary/20 bg-muted/10">
+        <CardHeader>
+          <CardTitle className="text-lg">Inquadramento Scolastico</CardTitle>
+          <CardDescription>
+            Dettagli della tua iscrizione scolastica (gestiti dalla segreteria).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="class">Classe</Label>
+            <Input
+              id="class"
+              type="text"
+              disabled
+              value={currentClass}
+              className="bg-muted text-muted-foreground cursor-not-allowed font-medium"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="schoolTrack">Indirizzo</Label>
+            <Input
+              id="schoolTrack"
+              type="text"
+              disabled
+              value={schoolTrack}
+              className="bg-muted text-muted-foreground cursor-not-allowed font-medium uppercase"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="schoolSection">Sezione</Label>
+            <Input
+              id="schoolSection"
+              type="text"
+              disabled
+              value={
+                schoolSection !== "Non specificata" && !schoolSection.startsWith("Sezione")
+                  ? `Sezione ${schoolSection}`
+                  : schoolSection
+              }
+              className="bg-muted text-muted-foreground cursor-not-allowed font-medium"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 📸 SEZIONE 2: AVATAR */}
       <Card>
         <CardHeader>
           <CardTitle>Foto del Profilo</CardTitle>
           <CardDescription>
-            Visualizza o modifica la tua immagine identificativa sulla
-            piattaforma.
+            Visualizza o modifica la tua immagine identificativa.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center gap-6">
@@ -143,7 +201,7 @@ export default function ProfileForm() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              user.displayName.substring(0, 2)
+              user.displayName?.substring(0, 2) || "U"
             )}
           </div>
 
@@ -166,13 +224,13 @@ export default function ProfileForm() {
                 : "Scegli una nuova foto"}
             </Button>
             <p className="text-xs text-muted-foreground">
-              Formati supportati: JPG, JPEG, PNG, GIF. Dimensione massima 1MB.
+              Formati supportati: JPG, JPEG, PNG, GIF. Max 1MB.
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* 📝 Sezione Dati Personali del Profilo */}
+      {/* 📝 SEZIONE 3: DATI PERSONALI */}
       <form onSubmit={handleSaveText}>
         <Card>
           <CardHeader>
@@ -216,7 +274,7 @@ export default function ProfileForm() {
                 required
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Es. Prof. Carnabuci"
+                placeholder="Es. Mario Rossi"
               />
             </div>
 
@@ -246,20 +304,6 @@ export default function ProfileForm() {
                 />
               </div>
             </div>
-
-            {user.role === "student" &&
-              user.classes &&
-              user.classes.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Classi di Appartenenza</Label>
-                  <Input
-                    type="text"
-                    disabled
-                    value={user.classes.join(", ")}
-                    className="bg-muted text-muted-foreground cursor-not-allowed"
-                  />
-                </div>
-              )}
           </CardContent>
           <CardFooter className="flex justify-end">
             <Button type="submit" disabled={isSavingText}>
