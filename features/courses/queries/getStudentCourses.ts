@@ -5,7 +5,8 @@ export async function getStudentCoursesAction(profileId: string) {
   const supabase = getSupabaseAdmin();
 
   try {
-    // 🎯 ALLINEATO: Selezioniamo solo colonne reali presenti nella tabella fisica 'course_lessons'
+    // 🚀 OTTIMIZZATO: Rimossi 'content' ed 'external_url' dal select per evitare
+    // il caricamento di grandi quantitativi di testo (TOAST) non necessari per la dashboard.
     const { data, error } = await supabase
       .from("profile_courses")
       .select(
@@ -31,13 +32,11 @@ export async function getStudentCoursesAction(profileId: string) {
               id,
               title,
               content_type,
-              external_url,
-              content,
               order_index
             )
           )
         )
-      `,
+      `
       )
       .eq("profile_id", profileId)
       .eq("courses.published", true);
@@ -45,7 +44,7 @@ export async function getStudentCoursesAction(profileId: string) {
     if (error) {
       logger.error(
         "Errore nel recupero dei corsi dalla tabella fisica:",
-        error.message,
+        error.message
       );
       return { success: false, error: "Impossibile recuperare i corsi." };
     }
@@ -64,7 +63,7 @@ export async function getStudentCoursesAction(profileId: string) {
         cover_image: item.courses.cover_image,
         published: item.courses.published,
         course_assigned_at: item.enrolled_at,
-        // Passiamo la struttura moduli/lezioni originale alla UI
+        // Passiamo la struttura moduli/lezioni alleggerita alla UI
         modules: item.courses.course_modules || [],
       })) || [];
 
