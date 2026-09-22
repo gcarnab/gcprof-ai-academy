@@ -9,6 +9,11 @@ export class TrackingService {
    * Crea una nuova sessione dopo login riuscito.
    */
   static async createSession(profileId: string) {
+
+    if (process.env.DISABLE_SESSION_TRACKING === "true") {
+      return;
+    }
+
     try {
       const supabase = getSupabaseAdmin();
 
@@ -105,6 +110,10 @@ export class TrackingService {
    * Chiude l'ultima sessione aperta dell'utente.
    */
   static async closeSession(profileId: string) {
+// 🛑 KILL SWITCH: se disabilitato, interrompe subito l'esecuzione
+    if (process.env.DISABLE_SESSION_TRACKING === "true") {
+      return;
+    }    
     try {
       const supabase = getSupabaseAdmin();
 
