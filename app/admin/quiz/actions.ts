@@ -4,6 +4,11 @@ import { logger } from "@/lib/logger";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
+export type QuizTargetUserType =
+  | "EXTERNAL_STUDENT"
+  | "SCHOOL_ONLY"
+  | "ALL";
+
 export interface AssignQuizPayload {
   quizId: string;
   courseId: string;
@@ -13,14 +18,44 @@ export interface AssignQuizPayload {
   isVisible: boolean;
 
   /**
+   * Nuovo modello di targeting.
+   *
+   * - EXTERNAL_STUDENT:
+   *   accesso agli studenti esterni.
+   *
+   * - SCHOOL_ONLY:
+   *   accesso esclusivamente agli studenti scolastici
+   *   appartenenti ad almeno una delle classi assegnate.
+   *
+   * - ALL:
+   *   accesso agli studenti esterni e agli studenti scolastici
+   *   appartenenti ad almeno una delle classi assegnate.
+   */
+  targetUserType?: QuizTargetUserType | null;
+
+  /**
+   * Nuovo modello N:M.
+   *
+   * Contiene gli academy_classes.id associati al quiz.
+   */
+  classIds?: string[] | null;
+
+  /**
+   * LEGACY / COMPATIBILITÀ
+   *
    * academy_classes.id
    *
    * Rappresenta il macro-anno scolastico:
    * PRIME, SECONDE, TERZE, QUARTE, QUINTE.
+   *
+   * Se classIds non è valorizzato, questo valore viene utilizzato
+   * come singola assegnazione.
    */
   classId?: string | null;
 
   /**
+   * LEGACY / COMPATIBILITÀ
+   *
    * Indirizzo di studio.
    *
    * Esempio: LSA, INF, RIM...
@@ -28,6 +63,8 @@ export interface AssignQuizPayload {
   schoolTrack?: string | null;
 
   /**
+   * LEGACY / COMPATIBILITÀ
+   *
    * Sezione della classe.
    *
    * Esempio: A, B, C...
@@ -59,7 +96,50 @@ function normalizeOptionalText(value?: string | null): string | null {
 }
 
 /**
- * Verifica la coerenza della restrizione di classe.
+ * Normalizza e deduplica gli ID delle classi.
+ */
+function normalizeClassIds(
+  classIds?: string[] | null,
+  legacyClassId?: string | null,
+): string[] {
+  const ids = [
+    ...(Array.isArray(classIds) ? classIds : []),
+    ...(legacyClassId ? [legacyClassId] : []),
+  ]
+    .map((classId) => classId?.trim())
+    .filter(
+      (classId): classId is string =>
+        typeof classId === "string" && classId.length > 0,
+    );
+
+  return Array.from(new Set(ids));
+}
+
+/**
+ * Normalizza il tipo di targeting.
+ *
+ * In caso di valore assente o non riconosciuto viene utilizzato ALL,
+ * coerentemente con il DEFAULT presente nella tabella quizzes.
+ */
+function normalizeTargetUserType(
+  targetUserType?: string | null,
+): QuizTargetUserType {
+  if (
+    targetUserType === "EXTERNAL_STUDENT" ||
+    targetUserType === "SCHOOL_ONLY" ||
+    targetUserType === "ALL"
+  ) {
+    return targetUserType;
+  }
+
+  return "ALL";
+}
+
+/**
+ * Verifica la coerenza della restrizione legacy di classe.
+ *
+ * Questa funzione viene mantenuta per compatibilità con il precedente
+ * pannello amministrativo.
  *
  * Una restrizione completa richiede SEMPRE:
  * - classId       -> anno
@@ -67,6 +147,11 @@ function normalizeOptionalText(value?: string | null): string | null {
  * - schoolSection -> sezione
  *
  * Sono invece tutti null quando il quiz non è limitato ad una classe.
+ *
+ * NOTA:
+ * il nuovo modello di accesso NON utilizza questi tre campi come
+ * fonte decisionale. La fonte del nuovo modello è
+ * quiz_class_assignments.
  */
 function validateClassRestriction(
   classId: string | null,
@@ -91,25 +176,37 @@ function validateClassRestriction(
 }
 
 /**
- * Assegna un quiz a un corso, modulo/lezione e opzionalmente
- * limita l'accesso ad una specifica classe scolastica.
+ * Assegna un quiz a un corso, modulo/lezione e configura il nuovo
+ * modello di targeting.
  *
- * La restrizione è composta da:
+ * Nuovo modello:
  *
- * - classId       -> macro-anno (es. QUARTE)
- * - schoolTrack   -> indirizzo (es. LSA)
- * - schoolSection -> sezione (es. B)
+ * target_user_type + quiz_class_assignments
  *
- * Esempio:
+ * Esempi:
  *
- * QUARTE + LSA + B
+ * EXTERNAL_STUDENT
+ *   -> nessuna classe necessaria
  *
- * La restrizione viene salvata direttamente nella tabella quizzes.
+ * SCHOOL_ONLY
+ *   -> una o più classi in quiz_class_assignments
+ *
+ * ALL
+ *   -> studenti esterni + studenti scolastici appartenenti
+ *      alle classi presenti in quiz_class_assignments
  *
  * quiz_assignments contiene esclusivamente i metadati
- * dell'assegnazione (corso, scadenza, visibilità).
+ * dell'assegnazione:
  *
- * NON viene più utilizzato target_class.
+ * - quiz_id
+ * - course_id
+ * - due_at
+ * - is_visible
+ *
+ * I campi legacy class_id/school_track/school_section vengono
+ * mantenuti nel record quizzes per compatibilità e rollback,
+ * ma NON rappresentano la fonte decisionale del nuovo controllo
+ * di accesso.
  */
 export async function assignQuizAction(payload: AssignQuizPayload) {
   const supabase = getSupabaseAdmin();
@@ -121,73 +218,137 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
     lessonId: payload.lessonId,
     dueDate: payload.dueDate,
     isVisible: payload.isVisible,
+    targetUserType: payload.targetUserType,
+    classIds: payload.classIds,
     classId: payload.classId,
     schoolTrack: payload.schoolTrack,
     schoolSection: payload.schoolSection,
   });
 
-  const classId = payload.classId?.trim() || null;
+  const targetUserType = normalizeTargetUserType(
+    payload.targetUserType,
+  );
+
+  const classIds = normalizeClassIds(
+    payload.classIds,
+    payload.classId,
+  );
+
+  /*
+   * I campi legacy vengono ancora normalizzati e mantenuti.
+   *
+   * Per evitare regressioni con il vecchio pannello, se è presente
+   * classId viene utilizzato insieme a schoolTrack/schoolSection
+   * come prima.
+   */
+  const legacyClassId = payload.classId?.trim() || null;
   const schoolTrack = normalizeOptionalText(payload.schoolTrack);
   const schoolSection = normalizeOptionalText(payload.schoolSection);
 
   /*
-   * 1. Verifica coerenza della restrizione.
+   * 1. Compatibilità con il precedente modello.
    *
-   * Non è consentito specificare soltanto anno, indirizzo
-   * oppure sezione.
+   * La validazione legacy viene eseguita solo quando il chiamante
+   * sta effettivamente fornendo uno dei campi legacy.
+   *
+   * Il nuovo modello N:M può invece fornire semplicemente classIds.
    */
-  const restrictionError = validateClassRestriction(
-    classId,
-    schoolTrack,
-    schoolSection,
+  const hasLegacyRestrictionFields = Boolean(
+    legacyClassId || schoolTrack || schoolSection,
   );
 
-  if (restrictionError) {
-    return {
-      success: false,
-      error: restrictionError,
-    };
+  if (hasLegacyRestrictionFields) {
+    const restrictionError = validateClassRestriction(
+      legacyClassId,
+      schoolTrack,
+      schoolSection,
+    );
+
+    if (restrictionError) {
+      return {
+        success: false,
+        error: restrictionError,
+      };
+    }
   }
 
   /*
-   * 2. Se è stata specificata una classe, verifichiamo che
-   *    academy_classes.id esista.
+   * 2. Il targeting EXTERNAL_STUDENT non richiede classi.
+   *
+   * SCHOOL_ONLY e ALL possono invece avere una o più classi.
+   *
+   * Zero assegnazioni NON viene trasformato in accesso pubblico:
+   * il controllo lato lettura stabilisce che uno SCHOOL_STUDENT
+   * non può accedere a SCHOOL_ONLY/ALL senza una classe assegnata.
    */
-  if (classId) {
-    const { data: academyClass, error: classError } = await supabase
+  if (
+    (targetUserType === "SCHOOL_ONLY" ||
+      targetUserType === "ALL") &&
+    classIds.length === 0
+  ) {
+    logger.info(
+      "Quiz configurato senza classi scolastiche:",
+      {
+        quizId: payload.quizId,
+        targetUserType,
+      },
+    );
+  }
+
+  /*
+   * 3. Verifica che tutte le academy_classes selezionate esistano.
+   *
+   * La query viene eseguita in un'unica operazione per evitare
+   * N query in caso di assegnazione multipla.
+   */
+  if (classIds.length > 0) {
+    const { data: academyClasses, error: classesError } = await supabase
       .from("academy_classes")
       .select("id")
-      .eq("id", classId)
-      .maybeSingle();
+      .in("id", classIds);
 
-    if (classError) {
+    if (classesError) {
       logger.error(
-        "Errore durante la verifica della classe target:",
-        classError.message,
+        "Errore durante la verifica delle classi target:",
+        classesError.message,
       );
 
       return {
         success: false,
-        error: "Impossibile verificare la classe selezionata.",
+        error: "Impossibile verificare le classi selezionate.",
       };
     }
 
-    if (!academyClass) {
+    const existingClassIds = new Set(
+      (academyClasses ?? []).map((academyClass) => academyClass.id),
+    );
+
+    const missingClassIds = classIds.filter(
+      (classId) => !existingClassIds.has(classId),
+    );
+
+    if (missingClassIds.length > 0) {
       return {
         success: false,
-        error: "La classe selezionata non esiste.",
+        error:
+          "Una o più classi selezionate non esistono nel sistema.",
       };
     }
   }
 
   /*
-   * 3. Se è stata specificata una restrizione completa, verifichiamo
-   *    che esista realmente almeno uno studente con quella
-   *    combinazione anno + indirizzo + sezione.
+   * 4. Se viene utilizzato il vecchio modello con una restrizione
+   *    completa, verifichiamo che esista realmente almeno uno
+   *    studente con quella combinazione anno + indirizzo + sezione.
    *
-   *    Questo evita di salvare accidentalmente combinazioni inesistenti.
+   *    Questa verifica viene mantenuta esclusivamente per
+   *    compatibilità con il pannello precedente.
    */
-  if (classId && schoolTrack && schoolSection) {
+  if (
+    legacyClassId &&
+    schoolTrack &&
+    schoolSection
+  ) {
     const { data: matchingStudents, error: studentError } = await supabase
       .from("profiles")
       .select(
@@ -202,7 +363,7 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
       )
       .eq("school_track", schoolTrack)
       .eq("school_section", schoolSection)
-      .eq("profile_classes.class_id", classId)
+      .eq("profile_classes.class_id", legacyClassId)
       .limit(1);
 
     if (studentError) {
@@ -230,13 +391,21 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
   }
 
   /*
-   * 4. Aggiorna il quiz.
+   * 5. Aggiorna il quiz.
    *
-   * class_id + school_track + school_section costituiscono
-   * la fonte unica della restrizione di accesso.
+   * target_user_type è la nuova fonte del targeting.
    *
-   * Se il quiz non è ristretto, tutti e tre i valori vengono
-   * impostati a NULL.
+   * I campi legacy vengono mantenuti:
+   * - class_id
+   * - school_track
+   * - school_section
+   *
+   * Non vengono eliminati per garantire compatibilità e rollback.
+   *
+   * In caso di più classi non è possibile rappresentarle tutte
+   * nei vecchi campi; class_id continua quindi a rappresentare
+   * esclusivamente il valore legacy eventualmente fornito dal
+   * chiamante.
    */
   const { error: quizError } = await supabase
     .from("quizzes")
@@ -244,9 +413,13 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
       course_id: payload.courseId,
       module_id: payload.moduleId || null,
       lesson_id: payload.lessonId || null,
-      class_id: classId,
+
+      target_user_type: targetUserType,
+
+      class_id: legacyClassId,
       school_track: schoolTrack,
       school_section: schoolSection,
+
       updated_at: new Date().toISOString(),
     })
     .eq("id", payload.quizId);
@@ -264,7 +437,76 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
   }
 
   /*
-   * 5. Mantiene i metadati dell'assegnazione.
+   * 6. Aggiorna le assegnazioni N:M.
+   *
+   * Prima rimuoviamo le associazioni precedenti del quiz.
+   *
+   * Questo permette di modificare in modo atomico dal punto di vista
+   * applicativo:
+   *
+   * Quiz -> A,B,C
+   *
+   * in:
+   *
+   * Quiz -> A,D
+   *
+   * senza lasciare associazioni obsolete.
+   */
+  const { error: deleteAssignmentsError } = await supabase
+    .from("quiz_class_assignments")
+    .delete()
+    .eq("quiz_id", payload.quizId);
+
+  if (deleteAssignmentsError) {
+    logger.error(
+      "Errore durante la rimozione delle precedenti assegnazioni " +
+        "di classe del quiz:",
+      deleteAssignmentsError.message,
+    );
+
+    return {
+      success: false,
+      error:
+        "Impossibile aggiornare le classi assegnate al quiz.",
+    };
+  }
+
+  /*
+   * 7. Inserisce le nuove assegnazioni N:M.
+   *
+   * Nessuna riga viene inserita per EXTERNAL_STUDENT senza classi.
+   *
+   * Per SCHOOL_ONLY/ALL con zero classi non viene inserita alcuna
+   * associazione: lato accesso server-side lo SCHOOL_STUDENT
+   * rimane quindi correttamente escluso.
+   */
+  if (classIds.length > 0) {
+    const assignmentRows = classIds.map((classId) => ({
+      quiz_id: payload.quizId,
+      class_id: classId,
+    }));
+
+    const { error: insertAssignmentsError } = await supabase
+      .from("quiz_class_assignments")
+      .insert(assignmentRows);
+
+    if (insertAssignmentsError) {
+      logger.error(
+        "Errore durante il salvataggio delle assegnazioni " +
+          "N:M del quiz:",
+        insertAssignmentsError.message,
+      );
+
+      return {
+        success: false,
+        error:
+          "Impossibile salvare le classi assegnate al quiz.",
+      };
+    }
+  }
+
+  /*
+   * 8. Mantiene i metadati dell'assegnazione al corso.
    *
    * La restrizione di classe NON viene salvata in
    * quiz_assignments.
@@ -304,7 +546,7 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
   }
 
   /*
-   * 6. Revalidation.
+   * 9. Revalidation.
    */
   revalidatePath(`/admin/quiz/${payload.quizId}/analytics`);
   revalidatePath("/admin/quiz", "layout");

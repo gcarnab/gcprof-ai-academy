@@ -1,5 +1,9 @@
 import { IQuizRepository } from "../ports/IQuizRepository";
-import { Quiz, QuizStatus } from "../domain/Quiz";
+import {
+  Quiz,
+  QuizStatus,
+  QuizTargetUserType,
+} from "../domain/Quiz";
 import { QuizQuestion } from "../domain/Question";
 import { QuizAttempt } from "../domain/QuizAttempt";
 import { QuizAnswer } from "../domain/QuizAnswer";
@@ -829,6 +833,13 @@ export class SupabaseQuizRepository implements IQuizRepository {
   // ======================================================
 
   private mapToQuizEntity(q: any): Quiz {
+    const targetUserType: QuizTargetUserType | undefined =
+      q.target_user_type === "EXTERNAL_STUDENT" ||
+      q.target_user_type === "SCHOOL_ONLY" ||
+      q.target_user_type === "ALL"
+        ? q.target_user_type
+        : undefined;
+
     return {
       id: q.id,
       title: q.title,
@@ -841,9 +852,10 @@ export class SupabaseQuizRepository implements IQuizRepository {
       courseId: q.course_id ?? undefined,
       moduleId: q.module_id ?? undefined,
       lessonId: q.lesson_id ?? undefined,
+      targetUserType,
       classId: q.class_id ?? undefined,
-      schoolTrack: q.school_track ?? undefined,   
-      schoolSection: q.school_section ?? undefined,   
+      schoolTrack: q.school_track ?? undefined,
+      schoolSection: q.school_section ?? undefined,
       createdBy: q.created_by ?? undefined,
       createdAt: new Date(q.created_at),
       updatedAt: new Date(q.updated_at),

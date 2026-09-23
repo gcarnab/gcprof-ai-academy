@@ -8,6 +8,11 @@ import {
 } from "@/app/admin/quiz/actions";
 import { logger } from "@/lib/logger";
 
+type QuizTargetUserType =
+  | "EXTERNAL_STUDENT"
+  | "SCHOOL_ONLY"
+  | "ALL";
+
 interface Course {
   id: string;
   title: string;
@@ -41,6 +46,16 @@ interface AssignQuizModalProps {
     lessonId?: string;
     dueDate?: string;
     isVisible?: boolean;
+
+    /**
+     * Nuovo modello.
+     */
+    targetUserType?: QuizTargetUserType;
+    classIds?: string[];
+
+    /**
+     * Legacy.
+     */
     classId?: string;
     schoolTrack?: string;
     schoolSection?: string;
@@ -82,31 +97,58 @@ export function AssignQuizModal({
   );
 
   /**
-   * Restrizione scolastica.
+   * Nuovo modello di targeting:
    *
-   * classId       = anno/macro-classe
-   * schoolTrack   = indirizzo
-   * schoolSection = sezione
+   * EXTERNAL_STUDENT
+   * SCHOOL_ONLY
+   * ALL
+   */
+  const [targetUserType, setTargetUserType] =
+    useState<QuizTargetUserType>(
+      initialAssignment?.targetUserType ?? "ALL",
+    );
+
+  /**
+   * Nuovo modello N:M.
+   *
+   * Contiene gli academy_classes.id assegnati al quiz.
+   */
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>(
+    initialAssignment?.classIds?.length
+      ? Array.from(new Set(initialAssignment.classIds))
+      : initialAssignment?.classId
+        ? [initialAssignment.classId]
+        : [],
+  );
+
+  /**
+   * Campi legacy mantenuti per compatibilità con il vecchio
+   * modello e con eventuali dati già presenti.
    */
   const [selectedClassId, setSelectedClassId] = useState<string>(
     initialAssignment?.classId || "",
   );
 
-  const [selectedSchoolTrack, setSelectedSchoolTrack] = useState<string>(
-    initialAssignment?.schoolTrack || "",
-  );
+  const [selectedSchoolTrack, setSelectedSchoolTrack] =
+    useState<string>(
+      initialAssignment?.schoolTrack || "",
+    );
 
   const [selectedSchoolSection, setSelectedSchoolSection] =
-    useState<string>(initialAssignment?.schoolSection || "");
+    useState<string>(
+      initialAssignment?.schoolSection || "",
+    );
 
-  const [availableClassTargets, setAvailableClassTargets] = useState<
-    AvailableClassTarget[]
-  >([]);
+  const [availableClassTargets, setAvailableClassTargets] =
+    useState<AvailableClassTarget[]>([]);
 
   const [loadingModules, setLoadingModules] = useState(false);
-  const [loadingClassTargets, setLoadingClassTargets] = useState(false);
+  const [loadingClassTargets, setLoadingClassTargets] =
+    useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    null,
+  );
 
   /**
    * Carica le combinazioni reali:
@@ -185,50 +227,157 @@ export function AssignQuizModal({
 
   const lessons = selectedModule?.lessons || [];
 
-  const selectedClassTarget = availableClassTargets.find(
-    (target) =>
-      target.classId === selectedClassId &&
-      target.schoolTrack === selectedSchoolTrack &&
-      target.schoolSection === selectedSchoolSection,
-  );
+  /**
+   * Restituisce una chiave stabile per una combinazione
+   * anno + indirizzo + sezione.
+   *
+   * La chiave UI rimane distinta anche quando più combinazioni
+   * appartengono allo stesso academy_classes.id.
+   */
+  const getClassTargetValue = (
+    target: AvailableClassTarget,
+  ) =>
+    `${target.classId}|${target.schoolTrack}|${target.schoolSection}`;
 
-  const handleClassTargetChange = (value: string) => {
-    if (!value) {
-      setSelectedClassId("");
-      setSelectedSchoolTrack("");
-      setSelectedSchoolSection("");
-      return;
-    }
+  /**
+   * Determina se una specifica combinazione è selezionata.
+   *
+   * L'accesso effettivo del nuovo modello utilizza classId.
+   * Track e section vengono mantenuti nella UI per continuare
+   * a mostrare le classi reali presenti nel database.
+   */
+  const isClassTargetSelected = (
+    target: AvailableClassTarget,
+  ): boolean =>
+    selectedClassIds.includes(target.classId);
 
-    const target = availableClassTargets.find(
-      (item) => item.classId === value.split("|")[0]
-        && item.schoolTrack === value.split("|")[1]
-        && item.schoolSection === value.split("|")[2],
-    );
+  /**
+   * Gestisce la selezione/deselezione di una classe.
+   *
+   * Il DB usa academy_classes.id come identificatore della
+   * relazione N:M, quindi classId viene deduplicato.
+   */
+  const handleClassTargetToggle = (
+    target: AvailableClassTarget,
+  ) => {
+    setSelectedClassIds((current) => {
+      if (current.includes(target.classId)) {
+        return current.filter(
+          (classId) => classId !== target.classId,
+        );
+      }
 
-    if (!target) {
-      setSelectedClassId("");
-      setSelectedSchoolTrack("");
-      setSelectedSchoolSection("");
-      return;
-    }
+      return [...current, target.classId];
+    });
 
+    /*
+     * Manteniamo aggiornati i campi legacy con l'ultima
+     * combinazione selezionata, senza utilizzarli come fonte
+     * del nuovo controllo di accesso.
+     */
     setSelectedClassId(target.classId);
     setSelectedSchoolTrack(target.schoolTrack);
     setSelectedSchoolSection(target.schoolSection);
   };
 
-  const getClassTargetValue = (target: AvailableClassTarget) =>
-    `${target.classId}|${target.schoolTrack}|${target.schoolSection}`;
+  /**
+   * Rimuove tutte le classi scolastiche selezionate.
+   */
+  const clearSelectedClasses = () => {
+    setSelectedClassIds([]);
+    setSelectedClassId("");
+    setSelectedSchoolTrack("");
+    setSelectedSchoolSection("");
+  };
 
-  const selectedTargetValue =
-    selectedClassTarget
-      ? getClassTargetValue(selectedClassTarget)
-      : "";
+  /**
+   * Seleziona/deseleziona tutte le classi macro disponibili.
+   *
+   * Le combinazioni UI vengono deduplicate per academy_classes.id.
+   */
+  const handleToggleAllClasses = () => {
+    const allClassIds = Array.from(
+      new Set(
+        availableClassTargets
+          .map((target) => target.classId)
+          .filter(
+            (classId): classId is string =>
+              typeof classId === "string" && classId.length > 0,
+          ),
+      ),
+    );
 
+    if (
+      allClassIds.length > 0 &&
+      allClassIds.every((classId) =>
+        selectedClassIds.includes(classId),
+      )
+    ) {
+      clearSelectedClasses();
+      return;
+    }
+
+    setSelectedClassIds(allClassIds);
+
+    /*
+     * Manteniamo il primo target come valore legacy di
+     * compatibilità, senza alterare la relazione N:M.
+     */
+    const firstTarget = availableClassTargets.find(
+      (target) => allClassIds.includes(target.classId),
+    );
+
+    if (firstTarget) {
+      setSelectedClassId(firstTarget.classId);
+      setSelectedSchoolTrack(firstTarget.schoolTrack);
+      setSelectedSchoolSection(firstTarget.schoolSection);
+    }
+  };
+
+  const selectedClassCount = selectedClassIds.length;
+
+  const allAvailableClassIds = Array.from(
+    new Set(
+      availableClassTargets
+        .map((target) => target.classId)
+        .filter(
+          (classId): classId is string =>
+            typeof classId === "string" && classId.length > 0,
+        ),
+    ),
+  );
+
+  const allClassesSelected =
+    allAvailableClassIds.length > 0 &&
+    allAvailableClassIds.every((classId) =>
+      selectedClassIds.includes(classId),
+    );
+
+  /**
+   * Salva l'assegnazione.
+   */
   const handleSave = async () => {
     if (!selectedCourseId) {
-      setErrorMessage("Seleziona un corso a cui assegnare il quiz.");
+      setErrorMessage(
+        "Seleziona un corso a cui assegnare il quiz.",
+      );
+      return;
+    }
+
+    /*
+     * SCHOOL_ONLY e ALL richiedono una classe per gli
+     * studenti scolastici.
+     *
+     * EXTERNAL_STUDENT non necessita di classi.
+     */
+    if (
+      (targetUserType === "SCHOOL_ONLY" ||
+        targetUserType === "ALL") &&
+      selectedClassIds.length === 0
+    ) {
+      setErrorMessage(
+        "Per questo tipo di targeting devi selezionare almeno una classe scolastica.",
+      );
       return;
     }
 
@@ -241,8 +390,23 @@ export function AssignQuizModal({
         courseId: selectedCourseId,
         moduleId: selectedModuleId || null,
         lessonId: selectedLessonId || null,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        dueDate: dueDate
+          ? new Date(dueDate).toISOString()
+          : null,
         isVisible,
+
+        /*
+         * Nuovo modello.
+         */
+        targetUserType,
+        classIds: selectedClassIds,
+
+        /*
+         * Legacy.
+         *
+         * Vengono mantenuti per compatibilità con il DB e con
+         * eventuali dati/consumatori esistenti.
+         */
         classId: selectedClassId || null,
         schoolTrack: selectedSchoolTrack || null,
         schoolSection: selectedSchoolSection || null,
@@ -397,76 +561,189 @@ export function AssignQuizModal({
             </div>
           )}
 
-          {/* RESTRIZIONE CLASSE */}
+          {/* TARGET UTENTE */}
           <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
             <div>
               <label
-                htmlFor="quiz-class-target"
+                htmlFor="quiz-target-user-type"
                 className="block text-xs font-bold uppercase tracking-wider text-foreground"
               >
-                Restrizione di Classe
+                Destinatari del Quiz
               </label>
 
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Seleziona una classe completa per consentire l&apos;accesso
-                esclusivamente agli studenti scolastici appartenenti a quella
-                combinazione di anno, indirizzo e sezione. Lascia
-                &quot;Nessuna restrizione&quot; per mantenere l&apos;accesso
-                libero.
+                Determina quali studenti possono accedere al quiz.
               </p>
             </div>
 
             <select
-              id="quiz-class-target"
-              value={selectedTargetValue}
+              id="quiz-target-user-type"
+              value={targetUserType}
               onChange={(event) =>
-                handleClassTargetChange(event.target.value)
+                setTargetUserType(
+                  event.target.value as QuizTargetUserType,
+                )
               }
-              disabled={loadingClassTargets || isSubmitting}
+              disabled={isSubmitting}
               className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             >
-              <option value="">
-                -- Nessuna restrizione di classe --
+              <option value="ALL">
+                Tutti gli studenti autorizzati
               </option>
 
-              {availableClassTargets.map((target) => (
-                <option
-                  key={getClassTargetValue(target)}
-                  value={getClassTargetValue(target)}
-                >
-                  {target.className} {target.schoolTrack}{" "}
-                  {target.schoolSection}
-                </option>
-              ))}
+              <option value="EXTERNAL_STUDENT">
+                Solo studenti esterni
+              </option>
+
+              <option value="SCHOOL_ONLY">
+                Solo studenti scolastici
+              </option>
             </select>
 
-            {selectedClassTarget && (
-              <div className="rounded-md border border-border bg-background px-3 py-2 text-xs">
+            <div className="rounded-md border border-border bg-background px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+              {targetUserType === "EXTERNAL_STUDENT" && (
+                <>
+                  Il quiz sarà accessibile agli studenti esterni.
+                  Gli studenti scolastici non potranno accedervi.
+                </>
+              )}
+
+              {targetUserType === "SCHOOL_ONLY" && (
+                <>
+                  Il quiz sarà accessibile esclusivamente agli
+                  studenti scolastici appartenenti ad almeno una
+                  delle classi selezionate.
+                </>
+              )}
+
+              {targetUserType === "ALL" && (
+                <>
+                  Gli studenti esterni potranno accedere al quiz.
+                  Gli studenti scolastici potranno accedere solo
+                  se appartengono ad almeno una delle classi
+                  selezionate.
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* CLASSI */}
+          {(targetUserType === "SCHOOL_ONLY" ||
+            targetUserType === "ALL") && (
+            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-foreground">
+                    Classi scolastiche autorizzate
+                  </label>
+
+                  {availableClassTargets.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleToggleAllClasses}
+                      disabled={
+                        loadingClassTargets || isSubmitting
+                      }
+                      className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+                    >
+                      {allClassesSelected
+                        ? "Deseleziona tutte"
+                        : "Seleziona tutte"}
+                    </button>
+                  )}
+                </div>
+
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Seleziona una o più classi. Uno studente scolastico
+                  potrà accedere se appartiene ad almeno una delle
+                  classi selezionate.
+                </p>
+              </div>
+
+              {loadingClassTargets && (
+                <p className="text-xs text-muted-foreground">
+                  Caricamento delle classi disponibili...
+                </p>
+              )}
+
+              {!loadingClassTargets &&
+                availableClassTargets.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Nessuna combinazione anno/indirizzo/sezione
+                    disponibile.
+                  </p>
+                )}
+
+              {!loadingClassTargets &&
+                availableClassTargets.length > 0 && (
+                  <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-border bg-background p-2">
+                    {availableClassTargets.map((target) => {
+                      const value = getClassTargetValue(target);
+                      const checked =
+                        isClassTargetSelected(target);
+
+                      return (
+                        <label
+                          key={value}
+                          className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 transition-colors ${
+                            checked
+                              ? "border-primary/40 bg-primary/10"
+                              : "border-transparent hover:bg-muted"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              handleClassTargetToggle(target)
+                            }
+                            disabled={isSubmitting}
+                            className="h-4 w-4 rounded border-input text-primary focus:ring-primary disabled:opacity-50"
+                          />
+
+                          <span className="min-w-0 text-sm">
+                            <span className="font-medium text-foreground">
+                              {target.className}
+                            </span>{" "}
+                            <span className="text-muted-foreground">
+                              {target.schoolTrack}{" "}
+                              {target.schoolSection}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+              <div className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-xs">
                 <span className="text-muted-foreground">
-                  Classe autorizzata:{" "}
+                  Classi selezionate
                 </span>
 
                 <span className="font-semibold text-primary">
-                  {selectedClassTarget.className}{" "}
-                  {selectedClassTarget.schoolTrack}{" "}
-                  {selectedClassTarget.schoolSection}
+                  {selectedClassCount}
                 </span>
               </div>
-            )}
 
-            {loadingClassTargets && (
-              <p className="text-xs text-muted-foreground">
-                Caricamento delle classi disponibili...
-              </p>
-            )}
-
-            {!loadingClassTargets &&
-              availableClassTargets.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Nessuna combinazione anno/indirizzo/sezione disponibile.
+              {selectedClassCount === 0 && (
+                <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                  Se non selezioni alcuna classe, gli studenti
+                  scolastici non potranno accedere al quiz.
                 </p>
               )}
-          </div>
+            </div>
+          )}
+
+          {/* INFORMAZIONE EXTERNAL */}
+          {targetUserType === "EXTERNAL_STUDENT" && (
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Non è necessario selezionare classi per un quiz
+                destinato agli studenti esterni.
+              </p>
+            </div>
+          )}
 
           {/* SCADENZA */}
           <div className="space-y-1.5">
@@ -493,7 +770,9 @@ export function AssignQuizModal({
               type="checkbox"
               id="isVisible"
               checked={isVisible}
-              onChange={(event) => setIsVisible(event.target.checked)}
+              onChange={(event) =>
+                setIsVisible(event.target.checked)
+              }
               disabled={isSubmitting}
               className="h-4 w-4 rounded border-input text-primary focus:ring-primary disabled:opacity-50"
             />
@@ -524,7 +803,9 @@ export function AssignQuizModal({
             disabled={isSubmitting || !selectedCourseId}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            {isSubmitting ? "Salvataggio..." : "Conferma e Assegna"}
+            {isSubmitting
+              ? "Salvataggio..."
+              : "Conferma e Assegna"}
           </button>
         </div>
       </div>

@@ -52,33 +52,45 @@ async function getAuthenticatedSession(
 }
 
 /**
- * Verifica server-side l'accesso di uno studente ad un quiz
- * basandosi sulla tripletta completa: class_id + school_track + school_section.
- *
- * Regole:
- * - Se nessun vincolo è presente sul quiz -> accesso libero agli utenti autenticati;
- * - Se vincolato -> consentito esclusivamente a SCHOOL_STUDENT con la tripletta corrispondente;
- * - Nessun dato proveniente dal client viene considerato attendibile.
- */
+
+* Verifica server-side l'accesso di uno studente ad un quiz
+* secondo il nuovo modello di targeting:
+*
+* * EXTERNAL_STUDENT:
+* consentito soltanto agli studenti esterni;
+*
+* * SCHOOL_ONLY:
+* consentito soltanto agli studenti scolastici appartenenti
+* ad almeno una delle classi assegnate al quiz;
+*
+* * ALL:
+* consentito agli studenti esterni;
+* consentito agli studenti scolastici appartenenti
+* ad almeno una delle classi assegnate al quiz.
+*
+* Per gli studenti scolastici:
+* * zero assegnazioni -> accesso negato;
+* * almeno una assegnazione corrispondente -> accesso consentito;
+* * nessuna assegnazione corrispondente -> accesso negato.
+*
+* I campi legacy class_id / school_track / school_section
+* non vengono più utilizzati come regola primaria di accesso.
+*
+* Nessun dato proveniente dal client viene considerato attendibile.
+  */
 async function assertStudentCanAccessQuiz(
   quiz: any,
   studentId: string,
 ): Promise<void> {
-  const classId = quiz?.classId ?? quiz?.class_id ?? null;
-  const schoolTrack = quiz?.schoolTrack ?? quiz?.school_track ?? null;
-  const schoolSection = quiz?.schoolSection ?? quiz?.school_section ?? null;
-
-  // 1. Se il quiz non ha alcun vincolo, l'accesso è consentito
-  if (!classId && !schoolTrack && !schoolSection) {
-    return;
-  }
+  const targetUserType =
+    quiz?.targetUserType ?? quiz?.target_user_type ?? "ALL";
 
   const supabase = getSupabaseAdmin();
 
-  // 2. Recupera il profilo dello studente (school_track e school_section)
+  // 1. Recupera esclusivamente il tipo di utente dal profilo.
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("user_type, school_track, school_section")
+    .select("user_type")
     .eq("id", studentId)
     .maybeSingle();
 
@@ -91,47 +103,101 @@ async function assertStudentCanAccessQuiz(
     throw new Error("Impossibile verificare il profilo dello studente.");
   }
 
-  if (!profile || profile.user_type !== "SCHOOL_STUDENT") {
+  if (!profile) {
+    throw new Error("Profilo dello studente non trovato.");
+  }
+
+  const userType = String(profile.user_type ?? "").toUpperCase();
+
+  // 2. Studente esterno:
+  //    EXTERNAL_STUDENT e ALL sono consentiti.
+  //    SCHOOL_ONLY è negato.
+  if (userType === "EXTERNAL_STUDENT") {
+    if (targetUserType === "EXTERNAL_STUDENT" || targetUserType === "ALL") {
+      return;
+    }
+
     throw new Error(
       "Accesso negato: questo quiz è riservato agli studenti scolastici.",
     );
   }
 
-  // 3. Controllo: class_id (se specificato nel quiz, tramite la tabella associativa profile_classes)
-  if (classId) {
-    const { data: membership, error: classError } = await supabase
-      .from("profile_classes")
-      .select("class_id")
-      .eq("profile_id", studentId)
-      .eq("class_id", classId)
-      .maybeSingle();
-
-    if (classError) {
-      logger.error(
-        `Errore verifica appartenenza classe per lo studente ${studentId}`,
-        classError,
-      );
-      throw new Error("Impossibile verificare la classe dello studente.");
-    }
-
-    if (!membership) {
-      throw new Error(
-        "Accesso negato: questo quiz è riservato ad un'altra classe.",
-      );
-    }
+  // 3. Qualsiasi tipo diverso da SCHOOL_STUDENT viene negato.
+  if (userType !== "SCHOOL_STUDENT") {
+    throw new Error("Accesso negato.");
   }
 
-  // 4. Controllo: school_track (se specificato nel quiz)
-  if (schoolTrack && profile.school_track !== schoolTrack) {
+  // 4. Un quiz EXTERNAL_STUDENT non è accessibile agli studenti scolastici.
+  if (targetUserType === "EXTERNAL_STUDENT") {
     throw new Error(
-      "Accesso negato: questo quiz è riservato ad un altro indirizzo scolastico.",
+      "Accesso negato: questo quiz è riservato agli studenti esterni.",
     );
   }
 
-  // 5. Controllo: school_section (se specificato nel quiz)
-  if (schoolSection && profile.school_section !== schoolSection) {
+  // 5. Recupera tutte le classi dello studente.
+  const { data: profileClasses, error: profileClassesError } = await supabase
+    .from("profile_classes")
+    .select("class_id")
+    .eq("profile_id", studentId);
+
+  if (profileClassesError) {
+    logger.error(
+      `Errore verifica classi per lo studente ${studentId}`,
+      profileClassesError,
+    );
+
+    throw new Error("Impossibile verificare le classi dello studente.");
+  }
+
+  const studentClassIds = (profileClasses ?? [])
+    .map((item: { class_id: string | null }) => item.class_id)
+    .filter(
+      (classId): classId is string =>
+        typeof classId === "string" && classId.length > 0,
+    );
+
+  // 6. Recupera le classi assegnate al quiz.
+  const { data: quizClassAssignments, error: assignmentsError } = await supabase
+    .from("quiz_class_assignments")
+    .select("class_id")
+    .eq("quiz_id", quiz.id);
+
+  if (assignmentsError) {
+    logger.error(
+      `Errore verifica assegnazioni di classe per il quiz ${quiz.id}`,
+      assignmentsError,
+    );
+
     throw new Error(
-      "Accesso negato: questo quiz è riservato ad un'altra sezione.",
+      "Impossibile verificare le assegnazioni di classe del quiz.",
+    );
+  }
+
+  const assignedClassIds = (quizClassAssignments ?? [])
+    .map((item: { class_id: string | null }) => item.class_id)
+    .filter(
+      (classId): classId is string =>
+        typeof classId === "string" && classId.length > 0,
+    );
+
+  // 7. Per SCHOOL_ONLY e ALL, nessuna assegnazione significa
+  //    esplicitamente accesso negato agli studenti scolastici.
+  if (assignedClassIds.length === 0) {
+    throw new Error(
+      "Accesso negato: questo quiz non è assegnato a nessuna delle tue classi.",
+    );
+  }
+
+  // 8. N:M:
+  //    basta una classe dello studente presente tra le classi
+  //    assegnate al quiz.
+  const hasMatchingClass = assignedClassIds.some((classId) =>
+    studentClassIds.includes(classId),
+  );
+
+  if (!hasMatchingClass) {
+    throw new Error(
+      "Accesso negato: questo quiz è riservato ad un'altra classe.",
     );
   }
 }
