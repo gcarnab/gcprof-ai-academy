@@ -40,11 +40,17 @@ export default function StudentProgressMatrixCard({
     }
   }, [courses, selectedCourseId]);
 
-  // Estrazione opzioni univoche per i filtri
+  // Estrazione opzioni univoche per i filtri (supporta sia DB snake_case che camelCase)
   const availableClasses = useMemo(() => {
     const set = new Set<string>();
     users.forEach((u: any) => {
-      (u.classes || []).forEach((c: string) => set.add(c));
+      const clsList = u.classes || u.academy_classes || [];
+      if (Array.isArray(clsList)) {
+        clsList.forEach((c: any) => {
+          const className = typeof c === "string" ? c : c.name || c.class_name;
+          if (className) set.add(className);
+        });
+      }
     });
     return Array.from(set).sort();
   }, [users]);
@@ -52,7 +58,7 @@ export default function StudentProgressMatrixCard({
   const availableTracks = useMemo(() => {
     const set = new Set<string>();
     users.forEach((u: any) => {
-      const track = u.schoolTrack || u.school_track;
+      const track = u.schoolTrack || u.school_track || u.track;
       if (track) set.add(track);
     });
     return Array.from(set).sort();
@@ -61,7 +67,7 @@ export default function StudentProgressMatrixCard({
   const availableSections = useMemo(() => {
     const set = new Set<string>();
     users.forEach((u: any) => {
-      const section = u.schoolSection || u.school_section;
+      const section = u.schoolSection || u.school_section || u.section;
       if (section) set.add(section);
     });
     return Array.from(set).sort();
@@ -79,37 +85,16 @@ export default function StudentProgressMatrixCard({
     );
   }, [courses, selectedCourseId]);
 
-  // Utility per verificare completamento
+  // Utility per verificare completamento lezione (allineato con profile_lessons_progress)
   const checkIsCompleted = (lp: any): boolean => {
-    if (
-      lp.is_completed === true ||
-      lp.is_completed === "true" ||
-      lp.is_completed === 1
-    )
-      return true;
-    if (
-      lp.completed === true ||
-      lp.completed === "true" ||
-      lp.completed === 1
-    )
-      return true;
-    if (
-      lp.status &&
-      ["completed", "complete", "done", "finished"].includes(
-        String(lp.status).toLowerCase()
-      )
-    )
-      return true;
-    if (
-      lp.completed_at !== undefined &&
-      lp.completed_at !== null &&
-      lp.completed_at !== ""
-    )
-      return true;
+    if (lp.is_completed === true || lp.is_completed === "true" || lp.is_completed === 1) return true;
+    if (lp.completed === true || lp.completed === "true" || lp.completed === 1) return true;
+    if (lp.status && ["completed", "complete", "done", "finished"].includes(String(lp.status).toLowerCase())) return true;
+    if (lp.completed_at !== undefined && lp.completed_at !== null && lp.completed_at !== "") return true;
     return false;
   };
 
-  // Filtraggio utenti (SCHOOL_STUDENT e EXTERNAL_STUDENT)
+  // Filtraggio utenti
   const filteredUsers = useMemo(() => {
     return users.filter((u: any) => {
       const roleStr = String(u.role || "").toLowerCase();
@@ -117,32 +102,34 @@ export default function StudentProgressMatrixCard({
         return false;
       }
 
+      const userType = u.user_type || u.userType;
+      const userClasses = Array.isArray(u.classes) 
+        ? u.classes 
+        : Array.isArray(u.academy_classes)
+        ? u.academy_classes.map((c: any) => typeof c === "string" ? c : c.name)
+        : [];
+
       if (selectedClass === "external") {
-        const isExternal =
-          u.userType === "EXTERNAL_STUDENT" ||
-          !u.classes ||
-          u.classes.length === 0;
+        const isExternal = userType === "EXTERNAL_STUDENT" || userClasses.length === 0;
         if (!isExternal) return false;
       } else if (selectedClass !== "all") {
-        const userClasses = u.classes || [];
         if (!userClasses.includes(selectedClass)) return false;
       }
 
       if (selectedTrack !== "all") {
-        const track = u.schoolTrack || u.school_track || "";
+        const track = u.schoolTrack || u.school_track || u.track || "";
         if (track !== selectedTrack) return false;
       }
 
       if (selectedSection !== "all") {
-        const section = u.schoolSection || u.school_section || "";
+        const section = u.schoolSection || u.school_section || u.section || "";
         if (section !== selectedSection) return false;
       }
 
       if (searchQuery.trim() !== "") {
         const q = searchQuery.toLowerCase();
-        const fullName = `${u.first_name || ""} ${u.last_name || ""} ${
-          u.display_name || ""
-        }`.toLowerCase();
+        // Supporta sia full_name dal DB Supabase che first_name/last_name
+        const fullName = (u.full_name || `${u.first_name || ""} ${u.last_name || ""} ${u.display_name || ""}`).toLowerCase();
         const email = String(u.email || "").toLowerCase();
         if (!fullName.includes(q) && !email.includes(q)) return false;
       }
@@ -157,27 +144,16 @@ export default function StudentProgressMatrixCard({
 
     const modules = selectedCourse.course_modules || selectedCourse.modules || [];
 
-    // Estrae tutte le lezioni con relative informazioni di modulo
-    const allLessons: Array<{
-      lessonId: string;
-      lessonTitle: string;
-      moduleId: string;
-      moduleTitle: string;
-    }> = [];
-
+    // Mappa tutte le lezioni del corso selezionato
+    const courseLessonIds = new Set<string>();
     modules.forEach((mod: any) => {
       const lessons = mod.course_lessons || mod.lessons || [];
       lessons.forEach((les: any) => {
-        allLessons.push({
-          lessonId: String(les.id).trim().toLowerCase(),
-          lessonTitle: les.title || les.name || "Lezione",
-          moduleId: String(mod.id || mod.title),
-          moduleTitle: mod.title || mod.name || "Modulo",
-        });
+        courseLessonIds.add(String(les.id).trim().toLowerCase());
       });
     });
 
-    const totalCourseLessons = allLessons.length;
+    const totalCourseLessons = courseLessonIds.size;
 
     return filteredUsers.map((u: any) => {
       const possibleUserIds = [
@@ -191,7 +167,7 @@ export default function StudentProgressMatrixCard({
         .filter(Boolean)
         .map((id) => String(id).trim().toLowerCase());
 
-      // Set delle lezioni completate da questo specifico utente
+      // Set delle lezioni completate da QUESTO utente ESCLUSIVAMENTE per questo corso
       const completedLessonIds = new Set<string>();
 
       rawProgressArray.forEach((lp: any) => {
@@ -201,17 +177,25 @@ export default function StudentProgressMatrixCard({
           .trim()
           .toLowerCase();
 
-        if (possibleUserIds.includes(lpUserId) && checkIsCompleted(lp)) {
-          const lpLessonId = String(
-            lp.lesson_id || lp.course_lesson_id || lp.lessonId || lp.id || ""
-          )
-            .trim()
-            .toLowerCase();
+        const lpLessonId = String(
+          lp.lesson_id || lp.course_lesson_id || lp.lessonId || lp.id || ""
+        )
+          .trim()
+          .toLowerCase();
+
+        // Filtra verificando che la lezione appartenga AL CORSO SELEZIONATO
+        if (
+          possibleUserIds.includes(lpUserId) &&
+          courseLessonIds.has(lpLessonId) &&
+          checkIsCompleted(lp)
+        ) {
           completedLessonIds.add(lpLessonId);
         }
       });
 
       // Calcolo avanzamento per ciascun modulo
+      let totalCourseCompletedCount = 0;
+
       const moduleStats = modules.map((mod: any) => {
         const modLessons = mod.course_lessons || mod.lessons || [];
         let modCompleted = 0;
@@ -228,6 +212,8 @@ export default function StudentProgressMatrixCard({
           };
         });
 
+        totalCourseCompletedCount += modCompleted;
+
         const modTotal = modLessons.length;
         const modPercentage =
           modTotal > 0 ? Math.round((modCompleted / modTotal) * 100) : 0;
@@ -242,16 +228,19 @@ export default function StudentProgressMatrixCard({
         };
       });
 
-      const totalCompleted = completedLessonIds.size;
+      // Percentuale globale calcolata correttamente solo sulle lezioni del corso selezionato
       const overallPercentage =
         totalCourseLessons > 0
-          ? Math.min(100, Math.round((totalCompleted / totalCourseLessons) * 100))
+          ? Math.min(100, Math.round((totalCourseCompletedCount / totalCourseLessons) * 100))
           : 0;
+
+      const displayName = u.full_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email;
 
       return {
         user: u,
+        displayName,
         userIdStr: String(u.id || u.profile_id),
-        totalCompleted,
+        totalCompleted: totalCourseCompletedCount,
         totalCourseLessons,
         overallPercentage,
         moduleStats,
@@ -307,7 +296,6 @@ export default function StudentProgressMatrixCard({
 
         {/* Filtri Principali */}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 text-xs">
-          {/* Seleziona Corso */}
           <div className="flex flex-col gap-1">
             <label className="font-medium text-muted-foreground">Corso</label>
             <select
@@ -323,7 +311,6 @@ export default function StudentProgressMatrixCard({
             </select>
           </div>
 
-          {/* Seleziona Classe */}
           <div className="flex flex-col gap-1">
             <label className="font-medium text-muted-foreground">Classe / Gruppo</label>
             <select
@@ -341,7 +328,6 @@ export default function StudentProgressMatrixCard({
             </select>
           </div>
 
-          {/* Seleziona Indirizzo */}
           <div className="flex flex-col gap-1">
             <label className="font-medium text-muted-foreground">Indirizzo</label>
             <select
@@ -358,7 +344,6 @@ export default function StudentProgressMatrixCard({
             </select>
           </div>
 
-          {/* Seleziona Sezione */}
           <div className="flex flex-col gap-1">
             <label className="font-medium text-muted-foreground">Sezione</label>
             <select
@@ -383,7 +368,7 @@ export default function StudentProgressMatrixCard({
           <span className="text-muted-foreground">🔍</span>
           <input
             type="text"
-            placeholder="Cerca studente per nome, cognome o email..."
+            placeholder="Cerca studente per nome o email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-background border border-input rounded-md px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -433,10 +418,13 @@ export default function StudentProgressMatrixCard({
           {studentProgressData.map((item) => {
             const u = item.user;
             const isExpanded = expandedStudentIds.has(item.userIdStr);
-            const userClassLabel =
-              u.classes && u.classes.length > 0
-                ? u.classes.join(", ")
-                : "Esterno";
+            const userClasses = Array.isArray(u.classes) 
+              ? u.classes 
+              : Array.isArray(u.academy_classes)
+              ? u.academy_classes.map((c: any) => typeof c === "string" ? c : c.name)
+              : [];
+            
+            const userClassLabel = userClasses.length > 0 ? userClasses.join(", ") : "Esterno";
 
             return (
               <div
@@ -451,13 +439,11 @@ export default function StudentProgressMatrixCard({
                   {/* Anagrafica Studente */}
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
-                      {u.first_name?.[0] || u.email?.[0] || "S"}
+                      {item.displayName[0] || "S"}
                     </div>
                     <div>
                       <div className="font-semibold text-xs text-foreground flex items-center gap-2">
-                        {u.first_name || u.last_name
-                          ? `${u.first_name || ""} ${u.last_name || ""}`.trim()
-                          : u.email}
+                        {item.displayName}
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted font-normal text-muted-foreground">
                           {userClassLabel}
                         </span>
@@ -486,7 +472,6 @@ export default function StudentProgressMatrixCard({
                       </div>
                     </div>
 
-                    {/* Icona espansione */}
                     <span className="text-muted-foreground text-xs pl-1">
                       {isExpanded ? "▲" : "▼"}
                     </span>
@@ -506,7 +491,6 @@ export default function StudentProgressMatrixCard({
                           key={mod.id}
                           className="bg-card border border-border p-3 rounded-lg space-y-2.5"
                         >
-                          {/* Intestazione Modulo */}
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-foreground truncate max-w-[70%]" title={mod.title}>
                               {mod.title}
@@ -516,7 +500,6 @@ export default function StudentProgressMatrixCard({
                             </span>
                           </div>
 
-                          {/* Progress bar modulo */}
                           <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                             <div
                               className="h-full bg-emerald-500 rounded-full transition-all"
@@ -524,7 +507,6 @@ export default function StudentProgressMatrixCard({
                             />
                           </div>
 
-                          {/* Lista Lezioni con badge */}
                           <div className="space-y-1.5 pt-1">
                             {mod.lessons.map((les: any) => (
                               <div

@@ -6,7 +6,6 @@ import BarChartCard from "./charts/BarChartCard";
 import DonutChartCard from "./charts/DonutChartCard";
 import StatsKpiCards from "./charts/StatsKpiCards";
 import HorizontalBarChartCard from "./charts/HorizontalBarChartCard";
-import LessonCompletionChartCard from "./charts/LessonCompletionChartCard";
 import StudentProgressMatrixCard from "./charts/StudentProgressMatrixCard";
 import type { AdminStatsData } from "../services/adminStatsService";
 
@@ -117,22 +116,6 @@ export default function AdminStatsDashboard({ stats }: Props) {
         title="🎓 Struttura Didattica & Avanzamento Corsi"
         subtitle="Analisi sintetica delle categorie, completamento lezioni per corso e dettaglio analitico individuale degli studenti."
       >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-1">
-            <BarChartCard
-              title="Corsi per Categoria"
-              data={stats?.charts?.coursesByCategory ?? {}}
-            />
-          </div>
-          <div className="lg:col-span-2">
-            <LessonCompletionChartCard
-              courses={rawCourses}
-              users={rawUsers}
-              lessonProgress={rawLessonProgress}
-            />
-          </div>
-        </div>
-
         {/* 👤 MATRICE DI AVANZAMENTO INDIVIDUALE PER STUDENTE */}
         <div className="mt-6">
           <StudentProgressMatrixCard
@@ -246,10 +229,16 @@ export default function AdminStatsDashboard({ stats }: Props) {
             title="Studenti per Sezione"
             data={stats?.charts?.studentsBySection ?? {}}
           />
-          <div className="md:col-span-2 lg:col-span-2">
+          <div className="md:col-span-1 lg:col-span-1">
             <BarChartCard
               title="Studenti per Indirizzo"
               data={stats?.charts?.studentsByTrack ?? {}}
+            />
+          </div>
+          <div className="lg:col-span-1">
+            <BarChartCard
+              title="Corsi per Categoria"
+              data={stats?.charts?.coursesByCategory ?? {}}
             />
           </div>
         </div>
