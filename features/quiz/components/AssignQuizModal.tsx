@@ -34,6 +34,12 @@ interface AvailableClassTarget {
   schoolSection: string;
 }
 
+interface ClassTarget {
+  classId: string;
+  schoolTrack: string;
+  schoolSection: string;
+}
+
 interface AssignQuizModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -52,6 +58,7 @@ interface AssignQuizModalProps {
      */
     targetUserType?: QuizTargetUserType;
     classIds?: string[];
+    classTargets?: ClassTarget[];
 
     /**
      * Legacy.
@@ -111,15 +118,42 @@ export function AssignQuizModal({
   /**
    * Nuovo modello N:M.
    *
-   * Contiene gli academy_classes.id assegnati al quiz.
+   * Una classe scolastica completa è identificata da:
+   *
+   * academy_classes.id
+   * + school_track
+   * + school_section
    */
-  const [selectedClassIds, setSelectedClassIds] = useState<string[]>(
-    initialAssignment?.classIds?.length
-      ? Array.from(new Set(initialAssignment.classIds))
-      : initialAssignment?.classId
-        ? [initialAssignment.classId]
-        : [],
-  );
+  const [selectedClassTargets, setSelectedClassTargets] = useState<
+    ClassTarget[]
+  >(() => {
+    if (
+      initialAssignment?.classTargets &&
+      initialAssignment.classTargets.length > 0
+    ) {
+      const seen = new Set<string>();
+
+      return initialAssignment.classTargets.filter((target) => {
+        const key = `${target.classId}|${target.schoolTrack}|${target.schoolSection}`;
+
+        if (seen.has(key)) {
+          return false;
+        }
+
+        seen.add(key);
+        return true;
+      });
+    }
+
+    /**
+     * Compatibilità con eventuali dati iniziali già forniti
+     * attraverso il vecchio modello classIds.
+     *
+     * Se non sono disponibili track/section, non inventiamo
+     * valori: il fallback legacy viene mantenuto separatamente.
+     */
+    return [];
+  });
 
   /**
    * Campi legacy mantenuti per compatibilità con il vecchio
@@ -230,44 +264,58 @@ export function AssignQuizModal({
   /**
    * Restituisce una chiave stabile per una combinazione
    * anno + indirizzo + sezione.
-   *
-   * La chiave UI rimane distinta anche quando più combinazioni
-   * appartengono allo stesso academy_classes.id.
    */
   const getClassTargetValue = (
-    target: AvailableClassTarget,
+    target: AvailableClassTarget | ClassTarget,
   ) =>
     `${target.classId}|${target.schoolTrack}|${target.schoolSection}`;
 
   /**
-   * Determina se una specifica combinazione è selezionata.
+   * Determina se una specifica classe scolastica completa
+   * è selezionata.
    *
-   * L'accesso effettivo del nuovo modello utilizza classId.
-   * Track e section vengono mantenuti nella UI per continuare
-   * a mostrare le classi reali presenti nel database.
+   * NON viene confrontato soltanto classId.
    */
   const isClassTargetSelected = (
     target: AvailableClassTarget,
   ): boolean =>
-    selectedClassIds.includes(target.classId);
+    selectedClassTargets.some(
+      (selected) =>
+        selected.classId === target.classId &&
+        selected.schoolTrack === target.schoolTrack &&
+        selected.schoolSection === target.schoolSection,
+    );
 
   /**
-   * Gestisce la selezione/deselezione di una classe.
-   *
-   * Il DB usa academy_classes.id come identificatore della
-   * relazione N:M, quindi classId viene deduplicato.
+   * Gestisce la selezione/deselezione di una classe scolastica
+   * completa.
    */
   const handleClassTargetToggle = (
     target: AvailableClassTarget,
   ) => {
-    setSelectedClassIds((current) => {
-      if (current.includes(target.classId)) {
+    const targetKey = getClassTargetValue(target);
+
+    setSelectedClassTargets((current) => {
+      const alreadySelected = current.some(
+        (selected) =>
+          getClassTargetValue(selected) === targetKey,
+      );
+
+      if (alreadySelected) {
         return current.filter(
-          (classId) => classId !== target.classId,
+          (selected) =>
+            getClassTargetValue(selected) !== targetKey,
         );
       }
 
-      return [...current, target.classId];
+      return [
+        ...current,
+        {
+          classId: target.classId,
+          schoolTrack: target.schoolTrack,
+          schoolSection: target.schoolSection,
+        },
+      ];
     });
 
     /*
@@ -284,48 +332,68 @@ export function AssignQuizModal({
    * Rimuove tutte le classi scolastiche selezionate.
    */
   const clearSelectedClasses = () => {
-    setSelectedClassIds([]);
+    setSelectedClassTargets([]);
     setSelectedClassId("");
     setSelectedSchoolTrack("");
     setSelectedSchoolSection("");
   };
 
   /**
-   * Seleziona/deseleziona tutte le classi macro disponibili.
+   * Seleziona/deseleziona tutte le classi scolastiche complete
+   * disponibili.
    *
-   * Le combinazioni UI vengono deduplicate per academy_classes.id.
+   * Ogni combinazione:
+   *
+   * classId + schoolTrack + schoolSection
+   *
+   * è una selezione distinta.
    */
   const handleToggleAllClasses = () => {
-    const allClassIds = Array.from(
-      new Set(
-        availableClassTargets
-          .map((target) => target.classId)
-          .filter(
-            (classId): classId is string =>
-              typeof classId === "string" && classId.length > 0,
-          ),
-      ),
+    const allTargets = availableClassTargets.filter(
+      (target) =>
+        typeof target.classId === "string" &&
+        target.classId.length > 0 &&
+        typeof target.schoolTrack === "string" &&
+        target.schoolTrack.length > 0 &&
+        typeof target.schoolSection === "string" &&
+        target.schoolSection.length > 0,
     );
 
-    if (
-      allClassIds.length > 0 &&
-      allClassIds.every((classId) =>
-        selectedClassIds.includes(classId),
-      )
-    ) {
+    const uniqueTargets = Array.from(
+      new Map(
+        allTargets.map((target) => [
+          getClassTargetValue(target),
+          {
+            classId: target.classId,
+            schoolTrack: target.schoolTrack,
+            schoolSection: target.schoolSection,
+          },
+        ]),
+      ).values(),
+    );
+
+    const allSelected =
+      uniqueTargets.length > 0 &&
+      uniqueTargets.every((target) =>
+        selectedClassTargets.some(
+          (selected) =>
+            getClassTargetValue(selected) ===
+            getClassTargetValue(target),
+        ),
+      );
+
+    if (allSelected) {
       clearSelectedClasses();
       return;
     }
 
-    setSelectedClassIds(allClassIds);
+    setSelectedClassTargets(uniqueTargets);
 
     /*
      * Manteniamo il primo target come valore legacy di
      * compatibilità, senza alterare la relazione N:M.
      */
-    const firstTarget = availableClassTargets.find(
-      (target) => allClassIds.includes(target.classId),
-    );
+    const firstTarget = uniqueTargets[0];
 
     if (firstTarget) {
       setSelectedClassId(firstTarget.classId);
@@ -334,11 +402,46 @@ export function AssignQuizModal({
     }
   };
 
-  const selectedClassCount = selectedClassIds.length;
+  const selectedClassCount = selectedClassTargets.length;
 
-  const allAvailableClassIds = Array.from(
-    new Set(
+  const allAvailableClassTargets = Array.from(
+    new Map(
       availableClassTargets
+        .filter(
+          (target) =>
+            typeof target.classId === "string" &&
+            target.classId.length > 0 &&
+            typeof target.schoolTrack === "string" &&
+            target.schoolTrack.length > 0 &&
+            typeof target.schoolSection === "string" &&
+            target.schoolSection.length > 0,
+        )
+        .map((target) => [
+          getClassTargetValue(target),
+          target,
+        ]),
+    ).values(),
+  );
+
+  const allClassesSelected =
+    allAvailableClassTargets.length > 0 &&
+    allAvailableClassTargets.every((target) =>
+      selectedClassTargets.some(
+        (selected) =>
+          getClassTargetValue(selected) ===
+          getClassTargetValue(target),
+      ),
+    );
+
+  /**
+   * Mantiene compatibilità con il precedente payload classIds.
+   *
+   * Il nuovo payload classTargets contiene invece la specificità
+   * completa della classe.
+   */
+  const selectedClassIds = Array.from(
+    new Set(
+      selectedClassTargets
         .map((target) => target.classId)
         .filter(
           (classId): classId is string =>
@@ -346,12 +449,6 @@ export function AssignQuizModal({
         ),
     ),
   );
-
-  const allClassesSelected =
-    allAvailableClassIds.length > 0 &&
-    allAvailableClassIds.every((classId) =>
-      selectedClassIds.includes(classId),
-    );
 
   /**
    * Salva l'assegnazione.
@@ -373,7 +470,7 @@ export function AssignQuizModal({
     if (
       (targetUserType === "SCHOOL_ONLY" ||
         targetUserType === "ALL") &&
-      selectedClassIds.length === 0
+      selectedClassTargets.length === 0
     ) {
       setErrorMessage(
         "Per questo tipo di targeting devi selezionare almeno una classe scolastica.",
@@ -397,9 +494,16 @@ export function AssignQuizModal({
 
         /*
          * Nuovo modello.
+         *
+         * classIds viene mantenuto per compatibilità con il
+         * contratto attuale dell'action.
+         *
+         * classTargets identifica invece la classe scolastica
+         * completa.
          */
         targetUserType,
         classIds: selectedClassIds,
+        classTargets: selectedClassTargets,
 
         /*
          * Legacy.
@@ -677,7 +781,7 @@ export function AssignQuizModal({
               {!loadingClassTargets &&
                 availableClassTargets.length > 0 && (
                   <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-border bg-background p-2">
-                    {availableClassTargets.map((target) => {
+                    {allAvailableClassTargets.map((target) => {
                       const value = getClassTargetValue(target);
                       const checked =
                         isClassTargetSelected(target);

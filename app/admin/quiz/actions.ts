@@ -9,6 +9,12 @@ export type QuizTargetUserType =
   | "SCHOOL_ONLY"
   | "ALL";
 
+export interface QuizClassTarget {
+  classId: string;
+  schoolTrack: string;
+  schoolSection: string;
+}
+
 export interface AssignQuizPayload {
   quizId: string;
   courseId: string;
@@ -36,7 +42,32 @@ export interface AssignQuizPayload {
   /**
    * Nuovo modello N:M.
    *
-   * Contiene gli academy_classes.id associati al quiz.
+   * Ogni elemento identifica una classe scolastica completa:
+   *
+   * academy_classes.id
+   * + school_track
+   * + school_section
+   *
+   * Esempio:
+   *
+   * {
+   *   classId: "...",
+   *   schoolTrack: "LSA",
+   *   schoolSection: "B"
+   * }
+   */
+  classTargets?: QuizClassTarget[] | null;
+
+  /**
+   * Compatibilità con il precedente modello.
+   *
+   * Contiene esclusivamente academy_classes.id.
+   *
+   * Viene mantenuto perché può essere ancora inviato da
+   * componenti amministrativi precedenti.
+   *
+   * NON è sufficiente per rappresentare una classe scolastica
+   * completa nel nuovo modello.
    */
   classIds?: string[] | null;
 
@@ -47,9 +78,6 @@ export interface AssignQuizPayload {
    *
    * Rappresenta il macro-anno scolastico:
    * PRIME, SECONDE, TERZE, QUARTE, QUINTE.
-   *
-   * Se classIds non è valorizzato, questo valore viene utilizzato
-   * come singola assegnazione.
    */
   classId?: string | null;
 
@@ -73,7 +101,10 @@ export interface AssignQuizPayload {
 }
 
 /**
- * Rappresenta una combinazione reale anno + indirizzo + sezione
+ * Rappresenta una combinazione reale:
+ *
+ * anno + indirizzo + sezione
+ *
  * ricavata dai dati degli studenti presenti in profiles.
  */
 export interface AvailableClassTarget {
@@ -86,10 +117,13 @@ export interface AvailableClassTarget {
 /**
  * Normalizza un valore testuale proveniente dal client.
  *
- * Gli indirizzi e le sezioni vengono memorizzati in forma normalizzata
- * per evitare differenze accidentali dovute a spazi o maiuscole/minuscole.
+ * Gli indirizzi e le sezioni vengono memorizzati in forma
+ * normalizzata per evitare differenze accidentali dovute
+ * a spazi o maiuscole/minuscole.
  */
-function normalizeOptionalText(value?: string | null): string | null {
+function normalizeOptionalText(
+  value?: string | null,
+): string | null {
   const normalized = value?.trim().toUpperCase();
 
   return normalized || null;
@@ -97,6 +131,8 @@ function normalizeOptionalText(value?: string | null): string | null {
 
 /**
  * Normalizza e deduplica gli ID delle classi.
+ *
+ * Mantiene compatibilità con il precedente payload.
  */
 function normalizeClassIds(
   classIds?: string[] | null,
@@ -113,6 +149,56 @@ function normalizeClassIds(
     );
 
   return Array.from(new Set(ids));
+}
+
+/**
+ * Normalizza, valida e deduplica le classi complete del nuovo
+ * modello N:M.
+ *
+ * La chiave logica è:
+ *
+ * classId + schoolTrack + schoolSection
+ */
+function normalizeClassTargets(
+  classTargets?: QuizClassTarget[] | null,
+): QuizClassTarget[] {
+  if (!Array.isArray(classTargets)) {
+    return [];
+  }
+
+  const uniqueTargets = new Map<string, QuizClassTarget>();
+
+  for (const target of classTargets) {
+    if (!target || typeof target !== "object") {
+      continue;
+    }
+
+    const classId =
+      typeof target.classId === "string"
+        ? target.classId.trim()
+        : "";
+
+    const schoolTrack =
+      normalizeOptionalText(target.schoolTrack) ?? "";
+
+    const schoolSection =
+      normalizeOptionalText(target.schoolSection) ?? "";
+
+    if (!classId || !schoolTrack || !schoolSection) {
+      continue;
+    }
+
+    const key =
+      `${classId}|${schoolTrack}|${schoolSection}`;
+
+    uniqueTargets.set(key, {
+      classId,
+      schoolTrack,
+      schoolSection,
+    });
+  }
+
+  return Array.from(uniqueTargets.values());
 }
 
 /**
@@ -138,20 +224,17 @@ function normalizeTargetUserType(
 /**
  * Verifica la coerenza della restrizione legacy di classe.
  *
- * Questa funzione viene mantenuta per compatibilità con il precedente
- * pannello amministrativo.
- *
  * Una restrizione completa richiede SEMPRE:
- * - classId       -> anno
- * - schoolTrack   -> indirizzo
- * - schoolSection -> sezione
  *
- * Sono invece tutti null quando il quiz non è limitato ad una classe.
+ * - classId
+ * - schoolTrack
+ * - schoolSection
  *
- * NOTA:
- * il nuovo modello di accesso NON utilizza questi tre campi come
- * fonte decisionale. La fonte del nuovo modello è
- * quiz_class_assignments.
+ * Sono invece tutti null quando il quiz non è limitato ad
+ * una classe nel vecchio modello.
+ *
+ * Il nuovo modello NON utilizza questi tre campi come fonte
+ * decisionale: la fonte è quiz_class_assignments.
  */
 function validateClassRestriction(
   classId: string | null,
@@ -162,8 +245,11 @@ function validateClassRestriction(
   const hasTrack = Boolean(schoolTrack);
   const hasSection = Boolean(schoolSection);
 
-  const hasAnyRestriction = hasClassId || hasTrack || hasSection;
-  const hasCompleteRestriction = hasClassId && hasTrack && hasSection;
+  const hasAnyRestriction =
+    hasClassId || hasTrack || hasSection;
+
+  const hasCompleteRestriction =
+    hasClassId && hasTrack && hasSection;
 
   if (hasAnyRestriction && !hasCompleteRestriction) {
     return (
@@ -176,93 +262,281 @@ function validateClassRestriction(
 }
 
 /**
- * Assegna un quiz a un corso, modulo/lezione e configura il nuovo
- * modello di targeting.
+ * Verifica che tutte le classi contenute nei target esistano.
+ *
+ * Esegue una sola query indipendentemente dal numero di target.
+ */
+async function validateClassTargetsExist(
+  classTargets: QuizClassTarget[],
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  if (classTargets.length === 0) {
+    return { success: true };
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  const classIds = Array.from(
+    new Set(
+      classTargets.map((target) => target.classId),
+    ),
+  );
+
+  const { data: academyClasses, error } = await supabase
+    .from("academy_classes")
+    .select("id")
+    .in("id", classIds);
+
+  if (error) {
+    logger.error(
+      "Errore durante la verifica delle classi target:",
+      error.message,
+    );
+
+    return {
+      success: false,
+      error:
+        "Impossibile verificare le classi selezionate.",
+    };
+  }
+
+  const existingClassIds = new Set(
+    (academyClasses ?? []).map(
+      (academyClass) => academyClass.id,
+    ),
+  );
+
+  const missingClassIds = classIds.filter(
+    (classId) => !existingClassIds.has(classId),
+  );
+
+  if (missingClassIds.length > 0) {
+    return {
+      success: false,
+      error:
+        "Una o più classi selezionate non esistono nel sistema.",
+    };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Verifica che ogni combinazione:
+ *
+ * classId + schoolTrack + schoolSection
+ *
+ * corrisponda realmente ad almeno uno studente presente
+ * nel database.
+ *
+ * Questo evita di salvare combinazioni artificiali o non presenti.
+ */
+async function validateClassTargetCombinations(
+  classTargets: QuizClassTarget[],
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  if (classTargets.length === 0) {
+    return { success: true };
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  const { data: profiles, error } = await supabase
+    .from("profiles")
+    .select(
+      `
+        school_track,
+        school_section,
+        profile_classes!inner (
+          class_id
+        )
+      `,
+    )
+    .eq("role", "student")
+    .not("school_track", "is", null)
+    .not("school_section", "is", null);
+
+  if (error) {
+    logger.error(
+      "Errore durante la verifica delle combinazioni " +
+        "anno/indirizzo/sezione:",
+      error.message,
+    );
+
+    return {
+      success: false,
+      error:
+        "Impossibile verificare le combinazioni di classe selezionate.",
+    };
+  }
+
+  const availableCombinations = new Set<string>();
+
+  for (const profile of profiles ?? []) {
+    const schoolTrack = normalizeOptionalText(
+      profile.school_track,
+    );
+
+    const schoolSection = normalizeOptionalText(
+      profile.school_section,
+    );
+
+    if (!schoolTrack || !schoolSection) {
+      continue;
+    }
+
+    const profileClasses = Array.isArray(
+      profile.profile_classes,
+    )
+      ? profile.profile_classes
+      : [];
+
+    for (const profileClass of profileClasses) {
+      if (!profileClass?.class_id) {
+        continue;
+      }
+
+      availableCombinations.add(
+        `${profileClass.class_id}|${schoolTrack}|${schoolSection}`,
+      );
+    }
+  }
+
+  const invalidTargets = classTargets.filter(
+    (target) =>
+      !availableCombinations.has(
+        `${target.classId}|${target.schoolTrack}|${target.schoolSection}`,
+      ),
+  );
+
+  if (invalidTargets.length > 0) {
+    logger.warn(
+      "Sono state richieste combinazioni classe non presenti:",
+      {
+        invalidTargets,
+      },
+    );
+
+    return {
+      success: false,
+      error:
+        "Una o più combinazioni anno, indirizzo e sezione " +
+        "non corrispondono ad alcuna classe presente nel sistema.",
+    };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Assegna un quiz a un corso, modulo/lezione e configura
+ * il targeting.
  *
  * Nuovo modello:
  *
  * target_user_type + quiz_class_assignments
  *
- * Esempi:
+ * quiz_class_assignments:
  *
- * EXTERNAL_STUDENT
- *   -> nessuna classe necessaria
+ * quiz_id
+ * class_id
+ * school_track
+ * school_section
  *
- * SCHOOL_ONLY
- *   -> una o più classi in quiz_class_assignments
+ * quiz_assignments contiene esclusivamente:
  *
- * ALL
- *   -> studenti esterni + studenti scolastici appartenenti
- *      alle classi presenti in quiz_class_assignments
+ * quiz_id
+ * course_id
+ * due_at
+ * is_visible
  *
- * quiz_assignments contiene esclusivamente i metadati
- * dell'assegnazione:
- *
- * - quiz_id
- * - course_id
- * - due_at
- * - is_visible
- *
- * I campi legacy class_id/school_track/school_section vengono
- * mantenuti nel record quizzes per compatibilità e rollback,
- * ma NON rappresentano la fonte decisionale del nuovo controllo
- * di accesso.
+ * I campi legacy presenti in quizzes vengono mantenuti.
  */
-export async function assignQuizAction(payload: AssignQuizPayload) {
+export async function assignQuizAction(
+  payload: AssignQuizPayload,
+) {
   const supabase = getSupabaseAdmin();
 
-  logger.info("Dati ricevuti dalla Server Action di assegnazione quiz:", {
-    quizId: payload.quizId,
-    courseId: payload.courseId,
-    moduleId: payload.moduleId,
-    lessonId: payload.lessonId,
-    dueDate: payload.dueDate,
-    isVisible: payload.isVisible,
-    targetUserType: payload.targetUserType,
-    classIds: payload.classIds,
-    classId: payload.classId,
-    schoolTrack: payload.schoolTrack,
-    schoolSection: payload.schoolSection,
-  });
+  logger.info(
+    "Dati ricevuti dalla Server Action di assegnazione quiz:",
+    {
+      quizId: payload.quizId,
+      courseId: payload.courseId,
+      moduleId: payload.moduleId,
+      lessonId: payload.lessonId,
+      dueDate: payload.dueDate,
+      isVisible: payload.isVisible,
+      targetUserType: payload.targetUserType,
+      classTargets: payload.classTargets,
+      classIds: payload.classIds,
+      classId: payload.classId,
+      schoolTrack: payload.schoolTrack,
+      schoolSection: payload.schoolSection,
+    },
+  );
 
   const targetUserType = normalizeTargetUserType(
     payload.targetUserType,
   );
 
+  /*
+   * Nuovo modello N:M.
+   */
+  const classTargets = normalizeClassTargets(
+    payload.classTargets,
+  );
+
+  /*
+   * Compatibilità con il precedente modello.
+   */
+  const legacyClassId =
+    payload.classId?.trim() || null;
+
+  const schoolTrack = normalizeOptionalText(
+    payload.schoolTrack,
+  );
+
+  const schoolSection = normalizeOptionalText(
+    payload.schoolSection,
+  );
+
+  /*
+   * classIds rimane supportato per compatibilità.
+   *
+   * Se classTargets è presente, rappresenta la fonte completa
+   * del nuovo modello.
+   *
+   * Se classTargets è assente, classIds può ancora rappresentare
+   * il precedente modello.
+   */
   const classIds = normalizeClassIds(
     payload.classIds,
     payload.classId,
   );
 
   /*
-   * I campi legacy vengono ancora normalizzati e mantenuti.
+   * 1. Validazione legacy.
    *
-   * Per evitare regressioni con il vecchio pannello, se è presente
-   * classId viene utilizzato insieme a schoolTrack/schoolSection
-   * come prima.
-   */
-  const legacyClassId = payload.classId?.trim() || null;
-  const schoolTrack = normalizeOptionalText(payload.schoolTrack);
-  const schoolSection = normalizeOptionalText(payload.schoolSection);
-
-  /*
-   * 1. Compatibilità con il precedente modello.
-   *
-   * La validazione legacy viene eseguita solo quando il chiamante
-   * sta effettivamente fornendo uno dei campi legacy.
-   *
-   * Il nuovo modello N:M può invece fornire semplicemente classIds.
+   * Viene eseguita solo quando il chiamante sta utilizzando
+   * effettivamente i campi legacy.
    */
   const hasLegacyRestrictionFields = Boolean(
-    legacyClassId || schoolTrack || schoolSection,
+    legacyClassId ||
+      schoolTrack ||
+      schoolSection,
   );
 
   if (hasLegacyRestrictionFields) {
-    const restrictionError = validateClassRestriction(
-      legacyClassId,
-      schoolTrack,
-      schoolSection,
-    );
+    const restrictionError =
+      validateClassRestriction(
+        legacyClassId,
+        schoolTrack,
+        schoolSection,
+      );
 
     if (restrictionError) {
       return {
@@ -273,17 +547,117 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
   }
 
   /*
-   * 2. Il targeting EXTERNAL_STUDENT non richiede classi.
+   * 2. Se il nuovo modello è presente, verifica che tutte
+   *    le classi macro esistano.
+   */
+  if (classTargets.length > 0) {
+    const classesValidation =
+      await validateClassTargetsExist(
+        classTargets,
+      );
+
+    if (!classesValidation.success) {
+      return {
+        success: false,
+        error:
+          classesValidation.error ||
+          "Impossibile verificare le classi selezionate.",
+      };
+    }
+
+    /*
+     * Verifica la combinazione completa:
+     *
+     * classId + track + section
+     */
+    const combinationsValidation =
+      await validateClassTargetCombinations(
+        classTargets,
+      );
+
+    if (!combinationsValidation.success) {
+      return {
+        success: false,
+        error:
+          combinationsValidation.error ||
+          "Una o più combinazioni di classe non sono valide.",
+      };
+    }
+  } else if (classIds.length > 0) {
+    /*
+     * Compatibilità con il vecchio modello classIds.
+     *
+     * In questo caso verifichiamo almeno l'esistenza delle
+     * academy_classes selezionate.
+     */
+    const classesValidation =
+      await validateClassTargetsExist(
+        classIds.map((classId) => ({
+          classId,
+          schoolTrack:
+            schoolTrack || "",
+          schoolSection:
+            schoolSection || "",
+        })),
+      );
+
+    /*
+     * La validazione completa track/section non viene applicata
+     * al vecchio payload, perché potrebbe non contenerli.
+     */
+    if (!classesValidation.success) {
+      const { data: academyClasses, error } =
+        await supabase
+          .from("academy_classes")
+          .select("id")
+          .in("id", classIds);
+
+      if (error) {
+        logger.error(
+          "Errore durante la verifica delle classi target:",
+          error.message,
+        );
+
+        return {
+          success: false,
+          error:
+            "Impossibile verificare le classi selezionate.",
+        };
+      }
+
+      const existingClassIds = new Set(
+        (academyClasses ?? []).map(
+          (academyClass) => academyClass.id,
+        ),
+      );
+
+      const missingClassIds = classIds.filter(
+        (classId) =>
+          !existingClassIds.has(classId),
+      );
+
+      if (missingClassIds.length > 0) {
+        return {
+          success: false,
+          error:
+            "Una o più classi selezionate non esistono nel sistema.",
+        };
+      }
+    }
+  }
+
+  /*
+   * 3. Il nuovo modello richiede che SCHOOL_ONLY e ALL
+   *    possano essere associati a zero classi.
    *
-   * SCHOOL_ONLY e ALL possono invece avere una o più classi.
+   * In tal caso non viene concesso accesso agli SCHOOL_STUDENT.
    *
-   * Zero assegnazioni NON viene trasformato in accesso pubblico:
-   * il controllo lato lettura stabilisce che uno SCHOOL_STUDENT
-   * non può accedere a SCHOOL_ONLY/ALL senza una classe assegnata.
+   * EXTERNAL_STUDENT non richiede classi.
    */
   if (
     (targetUserType === "SCHOOL_ONLY" ||
       targetUserType === "ALL") &&
+    classTargets.length === 0 &&
     classIds.length === 0
   ) {
     logger.info(
@@ -296,75 +670,37 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
   }
 
   /*
-   * 3. Verifica che tutte le academy_classes selezionate esistano.
+   * 4. Verifica legacy.
    *
-   * La query viene eseguita in un'unica operazione per evitare
-   * N query in caso di assegnazione multipla.
-   */
-  if (classIds.length > 0) {
-    const { data: academyClasses, error: classesError } = await supabase
-      .from("academy_classes")
-      .select("id")
-      .in("id", classIds);
-
-    if (classesError) {
-      logger.error(
-        "Errore durante la verifica delle classi target:",
-        classesError.message,
-      );
-
-      return {
-        success: false,
-        error: "Impossibile verificare le classi selezionate.",
-      };
-    }
-
-    const existingClassIds = new Set(
-      (academyClasses ?? []).map((academyClass) => academyClass.id),
-    );
-
-    const missingClassIds = classIds.filter(
-      (classId) => !existingClassIds.has(classId),
-    );
-
-    if (missingClassIds.length > 0) {
-      return {
-        success: false,
-        error:
-          "Una o più classi selezionate non esistono nel sistema.",
-      };
-    }
-  }
-
-  /*
-   * 4. Se viene utilizzato il vecchio modello con una restrizione
-   *    completa, verifichiamo che esista realmente almeno uno
-   *    studente con quella combinazione anno + indirizzo + sezione.
-   *
-   *    Questa verifica viene mantenuta esclusivamente per
-   *    compatibilità con il pannello precedente.
+   * Viene mantenuta esclusivamente per il precedente modello
+   * di assegnazione.
    */
   if (
     legacyClassId &&
     schoolTrack &&
-    schoolSection
+    schoolSection &&
+    classTargets.length === 0
   ) {
-    const { data: matchingStudents, error: studentError } = await supabase
-      .from("profiles")
-      .select(
-        `
-          id,
-          school_track,
-          school_section,
-          profile_classes!inner (
-            class_id
-          )
-        `,
-      )
-      .eq("school_track", schoolTrack)
-      .eq("school_section", schoolSection)
-      .eq("profile_classes.class_id", legacyClassId)
-      .limit(1);
+    const { data: matchingStudents, error: studentError } =
+      await supabase
+        .from("profiles")
+        .select(
+          `
+            id,
+            school_track,
+            school_section,
+            profile_classes!inner (
+              class_id
+            )
+          `,
+        )
+        .eq("school_track", schoolTrack)
+        .eq("school_section", schoolSection)
+        .eq(
+          "profile_classes.class_id",
+          legacyClassId,
+        )
+        .limit(1);
 
     if (studentError) {
       logger.error(
@@ -380,7 +716,10 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
       };
     }
 
-    if (!matchingStudents || matchingStudents.length === 0) {
+    if (
+      !matchingStudents ||
+      matchingStudents.length === 0
+    ) {
       return {
         success: false,
         error:
@@ -393,19 +732,16 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
   /*
    * 5. Aggiorna il quiz.
    *
-   * target_user_type è la nuova fonte del targeting.
+   * target_user_type è la fonte del targeting.
    *
-   * I campi legacy vengono mantenuti:
-   * - class_id
-   * - school_track
-   * - school_section
+   * I campi legacy vengono mantenuti.
    *
-   * Non vengono eliminati per garantire compatibilità e rollback.
+   * Per una nuova assegnazione N:M:
+   * - class_id può contenere il valore legacy eventualmente
+   *   fornito dal chiamante;
+   * - school_track/school_section idem.
    *
-   * In caso di più classi non è possibile rappresentarle tutte
-   * nei vecchi campi; class_id continua quindi a rappresentare
-   * esclusivamente il valore legacy eventualmente fornito dal
-   * chiamante.
+   * Non vengono utilizzati per l'autorizzazione del nuovo modello.
    */
   const { error: quizError } = await supabase
     .from("quizzes")
@@ -437,30 +773,29 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
   }
 
   /*
-   * 6. Aggiorna le assegnazioni N:M.
+   * 6. Rimuove tutte le precedenti assegnazioni N:M.
    *
-   * Prima rimuoviamo le associazioni precedenti del quiz.
+   * Questo permette di trasformare:
    *
-   * Questo permette di modificare in modo atomico dal punto di vista
-   * applicativo:
-   *
-   * Quiz -> A,B,C
+   * A + B + C
    *
    * in:
    *
-   * Quiz -> A,D
+   * A + D
    *
-   * senza lasciare associazioni obsolete.
+   * senza lasciare B/C nel database.
    */
-  const { error: deleteAssignmentsError } = await supabase
+  const {
+    error: deleteAssignmentsError,
+  } = await supabase
     .from("quiz_class_assignments")
     .delete()
     .eq("quiz_id", payload.quizId);
 
   if (deleteAssignmentsError) {
     logger.error(
-      "Errore durante la rimozione delle precedenti assegnazioni " +
-        "di classe del quiz:",
+      "Errore durante la rimozione delle precedenti " +
+        "assegnazioni di classe del quiz:",
       deleteAssignmentsError.message,
     );
 
@@ -474,19 +809,29 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
   /*
    * 7. Inserisce le nuove assegnazioni N:M.
    *
-   * Nessuna riga viene inserita per EXTERNAL_STUDENT senza classi.
+   * IMPORTANTISSIMO:
    *
-   * Per SCHOOL_ONLY/ALL con zero classi non viene inserita alcuna
-   * associazione: lato accesso server-side lo SCHOOL_STUDENT
-   * rimane quindi correttamente escluso.
+   * quiz_class_assignments richiede:
+   *
+   * - quiz_id
+   * - class_id
+   * - school_track
+   * - school_section
+   *
+   * Non viene più inserito soltanto class_id.
    */
-  if (classIds.length > 0) {
-    const assignmentRows = classIds.map((classId) => ({
-      quiz_id: payload.quizId,
-      class_id: classId,
-    }));
+  if (classTargets.length > 0) {
+    const assignmentRows =
+      classTargets.map((target) => ({
+        quiz_id: payload.quizId,
+        class_id: target.classId,
+        school_track: target.schoolTrack,
+        school_section: target.schoolSection,
+      }));
 
-    const { error: insertAssignmentsError } = await supabase
+    const {
+      error: insertAssignmentsError,
+    } = await supabase
       .from("quiz_class_assignments")
       .insert(assignmentRows);
 
@@ -503,28 +848,78 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
           "Impossibile salvare le classi assegnate al quiz.",
       };
     }
+  } else if (
+    classIds.length > 0 &&
+    legacyClassId &&
+    schoolTrack &&
+    schoolSection
+  ) {
+    /*
+     * Compatibilità con un chiamante legacy che invia:
+     *
+     * classIds
+     * + classId
+     * + schoolTrack
+     * + schoolSection
+     *
+     * In questo caso possiamo ricostruire una sola assegnazione
+     * completa in modo sicuro.
+     *
+     * Non inventiamo track/section per gli altri classIds.
+     */
+    const assignmentRows = [
+      {
+        quiz_id: payload.quizId,
+        class_id: legacyClassId,
+        school_track: schoolTrack,
+        school_section: schoolSection,
+      },
+    ];
+
+    const {
+      error: insertLegacyAssignmentError,
+    } = await supabase
+      .from("quiz_class_assignments")
+      .insert(assignmentRows);
+
+    if (insertLegacyAssignmentError) {
+      logger.error(
+        "Errore durante il salvataggio della compatibilità " +
+          "legacy N:M del quiz:",
+        insertLegacyAssignmentError.message,
+      );
+
+      return {
+        success: false,
+        error:
+          "Impossibile salvare la classe assegnata al quiz.",
+      };
+    }
   }
 
   /*
-   * 8. Mantiene i metadati dell'assegnazione al corso.
+   * 8. Aggiorna i metadati dell'assegnazione al corso.
    *
-   * La restrizione di classe NON viene salvata in
-   * quiz_assignments.
+   * quiz_assignments NON contiene la restrizione di classe.
    *
-   * quiz_assignments contiene:
+   * Manteniamo invariati:
    * - quiz_id
    * - course_id
    * - due_at
    * - is_visible
    */
-  const { error: assignmentError } = await supabase
+  const {
+    error: assignmentError,
+  } = await supabase
     .from("quiz_assignments")
     .upsert(
       {
         quiz_id: payload.quizId,
         course_id: payload.courseId,
         due_at: payload.dueDate
-          ? new Date(payload.dueDate).toISOString()
+          ? new Date(
+              payload.dueDate,
+            ).toISOString()
           : null,
         is_visible: payload.isVisible,
       },
@@ -547,10 +942,20 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
 
   /*
    * 9. Revalidation.
+   *
+   * Manteniamo i path già utilizzati.
    */
-  revalidatePath(`/admin/quiz/${payload.quizId}/analytics`);
-  revalidatePath("/admin/quiz", "layout");
-  revalidatePath("/admin/dashboard", "layout");
+  revalidatePath(
+    `/admin/quiz/${payload.quizId}/analytics`,
+  );
+  revalidatePath(
+    "/admin/quiz",
+    "layout",
+  );
+  revalidatePath(
+    "/admin/dashboard",
+    "layout",
+  );
 
   return {
     success: true,
@@ -560,11 +965,12 @@ export async function assignQuizAction(payload: AssignQuizPayload) {
 /**
  * Recupera le classi macro disponibili.
  *
+ * academy_classes rappresenta esclusivamente il macro-anno:
+ *
+ * PRIME, SECONDE, TERZE, QUARTE, QUINTE.
+ *
  * Manteniamo questa Server Action per compatibilità con
  * il codice amministrativo esistente.
- *
- * academy_classes rappresenta esclusivamente il macro-anno:
- * PRIME, SECONDE, TERZE, QUARTE, QUINTE.
  */
 export async function getAvailableClassesAction() {
   const supabase = getSupabaseAdmin();
@@ -573,7 +979,9 @@ export async function getAvailableClassesAction() {
     const { data, error } = await supabase
       .from("academy_classes")
       .select("id, name")
-      .order("name", { ascending: true });
+      .order("name", {
+        ascending: true,
+      });
 
     if (error) {
       logger.error(
@@ -611,19 +1019,33 @@ export async function getAvailableClassesAction() {
  *
  * presenti nei profili degli studenti.
  *
- * Questa funzione evita di costruire artificialmente le classi
- * concatenando stringhe e permette al pannello amministrativo
- * di mostrare esclusivamente combinazioni realmente presenti
- * nel database.
+ * La funzione restituisce quindi:
+ *
+ * {
+ *   classId,
+ *   className,
+ *   schoolTrack,
+ *   schoolSection
+ * }
+ *
+ * Ogni combinazione rappresenta una classe scolastica completa.
  */
 export async function getAvailableClassTargetsAction() {
   const supabase = getSupabaseAdmin();
 
   try {
-    const { data: classes, error: classesError } = await supabase
+    /*
+     * Recuperiamo le macro-classi una sola volta.
+     */
+    const {
+      data: classes,
+      error: classesError,
+    } = await supabase
       .from("academy_classes")
       .select("id, name")
-      .order("name", { ascending: true });
+      .order("name", {
+        ascending: true,
+      });
 
     if (classesError) {
       logger.error(
@@ -637,7 +1059,14 @@ export async function getAvailableClassTargetsAction() {
       };
     }
 
-    const { data: profiles, error: profilesError } = await supabase
+    /*
+     * Recuperiamo le combinazioni effettivamente presenti
+     * nei profili scolastici.
+     */
+    const {
+      data: profiles,
+      error: profilesError,
+    } = await supabase
       .from("profiles")
       .select(
         `
@@ -665,40 +1094,54 @@ export async function getAvailableClassTargetsAction() {
     }
 
     const classNameById = new Map(
-      (classes ?? []).map((academyClass) => [
-        academyClass.id,
-        academyClass.name,
-      ]),
+      (classes ?? []).map(
+        (academyClass) => [
+          academyClass.id,
+          academyClass.name,
+        ],
+      ),
     );
 
-    const uniqueTargets = new Map<string, AvailableClassTarget>();
+    const uniqueTargets =
+      new Map<string, AvailableClassTarget>();
 
     for (const profile of profiles ?? []) {
-      const schoolTrack = normalizeOptionalText(profile.school_track);
-      const schoolSection = normalizeOptionalText(profile.school_section);
+      const schoolTrack =
+        normalizeOptionalText(
+          profile.school_track,
+        );
+
+      const schoolSection =
+        normalizeOptionalText(
+          profile.school_section,
+        );
 
       if (!schoolTrack || !schoolSection) {
         continue;
       }
 
-      const profileClasses = Array.isArray(profile.profile_classes)
-        ? profile.profile_classes
-        : [];
+      const profileClasses =
+        Array.isArray(profile.profile_classes)
+          ? profile.profile_classes
+          : [];
 
       for (const profileClass of profileClasses) {
-        const classId = profileClass.class_id;
+        const classId =
+          profileClass?.class_id;
 
         if (!classId) {
           continue;
         }
 
-        const className = classNameById.get(classId);
+        const className =
+          classNameById.get(classId);
 
         if (!className) {
           continue;
         }
 
-        const key = `${classId}|${schoolTrack}|${schoolSection}`;
+        const key =
+          `${classId}|${schoolTrack}|${schoolSection}`;
 
         uniqueTargets.set(key, {
           classId,
@@ -709,33 +1152,44 @@ export async function getAvailableClassTargetsAction() {
       }
     }
 
-    const targets = Array.from(uniqueTargets.values()).sort((a, b) => {
-      const classComparison = a.className.localeCompare(
-        b.className,
-        "it",
-        { sensitivity: "base" },
-      );
+    const targets =
+      Array.from(
+        uniqueTargets.values(),
+      ).sort((a, b) => {
+        const classComparison =
+          a.className.localeCompare(
+            b.className,
+            "it",
+            {
+              sensitivity: "base",
+            },
+          );
 
-      if (classComparison !== 0) {
-        return classComparison;
-      }
+        if (classComparison !== 0) {
+          return classComparison;
+        }
 
-      const trackComparison = a.schoolTrack.localeCompare(
-        b.schoolTrack,
-        "it",
-        { sensitivity: "base" },
-      );
+        const trackComparison =
+          a.schoolTrack.localeCompare(
+            b.schoolTrack,
+            "it",
+            {
+              sensitivity: "base",
+            },
+          );
 
-      if (trackComparison !== 0) {
-        return trackComparison;
-      }
+        if (trackComparison !== 0) {
+          return trackComparison;
+        }
 
-      return a.schoolSection.localeCompare(
-        b.schoolSection,
-        "it",
-        { sensitivity: "base" },
-      );
-    });
+        return a.schoolSection.localeCompare(
+          b.schoolSection,
+          "it",
+          {
+            sensitivity: "base",
+          },
+        );
+      });
 
     return {
       success: true,
@@ -743,8 +1197,8 @@ export async function getAvailableClassTargetsAction() {
     };
   } catch (error) {
     logger.error(
-      "Errore imprevisto durante il recupero delle combinazioni " +
-        "anno/indirizzo/sezione:",
+      "Errore imprevisto durante il recupero delle " +
+        "combinazioni anno/indirizzo/sezione:",
       error,
     );
 
@@ -758,23 +1212,30 @@ export async function getAvailableClassTargetsAction() {
 /**
  * Recupera i moduli e le relative lezioni di un corso.
  */
-export async function getCourseModulesAction(courseId: string) {
+export async function getCourseModulesAction(
+  courseId: string,
+) {
   const supabase = getSupabaseAdmin();
 
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from("course_modules")
     .select(
       `
-      id,
-      title,
-      course_lessons (
         id,
-        title
-      )
-    `,
+        title,
+        course_lessons (
+          id,
+          title
+        )
+      `,
     )
     .eq("course_id", courseId)
-    .order("order_index", { ascending: true });
+    .order("order_index", {
+      ascending: true,
+    });
 
   if (error) {
     logger.error(
@@ -782,11 +1243,18 @@ export async function getCourseModulesAction(courseId: string) {
       error.message,
     );
 
-    const { data: modulesOnly } = await supabase
+    /*
+     * Manteniamo il fallback già presente.
+     */
+    const {
+      data: modulesOnly,
+    } = await supabase
       .from("course_modules")
       .select("id, title")
       .eq("course_id", courseId)
-      .order("order_index", { ascending: true });
+      .order("order_index", {
+        ascending: true,
+      });
 
     return {
       success: true,
@@ -794,7 +1262,9 @@ export async function getCourseModulesAction(courseId: string) {
     };
   }
 
-  const formattedModules = (data ?? []).map((module: any) => ({
+  const formattedModules = (
+    data ?? []
+  ).map((module: any) => ({
     id: module.id,
     title: module.title,
     lessons: module.course_lessons ?? [],

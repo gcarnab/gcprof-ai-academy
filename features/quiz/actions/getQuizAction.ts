@@ -17,6 +17,16 @@ interface UserSession {
   role: "admin" | "student";
 }
 
+interface StudentProfileClass {
+  class_id: string | null;
+}
+
+interface QuizClassAssignment {
+  class_id: string | null;
+  school_track: string | null;
+  school_section: string | null;
+}
+
 /**
  * Recupera e valida la sessione corrente dal cookie HttpOnly.
  */
@@ -76,10 +86,11 @@ async function assertQuizAccess(
   const targetUserType = quiz.targetUserType ?? "ALL";
   const supabase = getSupabaseAdmin();
 
-  // 2. Recupero del tipo di utente dal profilo.
+  // 2. Recupero del tipo di utente e dell'identità scolastica
+  //    dal profilo.
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("user_type")
+    .select("user_type, school_track, school_section")
     .eq("id", session.id)
     .maybeSingle();
 
@@ -99,6 +110,12 @@ async function assertQuizAccess(
   }
 
   const userType = String(profile.user_type ?? "").toUpperCase();
+  const studentSchoolTrack = String(profile.school_track ?? "")
+    .trim()
+    .toUpperCase();
+  const studentSchoolSection = String(profile.school_section ?? "")
+    .trim()
+    .toUpperCase();
 
   // 3. Gli studenti esterni possono accedere soltanto ai quiz
   //    EXTERNAL_STUDENT oppure ALL.
@@ -128,6 +145,14 @@ async function assertQuizAccess(
   }
 
   // 5. Recupero delle classi appartenenti allo studente.
+  //
+  //    class_id identifica soltanto il livello macro (es. QUARTA).
+  //    L'identità completa della classe è:
+  //
+  //      class_id + school_track + school_section
+  //
+  //    school_track e school_section vengono quindi recuperati
+  //    dal profilo e confrontati con l'assegnazione del quiz.
   const { data: profileClasses, error: profileClassesError } =
     await supabase
       .from("profile_classes")
@@ -146,17 +171,21 @@ async function assertQuizAccess(
   }
 
   const studentClassIds = (profileClasses ?? [])
-    .map((item: { class_id: string | null }) => item.class_id)
+    .map((item: StudentProfileClass) => item.class_id)
     .filter(
       (classId): classId is string =>
         typeof classId === "string" && classId.length > 0,
     );
 
-  // 6. Recupero delle classi assegnate al quiz.
+  // 6. Recupero delle assegnazioni complete del quiz.
+  //
+  //    Non è sufficiente confrontare soltanto class_id perché,
+  //    ad esempio, QUARTA LSA B e QUARTA INF A possono condividere
+  //    lo stesso academy_classes.id.
   const { data: quizClassAssignments, error: assignmentsError } =
     await supabase
       .from("quiz_class_assignments")
-      .select("class_id")
+      .select("class_id, school_track, school_section")
       .eq("quiz_id", quiz.id);
 
   if (assignmentsError) {
@@ -170,25 +199,47 @@ async function assertQuizAccess(
     );
   }
 
-  const assignedClassIds = (quizClassAssignments ?? [])
-    .map((item: { class_id: string | null }) => item.class_id)
+  const assignedClassAssignments = (
+    quizClassAssignments ?? []
+  )
+    .map((item: QuizClassAssignment) => ({
+      classId: item.class_id,
+      schoolTrack: String(item.school_track ?? "")
+        .trim()
+        .toUpperCase(),
+      schoolSection: String(item.school_section ?? "")
+        .trim()
+        .toUpperCase(),
+    }))
     .filter(
-      (classId): classId is string =>
-        typeof classId === "string" && classId.length > 0,
+      (
+        assignment,
+      ): assignment is {
+        classId: string;
+        schoolTrack: string;
+        schoolSection: string;
+      } =>
+        typeof assignment.classId === "string" &&
+        assignment.classId.length > 0 &&
+        assignment.schoolTrack.length > 0 &&
+        assignment.schoolSection.length > 0,
     );
 
   // 7. Per SCHOOL_ONLY e ALL, uno studente scolastico deve
-  //    appartenere ad almeno una classe assegnata al quiz.
+  //    appartenere ad almeno una classe completa assegnata al quiz.
   //
   //    Nessuna assegnazione => accesso negato.
-  if (assignedClassIds.length === 0) {
+  if (assignedClassAssignments.length === 0) {
     throw new Error(
       "Accesso negato: questo quiz non è assegnato a nessuna delle tue classi.",
     );
   }
 
-  const hasMatchingClass = assignedClassIds.some((classId) =>
-    studentClassIds.includes(classId),
+  const hasMatchingClass = assignedClassAssignments.some(
+    (assignment) =>
+      studentClassIds.includes(assignment.classId) &&
+      assignment.schoolTrack === studentSchoolTrack &&
+      assignment.schoolSection === studentSchoolSection,
   );
 
   if (!hasMatchingClass) {
