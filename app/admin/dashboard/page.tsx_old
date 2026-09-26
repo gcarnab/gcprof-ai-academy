@@ -59,7 +59,8 @@ export default async function AdminDashboardPage({
     quizzesRes,
     coursesRes,
     courseStatsRes,
-    systemConfiguration,
+    initialSystemSettings,
+    initialMaintenanceSettings,
     aiSettingsRes,
   ] = await Promise.all([
     getAdminDashboardStats(),
@@ -109,7 +110,9 @@ export default async function AdminDashboardPage({
         "course_id, profile_id, course_xp, course_level",
       ),
 
-    systemSettingsService.getConfiguration(),
+    systemSettingsService.getHomeBannerSettings(),
+
+    systemSettingsService.getMaintenanceSettings(),
 
     getAiSettingsAction(),
   ]);
@@ -134,12 +137,6 @@ export default async function AdminDashboardPage({
       courseStatsRes.error,
     );
   }
-
-  const initialSystemSettings =
-    systemConfiguration.homeBanner;
-
-  const initialMaintenanceSettings =
-    systemConfiguration.maintenance;
 
   const initialAiSettings = aiSettingsRes?.success
     ? aiSettingsRes.data
@@ -255,4 +252,3 @@ export default async function AdminDashboardPage({
     </div>
   );
 }
-
